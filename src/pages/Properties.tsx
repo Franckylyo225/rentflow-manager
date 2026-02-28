@@ -87,7 +87,7 @@ export default function Properties() {
                     </div>
                     <div className="p-2.5 rounded-lg bg-muted">
                       <p className="text-xs text-muted-foreground">Revenus</p>
-                      <p className="font-semibold text-card-foreground">{(property.totalRevenue / 1000).toFixed(0)}K MAD</p>
+                      <p className="font-semibold text-card-foreground">{(property.totalRevenue / 1000000).toFixed(1)}M FCFA</p>
                     </div>
                   </div>
 

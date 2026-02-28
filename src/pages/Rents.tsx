@@ -27,9 +27,9 @@ export default function Rents() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total dû" value={`${totalDue.toLocaleString()} MAD`} icon={CreditCard} />
-          <StatCard title="Total encaissé" value={`${totalPaid.toLocaleString()} MAD`} icon={CheckCircle2} variant="success" />
-          <StatCard title="Impayés" value={`${totalUnpaid.toLocaleString()} MAD`} icon={AlertTriangle} variant="destructive" />
+          <StatCard title="Total dû" value={`${totalDue.toLocaleString()} FCFA`} icon={CreditCard} />
+          <StatCard title="Total encaissé" value={`${totalPaid.toLocaleString()} FCFA`} icon={CheckCircle2} variant="success" />
+          <StatCard title="Impayés" value={`${totalUnpaid.toLocaleString()} FCFA`} icon={AlertTriangle} variant="destructive" />
           <StatCard title="En retard" value={lateCount.toString()} icon={Clock} variant="warning" subtitle="locataires" />
         </div>
 
@@ -70,8 +70,8 @@ export default function Rents() {
                       <td className="py-3 px-4 font-medium text-card-foreground">{payment.tenantName}</td>
                       <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{payment.unitName}</td>
                       <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{payment.propertyName}</td>
-                      <td className="py-3 px-4 text-right font-medium text-card-foreground">{payment.amount.toLocaleString()} MAD</td>
-                      <td className="py-3 px-4 text-right text-muted-foreground hidden sm:table-cell">{payment.paidAmount.toLocaleString()} MAD</td>
+                      <td className="py-3 px-4 text-right font-medium text-card-foreground">{payment.amount.toLocaleString()} FCFA</td>
+                      <td className="py-3 px-4 text-right text-muted-foreground hidden sm:table-cell">{payment.paidAmount.toLocaleString()} FCFA</td>
                       <td className="py-3 px-4 text-muted-foreground">{new Date(payment.dueDate).toLocaleDateString("fr-FR")}</td>
                       <td className="py-3 px-4"><PaymentStatusBadge status={payment.status} /></td>
                     </tr>

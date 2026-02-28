@@ -28,7 +28,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Revenus mensuels"
-            value={`${(totalRevenue / 1000).toFixed(0)}K MAD`}
+            value={`${(totalRevenue / 1000000).toFixed(1)}M FCFA`}
             icon={TrendingUp}
             trend={{ value: "+12% vs mois dernier", positive: true }}
             variant="success"
@@ -47,7 +47,7 @@ export default function Dashboard() {
           />
           <StatCard
             title="Loyers impayés"
-            value={`${(unpaidTotal / 1000).toFixed(0)}K MAD`}
+            value={`${(unpaidTotal / 1000000).toFixed(1)}M FCFA`}
             icon={AlertTriangle}
             variant="destructive"
             trend={{ value: "3 locataires concernés", positive: false }}
@@ -65,8 +65,8 @@ export default function Dashboard() {
                 <BarChart data={monthlyRevenue}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 90%)" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(220, 10%, 46%)" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(220, 10%, 46%)" tickFormatter={v => `${v / 1000}K`} />
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MAD`, "Revenus"]} />
+                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(220, 10%, 46%)" tickFormatter={v => `${v / 1000000}M`} />
+                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} FCFA`, "Revenus"]} />
                   <Bar dataKey="revenue" fill="hsl(160, 84%, 39%)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -85,7 +85,7 @@ export default function Dashboard() {
                       <Cell key={i} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MAD`]} />
+                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} FCFA`]} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-2 mt-2">
@@ -95,7 +95,7 @@ export default function Dashboard() {
                       <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.fill }} />
                       <span className="text-muted-foreground">{c.city}</span>
                     </div>
-                    <span className="font-medium text-card-foreground">{c.revenue.toLocaleString()} MAD</span>
+                    <span className="font-medium text-card-foreground">{c.revenue.toLocaleString()} FCFA</span>
                   </div>
                 ))}
               </div>
@@ -125,7 +125,7 @@ export default function Dashboard() {
                     <tr key={p.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                       <td className="py-2.5 px-3 font-medium text-card-foreground">{p.tenantName}</td>
                       <td className="py-2.5 px-3 text-muted-foreground hidden sm:table-cell">{p.propertyName}</td>
-                      <td className="py-2.5 px-3 text-card-foreground">{p.amount.toLocaleString()} MAD</td>
+                      <td className="py-2.5 px-3 text-card-foreground">{p.amount.toLocaleString()} FCFA</td>
                       <td className="py-2.5 px-3 text-muted-foreground">{new Date(p.dueDate).toLocaleDateString("fr-FR")}</td>
                       <td className="py-2.5 px-3"><PaymentStatusBadge status={p.status} /></td>
                     </tr>

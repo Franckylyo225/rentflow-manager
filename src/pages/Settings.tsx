@@ -25,19 +25,19 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nom de l'entreprise</Label>
-                <Input defaultValue="Immobilière Atlas" />
+                <Input defaultValue="Immobilière Ivoire" />
               </div>
               <div className="space-y-2">
                 <Label>Email de contact</Label>
-                <Input defaultValue="contact@atlas-immo.ma" />
+                <Input defaultValue="contact@ivoire-immo.ci" />
               </div>
               <div className="space-y-2">
                 <Label>Téléphone</Label>
-                <Input defaultValue="+212 5 22 34 56 78" />
+                <Input defaultValue="+225 27 22 34 56 78" />
               </div>
               <div className="space-y-2">
                 <Label>Adresse</Label>
-                <Input defaultValue="45 Bd Zerktouni, Casablanca" />
+                <Input defaultValue="Rue des Jardins, Cocody, Abidjan" />
               </div>
             </div>
             <Button>Enregistrer</Button>

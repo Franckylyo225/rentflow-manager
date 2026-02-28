@@ -12,22 +12,22 @@ const defaultTemplates = [
     id: "before_5",
     label: "Rappel 5 jours avant",
     icon: Bell,
-    sms: "Bonjour {nom}, votre loyer de {montant} MAD pour {unité} est dû le {date}. Merci de procéder au paiement.",
-    email: "Bonjour {nom},\n\nNous vous rappelons que votre loyer de {montant} MAD pour {unité} ({bien}) est dû le {date}.\n\nMerci de procéder au paiement dans les délais.\n\nCordialement,\n{entreprise}",
+    sms: "Bonjour {nom}, votre loyer de {montant} FCFA pour {unité} est dû le {date}. Merci de procéder au paiement.",
+    email: "Bonjour {nom},\n\nNous vous rappelons que votre loyer de {montant} FCFA pour {unité} ({bien}) est dû le {date}.\n\nMerci de procéder au paiement dans les délais.\n\nCordialement,\n{entreprise}",
   },
   {
     id: "after_1",
     label: "Relance J+1",
     icon: MessageSquare,
-    sms: "Bonjour {nom}, votre loyer de {montant} MAD pour {unité} était dû hier. Merci de régulariser votre situation.",
-    email: "Bonjour {nom},\n\nVotre loyer de {montant} MAD pour {unité} ({bien}) était dû le {date} et n'a pas encore été reçu.\n\nMerci de régulariser votre situation au plus vite.\n\nCordialement,\n{entreprise}",
+    sms: "Bonjour {nom}, votre loyer de {montant} FCFA pour {unité} était dû hier. Merci de régulariser votre situation.",
+    email: "Bonjour {nom},\n\nVotre loyer de {montant} FCFA pour {unité} ({bien}) était dû le {date} et n'a pas encore été reçu.\n\nMerci de régulariser votre situation au plus vite.\n\nCordialement,\n{entreprise}",
   },
   {
     id: "after_7",
     label: "Relance J+7",
     icon: MessageSquare,
-    sms: "Bonjour {nom}, votre loyer de {montant} MAD est en retard de 7 jours. Contactez-nous pour régulariser.",
-    email: "Bonjour {nom},\n\nVotre loyer de {montant} MAD pour {unité} ({bien}) est en retard de 7 jours.\n\nNous vous prions de régulariser votre situation dans les plus brefs délais ou de nous contacter pour trouver une solution.\n\nCordialement,\n{entreprise}",
+    sms: "Bonjour {nom}, votre loyer de {montant} FCFA est en retard de 7 jours. Contactez-nous pour régulariser.",
+    email: "Bonjour {nom},\n\nVotre loyer de {montant} FCFA pour {unité} ({bien}) est en retard de 7 jours.\n\nNous vous prions de régulariser votre situation dans les plus brefs délais ou de nous contacter pour trouver une solution.\n\nCordialement,\n{entreprise}",
   },
 ];
 

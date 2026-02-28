@@ -67,11 +67,11 @@ export default function Tenants() {
                 <div className="flex gap-3 pt-1">
                   <div className="flex-1 p-2.5 rounded-lg bg-muted text-center">
                     <p className="text-xs text-muted-foreground">Loyer</p>
-                    <p className="font-semibold text-sm text-card-foreground">{tenant.rent.toLocaleString()} MAD</p>
+                    <p className="font-semibold text-sm text-card-foreground">{tenant.rent.toLocaleString()} FCFA</p>
                   </div>
                   <div className="flex-1 p-2.5 rounded-lg bg-muted text-center">
                     <p className="text-xs text-muted-foreground">Caution</p>
-                    <p className="font-semibold text-sm text-card-foreground">{tenant.deposit.toLocaleString()} MAD</p>
+                    <p className="font-semibold text-sm text-card-foreground">{tenant.deposit.toLocaleString()} FCFA</p>
                   </div>
                 </div>
               </CardContent>
