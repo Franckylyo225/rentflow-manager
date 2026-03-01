@@ -2,10 +2,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut } from "lucide-react";
 import { PaymentStatusBadge } from "@/components/ui/status-badge";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { LeaseTerminationDialog } from "@/components/tenant/LeaseTerminationDialog";
 
 export default function TenantDetail() {
   const { id } = useParams();
@@ -13,9 +14,11 @@ export default function TenantDetail() {
   const [tenant, setTenant] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showTermination, setShowTermination] = useState(false);
 
-  useEffect(() => {
+  const fetchData = () => {
     if (!id) return;
+    setLoading(true);
     Promise.all([
       supabase.from("tenants").select("*, units(name, property_id, properties(name, city_id, cities(name)))").eq("id", id).single(),
       supabase.from("rent_payments").select("*").eq("tenant_id", id).order("due_date", { ascending: false }),
@@ -24,7 +27,9 @@ export default function TenantDetail() {
       setPayments(pRes.data || []);
       setLoading(false);
     });
-  }, [id]);
+  };
+
+  useEffect(() => { fetchData(); }, [id]);
 
   if (loading) {
     return <AppLayout><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
@@ -57,6 +62,14 @@ export default function TenantDetail() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">{tenant.full_name}</h1>
             <p className="text-muted-foreground text-sm">{tenant.units?.properties?.name} · {tenant.units?.name}</p>
           </div>
+          {tenant.is_active && (
+            <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
+              <LogOut className="h-4 w-4 mr-2" /> Initier fin de bail
+            </Button>
+          )}
+          {!tenant.is_active && (
+            <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">Ancien locataire</span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -132,6 +145,15 @@ export default function TenantDetail() {
               </div>
             </CardContent>
           </Card>
+        )}
+        {tenant.is_active && (
+          <LeaseTerminationDialog
+            open={showTermination}
+            onOpenChange={setShowTermination}
+            tenant={tenant}
+            payments={payments}
+            onComplete={() => navigate("/tenants")}
+          />
         )}
       </div>
     </AppLayout>
