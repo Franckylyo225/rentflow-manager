@@ -162,6 +162,67 @@ export type Database = {
           },
         ]
       }
+      employees: {
+        Row: {
+          city_id: string | null
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          monthly_salary: number
+          organization_id: string
+          position: string
+          property_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          city_id?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          monthly_salary?: number
+          organization_id: string
+          position?: string
+          property_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          monthly_salary?: number
+          organization_id?: string
+          position?: string
+          property_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escalation_tasks: {
         Row: {
           assigned_to: string | null
@@ -208,6 +269,135 @@ export type Database = {
             columns: ["rent_payment_id"]
             isOneToOne: false
             referencedRelation: "rent_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category_id: string
+          city_id: string | null
+          country_id: string | null
+          created_at: string
+          description: string | null
+          employee_id: string | null
+          expense_date: string
+          expense_type: string
+          frequency: string
+          id: string
+          organization_id: string
+          property_id: string | null
+          receipt_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category_id: string
+          city_id?: string | null
+          country_id?: string | null
+          created_at?: string
+          description?: string | null
+          employee_id?: string | null
+          expense_date?: string
+          expense_type?: string
+          frequency?: string
+          id?: string
+          organization_id: string
+          property_id?: string | null
+          receipt_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          city_id?: string | null
+          country_id?: string | null
+          created_at?: string
+          description?: string | null
+          employee_id?: string | null
+          expense_date?: string
+          expense_type?: string
+          frequency?: string
+          id?: string
+          organization_id?: string
+          property_id?: string | null
+          receipt_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
