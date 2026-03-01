@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getEscalationInfo, defaultTasksByLevel, type EscalationInfo } from "@/lib/escalation";
+import { generateMiseEnDemeure } from "@/lib/generateMiseEnDemeure";
 
 const paymentMethods = ["Espèces", "Virement bancaire", "Chèque", "Mobile Money", "Carte bancaire"];
 
@@ -382,7 +383,26 @@ export default function Rents() {
                     </Button>
                   ))}
                   {(selectedPayment.escalation?.numericLevel ?? 0) >= 3 && (
-                    <Button variant="outline" size="sm" className="text-xs border-destructive/30 text-destructive">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-destructive/30 text-destructive"
+                      onClick={() => {
+                        generateMiseEnDemeure({
+                          tenantName: selectedPayment.tenants?.full_name ?? "",
+                          tenantPhone: selectedPayment.tenants?.phone ?? "",
+                          tenantEmail: selectedPayment.tenants?.email ?? "",
+                          unitName: selectedPayment.tenants?.units?.name ?? "",
+                          propertyName: selectedPayment.tenants?.units?.properties?.name ?? "",
+                          propertyAddress: "",
+                          amount: selectedPayment.amount,
+                          paidAmount: selectedPayment.paid_amount,
+                          dueDate: selectedPayment.due_date,
+                          daysLate: selectedPayment.escalation?.daysLate ?? 0,
+                        });
+                        toast.success("PDF de mise en demeure généré");
+                      }}
+                    >
                       <FileText className="h-3 w-3 mr-1" />
                       Mise en demeure (PDF)
                     </Button>
