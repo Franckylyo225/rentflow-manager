@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 
 export default function Tenants() {
   const [search, setSearch] = useState("");
+  const [riskFilter, setRiskFilter] = useState("all");
+  const [sortByRisk, setSortByRisk] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState("");
@@ -43,9 +45,18 @@ export default function Tenants() {
     ? vacantUnits.filter(u => u.property_id === selectedProperty)
     : vacantUnits;
 
-  const filtered = tenants.filter(t =>
-    !search || t.full_name.toLowerCase().includes(search.toLowerCase()) || t.phone.includes(search)
-  );
+  const filtered = useMemo(() => {
+    let result = tenants.filter(t =>
+      !search || t.full_name.toLowerCase().includes(search.toLowerCase()) || t.phone.includes(search)
+    );
+    if (riskFilter !== "all") {
+      result = result.filter(t => riskScores.get(t.id)?.level === riskFilter);
+    }
+    if (sortByRisk) {
+      result = [...result].sort((a, b) => (riskScores.get(b.id)?.score ?? 0) - (riskScores.get(a.id)?.score ?? 0));
+    }
+    return result;
+  }, [tenants, search, riskFilter, sortByRisk, riskScores]);
 
   const selectedUnit = allUnits.find(u => u.id === form.unit_id);
 
@@ -99,9 +110,25 @@ export default function Tenants() {
           </Button>
         </div>
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Rechercher par nom ou téléphone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Rechercher par nom ou téléphone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={riskFilter} onValueChange={setRiskFilter}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Niveau de risque" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les niveaux</SelectItem>
+              <SelectItem value="low">🟢 Faible</SelectItem>
+              <SelectItem value="medium">🟡 Modéré</SelectItem>
+              <SelectItem value="high">🟠 Élevé</SelectItem>
+              <SelectItem value="critical">🔴 Critique</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant={sortByRisk ? "default" : "outline"} size="sm" className="gap-1.5 self-start" onClick={() => setSortByRisk(v => !v)}>
+            <ShieldAlert className="h-4 w-4" />
+            {sortByRisk ? "Trié par risque" : "Trier par risque"}
+          </Button>
         </div>
 
         {loading ? (
