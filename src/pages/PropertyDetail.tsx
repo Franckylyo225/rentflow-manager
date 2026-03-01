@@ -24,7 +24,7 @@ export default function PropertyDetail() {
   const [showEditUnit, setShowEditUnit] = useState(false);
   const [showDeleteUnit, setShowDeleteUnit] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [unitForm, setUnitForm] = useState({ name: "", rent: "", charges: "" });
+  const [unitForm, setUnitForm] = useState({ name: "", rent: "", charges: "", rooms: "1", floor: "" });
   const [editingUnit, setEditingUnit] = useState<any>(null);
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
@@ -69,6 +69,8 @@ export default function PropertyDetail() {
       name: unitForm.name,
       rent: parseInt(unitForm.rent),
       charges: parseInt(unitForm.charges) || 0,
+      rooms: parseInt(unitForm.rooms) || 1,
+      floor: unitForm.floor ? parseInt(unitForm.floor) : null,
       status: "vacant" as const,
     });
     setSaving(false);
@@ -77,7 +79,7 @@ export default function PropertyDetail() {
     } else {
       toast.success("Unité ajoutée");
       setShowAddUnit(false);
-      setUnitForm({ name: "", rent: "", charges: "" });
+      setUnitForm({ name: "", rent: "", charges: "", rooms: "1", floor: "" });
       refetchUnits();
     }
   };
@@ -89,6 +91,8 @@ export default function PropertyDetail() {
       name: unitForm.name,
       rent: parseInt(unitForm.rent),
       charges: parseInt(unitForm.charges) || 0,
+      rooms: parseInt(unitForm.rooms) || 1,
+      floor: unitForm.floor ? parseInt(unitForm.floor) : null,
     }).eq("id", editingUnit.id);
     setSaving(false);
     if (error) {
@@ -118,7 +122,7 @@ export default function PropertyDetail() {
 
   const openEditUnit = (unit: any) => {
     setEditingUnit(unit);
-    setUnitForm({ name: unit.name, rent: unit.rent.toString(), charges: unit.charges.toString() });
+    setUnitForm({ name: unit.name, rent: unit.rent.toString(), charges: unit.charges.toString(), rooms: (unit.rooms || 1).toString(), floor: unit.floor != null ? unit.floor.toString() : "" });
     setShowEditUnit(true);
   };
 
@@ -132,6 +136,16 @@ export default function PropertyDetail() {
       <div className="space-y-2">
         <Label>Numéro unité</Label>
         <Input value={unitForm.name} onChange={e => setUnitForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Apt 301" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Nombre de pièces</Label>
+          <Input type="number" min="1" value={unitForm.rooms} onChange={e => setUnitForm(f => ({ ...f, rooms: e.target.value }))} placeholder="Ex: 3" />
+        </div>
+        <div className="space-y-2">
+          <Label>Étage (optionnel)</Label>
+          <Input type="number" min="0" value={unitForm.floor} onChange={e => setUnitForm(f => ({ ...f, floor: e.target.value }))} placeholder="Ex: 2" />
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Loyer mensuel (FCFA)</Label>
@@ -166,7 +180,7 @@ export default function PropertyDetail() {
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Unités locatives</h2>
-          <Button size="sm" className="gap-2" onClick={() => { setUnitForm({ name: "", rent: "", charges: "" }); setShowAddUnit(true); }}>
+          <Button size="sm" className="gap-2" onClick={() => { setUnitForm({ name: "", rent: "", charges: "", rooms: "1", floor: "" }); setShowAddUnit(true); }}>
             <Plus className="h-3.5 w-3.5" /> Ajouter une unité
           </Button>
         </div>
@@ -183,8 +197,10 @@ export default function PropertyDetail() {
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
                       <th className="text-left py-3 px-4 text-muted-foreground font-medium">N° Unité</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Pièces</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Étage</th>
                       <th className="text-right py-3 px-4 text-muted-foreground font-medium">Loyer</th>
-                      <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Charges</th>
+                      <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Charges</th>
                       <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
                       <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
                     </tr>
@@ -193,6 +209,8 @@ export default function PropertyDetail() {
                     {propertyUnits.map(unit => (
                       <tr key={unit.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-4 font-medium text-card-foreground">{unit.name}</td>
+                        <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{(unit as any).rooms || "—"}</td>
+                        <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{(unit as any).floor != null ? (unit as any).floor : "RDC"}</td>
                         <td className="py-3 px-4 text-right text-card-foreground">{unit.rent.toLocaleString()} FCFA</td>
                         <td className="py-3 px-4 text-right text-muted-foreground hidden sm:table-cell">{unit.charges.toLocaleString()} FCFA</td>
                         <td className="py-3 px-4 text-center">

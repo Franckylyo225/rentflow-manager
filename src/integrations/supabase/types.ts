@@ -396,30 +396,36 @@ export type Database = {
         Row: {
           charges: number
           created_at: string
+          floor: number | null
           id: string
           name: string
           property_id: string
           rent: number
+          rooms: number
           status: Database["public"]["Enums"]["unit_status"]
           updated_at: string
         }
         Insert: {
           charges?: number
           created_at?: string
+          floor?: number | null
           id?: string
           name: string
           property_id: string
           rent?: number
+          rooms?: number
           status?: Database["public"]["Enums"]["unit_status"]
           updated_at?: string
         }
         Update: {
           charges?: number
           created_at?: string
+          floor?: number | null
           id?: string
           name?: string
           property_id?: string
           rent?: number
+          rooms?: number
           status?: Database["public"]["Enums"]["unit_status"]
           updated_at?: string
         }
