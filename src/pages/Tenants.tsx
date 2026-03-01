@@ -1,17 +1,20 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useTenants, useProperties, useUnits } from "@/hooks/useData";
+import { useTenants, useProperties, useUnits, useRentPayments } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Loader2, ShieldAlert } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { computeTenantRiskScore, riskStyles, riskProgressColors, type TenantRiskScore } from "@/lib/riskScoring";
+import { cn } from "@/lib/utils";
 
 export default function Tenants() {
   const [search, setSearch] = useState("");
@@ -27,6 +30,13 @@ export default function Tenants() {
   const { data: tenants, loading, refetch } = useTenants();
   const { data: properties } = useProperties();
   const { data: allUnits } = useUnits();
+  const { data: allPayments } = useRentPayments();
+
+  const riskScores = useMemo(() => {
+    const map = new Map<string, TenantRiskScore>();
+    tenants.forEach(t => map.set(t.id, computeTenantRiskScore(t.id, allPayments)));
+    return map;
+  }, [tenants, allPayments]);
 
   const vacantUnits = allUnits.filter(u => u.status === "vacant");
   const filteredVacantUnits = selectedProperty
@@ -112,6 +122,9 @@ export default function Tenants() {
                       <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Bien</th>
                       <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Unité</th>
                       <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Loyer</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium">
+                        <span className="flex items-center justify-center gap-1"><ShieldAlert className="h-3.5 w-3.5" /> Risque</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -133,6 +146,32 @@ export default function Tenants() {
                         <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{tenant.units?.properties?.name}</td>
                         <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{tenant.units?.name}</td>
                         <td className="py-3 px-4 text-right text-card-foreground hidden lg:table-cell">{tenant.rent.toLocaleString()} FCFA</td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const risk = riskScores.get(tenant.id);
+                            if (!risk) return null;
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="inline-flex flex-col items-center gap-1">
+                                    <Badge variant="outline" className={cn("text-xs font-medium", riskStyles[risk.level])}>
+                                      {risk.score}/100
+                                    </Badge>
+                                    <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
+                                      <div className={cn("h-full rounded-full transition-all", riskProgressColors[risk.level])} style={{ width: `${risk.score}%` }} />
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="text-xs max-w-48">
+                                  <p className="font-semibold mb-1">Risque : {risk.label}</p>
+                                  <p>Retards : {risk.lateCount}/{risk.totalPayments} échéances</p>
+                                  <p>Moy. retard : {risk.avgDaysLate}j</p>
+                                  <p>Impayés : {risk.unpaidAmount.toLocaleString()} FCFA</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
