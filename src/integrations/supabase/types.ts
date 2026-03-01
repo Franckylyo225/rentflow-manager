@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      bail_terminations: {
+        Row: {
+          balance: number
+          closed_at: string | null
+          created_at: string
+          deposit_amount: number
+          deposit_retained: number
+          effective_date: string
+          id: string
+          inspection_notes: string | null
+          inspection_status: string | null
+          notice_duration: number
+          notification_date: string
+          penalties: number
+          pending_charges: number
+          prorata_adjustment: number
+          reason: string
+          remaining_rent_due: number
+          status: string
+          tenant_id: string
+          total_due: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          closed_at?: string | null
+          created_at?: string
+          deposit_amount?: number
+          deposit_retained?: number
+          effective_date: string
+          id?: string
+          inspection_notes?: string | null
+          inspection_status?: string | null
+          notice_duration?: number
+          notification_date: string
+          penalties?: number
+          pending_charges?: number
+          prorata_adjustment?: number
+          reason: string
+          remaining_rent_due?: number
+          status?: string
+          tenant_id: string
+          total_due?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          closed_at?: string | null
+          created_at?: string
+          deposit_amount?: number
+          deposit_retained?: number
+          effective_date?: string
+          id?: string
+          inspection_notes?: string | null
+          inspection_status?: string | null
+          notice_duration?: number
+          notification_date?: string
+          penalties?: number
+          pending_charges?: number
+          prorata_adjustment?: number
+          reason?: string
+          remaining_rent_due?: number
+          status?: string
+          tenant_id?: string
+          total_due?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bail_terminations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cities: {
         Row: {
           country_id: string | null
