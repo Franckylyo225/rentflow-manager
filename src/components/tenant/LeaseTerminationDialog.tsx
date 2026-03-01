@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,14 +57,8 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
       .filter(p => p.status !== "paid")
       .reduce((sum: number, p: any) => sum + (p.amount - p.paid_amount), 0);
 
-    // Prorata calculation if departure mid-month
-    const dayInMonth = effectiveDate.getDate();
-    const daysInMonth = endOfMonth(effectiveDate).getDate();
-    const isEndOfMonth = dayInMonth === daysInMonth;
-    const prorataAdjustment = isEndOfMonth ? 0 : Math.round(tenant.rent * (daysInMonth - dayInMonth) / daysInMonth);
-
     const depositAmount = tenant.deposit;
-    const totalDue = remainingRentDue - prorataAdjustment;
+    const totalDue = remainingRentDue;
     const balance = depositAmount - totalDue;
 
     return {
@@ -71,7 +66,6 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
       pendingCharges: 0,
       penalties: 0,
       depositAmount,
-      prorataAdjustment,
       totalDue: Math.max(0, totalDue),
       depositRetained: Math.max(0, Math.min(depositAmount, totalDue)),
       balance,
@@ -100,7 +94,7 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
         pending_charges: financialSummary.pendingCharges,
         penalties: financialSummary.penalties,
         deposit_amount: financialSummary.depositAmount,
-        prorata_adjustment: financialSummary.prorataAdjustment,
+        prorata_adjustment: 0,
         total_due: financialSummary.totalDue,
         deposit_retained: financialSummary.depositRetained,
         balance: financialSummary.balance,
@@ -214,12 +208,6 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
                   <span className="text-muted-foreground">Loyers restants dus</span>
                   <span className="font-medium text-foreground">{financialSummary.remainingRentDue.toLocaleString()} FCFA</span>
                 </div>
-                {financialSummary.prorataAdjustment > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Régularisation prorata</span>
-                    <span className="font-medium text-green-600">-{financialSummary.prorataAdjustment.toLocaleString()} FCFA</span>
-                  </div>
-                )}
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total dû</span>
