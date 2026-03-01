@@ -68,8 +68,8 @@ export default function Expenses() {
       description: form.description,
       expense_type: form.expense_type,
       frequency: form.frequency,
-      property_id: form.property_id || null,
-      city_id: form.city_id || null,
+      property_id: form.property_id && form.property_id !== "none" ? form.property_id : null,
+      city_id: form.city_id && form.city_id !== "none" ? form.city_id : null,
     });
     if (error) { toast.error("Erreur : " + error.message); setSaving(false); return; }
     toast.success("Dépense ajoutée");
@@ -228,7 +228,7 @@ export default function Expenses() {
                 <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucune</SelectItem>
+                    <SelectItem value="none">Aucune</SelectItem>
                     {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -239,7 +239,7 @@ export default function Expenses() {
               <Select value={form.property_id} onValueChange={v => setForm(f => ({ ...f, property_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>

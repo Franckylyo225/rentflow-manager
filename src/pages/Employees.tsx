@@ -41,8 +41,8 @@ export default function Employees() {
       full_name: form.full_name,
       position: form.position,
       monthly_salary: parseInt(form.monthly_salary),
-      city_id: form.city_id || null,
-      property_id: form.property_id || null,
+      city_id: form.city_id && form.city_id !== "none" ? form.city_id : null,
+      property_id: form.property_id && form.property_id !== "none" ? form.property_id : null,
     }).select().single();
 
     if (empError) { toast.error("Erreur : " + empError.message); setSaving(false); return; }
@@ -59,8 +59,8 @@ export default function Employees() {
         expense_type: "fixe",
         frequency: "mensuelle",
         employee_id: emp.id,
-        city_id: form.city_id || null,
-        property_id: form.property_id || null,
+        city_id: form.city_id && form.city_id !== "none" ? form.city_id : null,
+        property_id: form.property_id && form.property_id !== "none" ? form.property_id : null,
       });
     }
 
@@ -170,7 +170,7 @@ export default function Employees() {
                 <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucune</SelectItem>
+                    <SelectItem value="none">Aucune</SelectItem>
                     {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -180,7 +180,7 @@ export default function Employees() {
                 <Select value={form.property_id} onValueChange={v => setForm(f => ({ ...f, property_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun</SelectItem>
+                    <SelectItem value="none">Aucun</SelectItem>
                     {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
