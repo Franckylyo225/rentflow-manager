@@ -3,6 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 
+// Countries hook
+export function useCountries() {
+  const { user } = useAuth();
+  const [data, setData] = useState<DbCountry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refetch = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data: result } = await supabase.from("countries").select("*").order("name");
+    if (result) setData(result as any);
+    setLoading(false);
+  };
+
+  useEffect(() => { refetch(); }, [user]);
+  return { data, loading, refetch };
+}
+
 // Cities hook
 export function useCities() {
   const { user } = useAuth();
@@ -12,8 +30,8 @@ export function useCities() {
   const refetch = async () => {
     if (!user) return;
     setLoading(true);
-    const { data: result } = await supabase.from("cities").select("*").order("name");
-    if (result) setData(result);
+    const { data: result } = await supabase.from("cities").select("*, countries(name)").order("name");
+    if (result) setData(result as any);
     setLoading(false);
   };
 
@@ -21,10 +39,19 @@ export function useCities() {
   return { data, loading, refetch };
 }
 
+export interface DbCountry {
+  id: string;
+  name: string;
+  code: string;
+  organization_id: string;
+}
+
 export interface DbCity {
   id: string;
   name: string;
   organization_id: string;
+  country_id?: string;
+  countries?: { name: string };
 }
 
 export interface DbProperty {
@@ -34,6 +61,7 @@ export interface DbProperty {
   name: string;
   address: string;
   description: string;
+  type: string;
   created_at: string;
   cities?: { name: string };
 }

@@ -1,10 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useProperties, useCities, useUnits } from "@/hooks/useData";
+import { useProperties, useCities, useUnits, useCountries } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Globe } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -14,17 +14,41 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+const PROPERTY_TYPES = [
+  { value: "immeuble", label: "Immeuble" },
+  { value: "villa", label: "Villa" },
+  { value: "duplex", label: "Duplex" },
+  { value: "studio", label: "Studio" },
+  { value: "appartement", label: "Appartement" },
+  { value: "terrain", label: "Terrain" },
+  { value: "bureau", label: "Bureau / Commerce" },
+  { value: "autre", label: "Autre" },
+];
 
 export default function Properties() {
   const [cityFilter, setCityFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [showAddCity, setShowAddCity] = useState(false);
+  const [showAddCountry, setShowAddCountry] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "" });
+  const [editingProperty, setEditingProperty] = useState<any>(null);
+  const [deletingProperty, setDeletingProperty] = useState<any>(null);
+  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+  const [cityForm, setCityForm] = useState({ name: "", country_id: "" });
+  const [countryForm, setCountryForm] = useState({ name: "", code: "" });
   const navigate = useNavigate();
 
   const { data: properties, loading, refetch } = useProperties();
-  const { data: cities } = useCities();
+  const { data: cities, refetch: refetchCities } = useCities();
+  const { data: countries, refetch: refetchCountries } = useCountries();
   const { data: allUnits } = useUnits();
   const { profile } = useProfile();
 
@@ -34,7 +58,6 @@ export default function Properties() {
     return true;
   });
 
-  // Compute unit stats per property
   const getStats = (propId: string) => {
     const propUnits = allUnits.filter(u => u.property_id === propId);
     const total = propUnits.length;
@@ -51,6 +74,7 @@ export default function Properties() {
       city_id: form.city_id,
       address: form.address,
       description: form.description,
+      type: form.type,
       organization_id: profile.organization_id,
     });
     setSaving(false);
@@ -59,10 +83,152 @@ export default function Properties() {
     } else {
       toast.success("Bien créé avec succès");
       setShowAdd(false);
-      setForm({ city_id: "", name: "", address: "", description: "" });
+      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
       refetch();
     }
   };
+
+  const handleEdit = async () => {
+    if (!form.name || !form.city_id || !editingProperty) return;
+    setSaving(true);
+    const { error } = await supabase.from("properties").update({
+      name: form.name,
+      city_id: form.city_id,
+      address: form.address,
+      description: form.description,
+      type: form.type,
+    }).eq("id", editingProperty.id);
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success("Bien modifié");
+      setShowEdit(false);
+      setEditingProperty(null);
+      refetch();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingProperty) return;
+    setSaving(true);
+    const { error } = await supabase.from("properties").delete().eq("id", deletingProperty.id);
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message + ". Supprimez d'abord les unités et locataires associés.");
+    } else {
+      toast.success("Bien supprimé");
+      setShowDelete(false);
+      setDeletingProperty(null);
+      refetch();
+    }
+  };
+
+  const openEdit = (property: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingProperty(property);
+    setForm({
+      city_id: property.city_id,
+      name: property.name,
+      address: property.address,
+      description: property.description || "",
+      type: property.type || "immeuble",
+    });
+    setShowEdit(true);
+  };
+
+  const openDelete = (property: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingProperty(property);
+    setShowDelete(true);
+  };
+
+  const handleAddCity = async () => {
+    if (!cityForm.name || !profile) return;
+    setSaving(true);
+    const { error } = await supabase.from("cities").insert({
+      name: cityForm.name,
+      organization_id: profile.organization_id,
+      country_id: cityForm.country_id || null,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success("Ville ajoutée");
+      setShowAddCity(false);
+      setCityForm({ name: "", country_id: "" });
+      refetchCities();
+    }
+  };
+
+  const handleAddCountry = async () => {
+    if (!countryForm.name || !profile) return;
+    setSaving(true);
+    const { error } = await supabase.from("countries").insert({
+      name: countryForm.name,
+      code: countryForm.code,
+      organization_id: profile.organization_id,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success("Pays ajouté");
+      setShowAddCountry(false);
+      setCountryForm({ name: "", code: "" });
+      refetchCountries();
+    }
+  };
+
+  const propertyFormDialog = (isEdit: boolean) => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Type de bien</Label>
+        <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
+          <SelectTrigger><SelectValue placeholder="Type de bien" /></SelectTrigger>
+          <SelectContent>
+            {PROPERTY_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Ville</Label>
+          <div className="flex gap-1">
+            <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setShowAddCountry(true)}>
+              <Globe className="h-3 w-3" /> Pays
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setShowAddCity(true)}>
+              <MapPin className="h-3 w-3" /> Ville
+            </Button>
+          </div>
+        </div>
+        <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
+          <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
+          <SelectContent>
+            {cities.map(c => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}{c.countries?.name ? ` (${c.countries.name})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Nom du bien</Label>
+        <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Résidence Les Palmiers" />
+      </div>
+      <div className="space-y-2">
+        <Label>Adresse</Label>
+        <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ex: 12 Bd de France, Cocody" />
+      </div>
+      <div className="space-y-2">
+        <Label>Description</Label>
+        <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
+      </div>
+    </div>
+  );
 
   return (
     <AppLayout>
@@ -72,7 +238,7 @@ export default function Properties() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Biens immobiliers</h1>
             <p className="text-muted-foreground text-sm mt-1">{properties.length} biens · {cities.length} villes</p>
           </div>
-          <Button className="gap-2 self-start" onClick={() => setShowAdd(true)}>
+          <Button className="gap-2 self-start" onClick={() => { setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" }); setShowAdd(true); }}>
             <Plus className="h-4 w-4" /> Ajouter un bien
           </Button>
         </div>
@@ -110,15 +276,17 @@ export default function Properties() {
                     <tr className="border-b border-border bg-muted/50">
                       <th className="text-left py-3 px-4 text-muted-foreground font-medium">Nom du bien</th>
                       <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Ville</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Type</th>
                       <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Unités</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Occupées</th>
                       <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Taux</th>
                       <th className="text-right py-3 px-4 text-muted-foreground font-medium">Revenus</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map(property => {
                       const stats = getStats(property.id);
+                      const typeLabel = PROPERTY_TYPES.find(t => t.value === (property as any).type)?.label || (property as any).type || "—";
                       return (
                         <tr
                           key={property.id}
@@ -130,8 +298,10 @@ export default function Properties() {
                             <p className="text-xs text-muted-foreground">{property.address}</p>
                           </td>
                           <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{property.cities?.name}</td>
+                          <td className="py-3 px-4 text-center hidden md:table-cell">
+                            <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
+                          </td>
                           <td className="py-3 px-4 text-center text-card-foreground hidden md:table-cell">{stats.total}</td>
-                          <td className="py-3 px-4 text-center text-card-foreground hidden md:table-cell">{stats.occupied}</td>
                           <td className="py-3 px-4 text-center hidden lg:table-cell">
                             <span className={`font-medium ${stats.occupancy >= 80 ? "text-success" : stats.occupancy >= 50 ? "text-warning" : "text-destructive"}`}>
                               {stats.occupancy}%
@@ -139,6 +309,16 @@ export default function Properties() {
                           </td>
                           <td className="py-3 px-4 text-right font-medium text-card-foreground">
                             {stats.revenue.toLocaleString()} FCFA
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => openEdit(property, e)}>
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => openDelete(property, e)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -151,39 +331,103 @@ export default function Properties() {
         )}
       </div>
 
+      {/* Add property */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ajouter un bien</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Ville</Label>
-              <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
-                <SelectContent>
-                  {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Nom du bien</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Résidence Les Palmiers" />
-            </div>
-            <div className="space-y-2">
-              <Label>Adresse</Label>
-              <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ex: 12 Bd de France, Cocody" />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
-            </div>
-          </div>
+          <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
+          {propertyFormDialog(false)}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
             <Button onClick={handleSave} disabled={saving || !form.name || !form.city_id}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit property */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
+          {propertyFormDialog(true)}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
+            <Button onClick={handleEdit} disabled={saving || !form.name || !form.city_id}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete property */}
+      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce bien ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le bien « {deletingProperty?.name} » et toutes ses données associées seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add city */}
+      <Dialog open={showAddCity} onOpenChange={setShowAddCity}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Ajouter une ville</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Pays (optionnel)</Label>
+              <Select value={cityForm.country_id} onValueChange={v => setCityForm(f => ({ ...f, country_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un pays" /></SelectTrigger>
+                <SelectContent>
+                  {countries.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nom de la ville</Label>
+              <Input value={cityForm.name} onChange={e => setCityForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Abidjan" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddCity(false)}>Annuler</Button>
+            <Button onClick={handleAddCity} disabled={saving || !cityForm.name}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Ajouter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add country */}
+      <Dialog open={showAddCountry} onOpenChange={setShowAddCountry}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Ajouter un pays</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nom du pays</Label>
+              <Input value={countryForm.name} onChange={e => setCountryForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Sénégal" />
+            </div>
+            <div className="space-y-2">
+              <Label>Code pays (optionnel)</Label>
+              <Input value={countryForm.code} onChange={e => setCountryForm(f => ({ ...f, code: e.target.value }))} placeholder="Ex: SN" maxLength={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddCountry(false)}>Annuler</Button>
+            <Button onClick={handleAddCountry} disabled={saving || !countryForm.name}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Ajouter
             </Button>
           </DialogFooter>
         </DialogContent>

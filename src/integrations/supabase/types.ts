@@ -16,18 +16,21 @@ export type Database = {
     Tables: {
       cities: {
         Row: {
+          country_id: string | null
           created_at: string
           id: string
           name: string
           organization_id: string
         }
         Insert: {
+          country_id?: string | null
           created_at?: string
           id?: string
           name: string
           organization_id: string
         }
         Update: {
+          country_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -35,7 +38,46 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cities_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      countries: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "countries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -208,6 +250,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          type: string
           updated_at: string
         }
         Insert: {
@@ -218,6 +261,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          type?: string
           updated_at?: string
         }
         Update: {
@@ -228,6 +272,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          type?: string
           updated_at?: string
         }
         Relationships: [
