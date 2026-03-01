@@ -1,10 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { properties, units, cities } from "@/data/mockData";
+import { useProperties, useCities, useUnits } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -12,22 +12,56 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function Properties() {
   const [cityFilter, setCityFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "" });
   const navigate = useNavigate();
 
+  const { data: properties, loading, refetch } = useProperties();
+  const { data: cities } = useCities();
+  const { data: allUnits } = useUnits();
+  const { profile } = useProfile();
+
   const filtered = properties.filter(p => {
-    if (cityFilter !== "all" && p.cityId !== cityFilter) return false;
+    if (cityFilter !== "all" && p.city_id !== cityFilter) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const handleSave = () => {
-    toast.success("Bien créé avec succès");
-    setShowAdd(false);
+  // Compute unit stats per property
+  const getStats = (propId: string) => {
+    const propUnits = allUnits.filter(u => u.property_id === propId);
+    const total = propUnits.length;
+    const occupied = propUnits.filter(u => u.status === "occupied").length;
+    const revenue = propUnits.filter(u => u.status === "occupied").reduce((s, u) => s + u.rent, 0);
+    return { total, occupied, occupancy: total > 0 ? Math.round((occupied / total) * 100) : 0, revenue };
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.city_id || !profile) return;
+    setSaving(true);
+    const { error } = await supabase.from("properties").insert({
+      name: form.name,
+      city_id: form.city_id,
+      address: form.address,
+      description: form.description,
+      organization_id: profile.organization_id,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success("Bien créé avec succès");
+      setShowAdd(false);
+      setForm({ city_id: "", name: "", address: "", description: "" });
+      refetch();
+    }
   };
 
   return (
@@ -61,58 +95,60 @@ export default function Properties() {
           </Select>
         </div>
 
-        <Card className="border-border">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left py-3 px-4 text-muted-foreground font-medium">Nom du bien</th>
-                    <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Ville</th>
-                    <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Unités</th>
-                    <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Occupées</th>
-                    <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Taux</th>
-                    <th className="text-right py-3 px-4 text-muted-foreground font-medium">Revenus</th>
-                    <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(property => {
-                    const occupancy = property.unitCount > 0 ? Math.round((property.occupiedUnits / property.unitCount) * 100) : 0;
-                    return (
-                      <tr
-                        key={property.id}
-                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/properties/${property.id}`)}
-                      >
-                        <td className="py-3 px-4">
-                          <p className="font-medium text-card-foreground">{property.name}</p>
-                          <p className="text-xs text-muted-foreground">{property.address}</p>
-                        </td>
-                        <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{property.cityName}</td>
-                        <td className="py-3 px-4 text-center text-card-foreground hidden md:table-cell">{property.unitCount}</td>
-                        <td className="py-3 px-4 text-center text-card-foreground hidden md:table-cell">{property.occupiedUnits}</td>
-                        <td className="py-3 px-4 text-center hidden lg:table-cell">
-                          <span className={`font-medium ${occupancy >= 80 ? "text-success" : occupancy >= 50 ? "text-warning" : "text-destructive"}`}>
-                            {occupancy}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right font-medium text-card-foreground">
-                          {(property.totalRevenue / 1000).toLocaleString()}k FCFA
-                        </td>
-                        <td className="py-3 px-4 text-center hidden sm:table-cell">
-                          <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-xs">
-                            Actif
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        {loading ? (
+          <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            {properties.length === 0 ? "Aucun bien. Commencez par en ajouter un." : "Aucun résultat."}
+          </div>
+        ) : (
+          <Card className="border-border">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Nom du bien</th>
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Ville</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Unités</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Occupées</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Taux</th>
+                      <th className="text-right py-3 px-4 text-muted-foreground font-medium">Revenus</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(property => {
+                      const stats = getStats(property.id);
+                      return (
+                        <tr
+                          key={property.id}
+                          className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                          onClick={() => navigate(`/properties/${property.id}`)}
+                        >
+                          <td className="py-3 px-4">
+                            <p className="font-medium text-card-foreground">{property.name}</p>
+                            <p className="text-xs text-muted-foreground">{property.address}</p>
+                          </td>
+                          <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{property.cities?.name}</td>
+                          <td className="py-3 px-4 text-center text-card-foreground hidden md:table-cell">{stats.total}</td>
+                          <td className="py-3 px-4 text-center text-card-foreground hidden md:table-cell">{stats.occupied}</td>
+                          <td className="py-3 px-4 text-center hidden lg:table-cell">
+                            <span className={`font-medium ${stats.occupancy >= 80 ? "text-success" : stats.occupancy >= 50 ? "text-warning" : "text-destructive"}`}>
+                              {stats.occupancy}%
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-medium text-card-foreground">
+                            {stats.revenue.toLocaleString()} FCFA
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
@@ -123,7 +159,7 @@ export default function Properties() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Ville</Label>
-              <Select>
+              <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
                 <SelectContent>
                   {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -132,20 +168,23 @@ export default function Properties() {
             </div>
             <div className="space-y-2">
               <Label>Nom du bien</Label>
-              <Input placeholder="Ex: Résidence Les Palmiers" />
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Résidence Les Palmiers" />
             </div>
             <div className="space-y-2">
               <Label>Adresse</Label>
-              <Input placeholder="Ex: 12 Bd de France, Cocody" />
+              <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ex: 12 Bd de France, Cocody" />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea placeholder="Description du bien..." rows={3} />
+              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave}>Enregistrer</Button>
+            <Button onClick={handleSave} disabled={saving || !form.name || !form.city_id}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

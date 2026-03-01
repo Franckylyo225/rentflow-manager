@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { navItems } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { Building2, X } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
 
 interface AppSidebarProps {
   open: boolean;
@@ -10,6 +11,13 @@ interface AppSidebarProps {
 
 export function AppSidebar({ open, onClose }: AppSidebarProps) {
   const location = useLocation();
+  const { profile, role } = useProfile();
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
+
+  const roleLabel = role?.role === "admin" ? "Administrateur" : role?.role === "gestionnaire" ? "Gestionnaire" : role?.role === "comptable" ? "Comptable" : "";
 
   return (
     <>
@@ -55,11 +63,11 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
         <div className="px-4 py-3 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
-              AD
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-accent-foreground truncate">Admin</p>
-              <p className="text-xs text-sidebar-foreground truncate">Administrateur</p>
+              <p className="text-sm font-medium text-sidebar-accent-foreground truncate">{profile?.full_name || "Utilisateur"}</p>
+              <p className="text-xs text-sidebar-foreground truncate">{roleLabel}</p>
             </div>
           </div>
         </div>
