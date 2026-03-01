@@ -230,40 +230,53 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Properties summary */}
+              {/* Dernières transactions */}
               <Card className="border-border lg:col-span-2">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Vos biens</CardTitle>
+                  <CardTitle className="text-base font-semibold">Dernières transactions</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/50">
-                          <th className="text-left py-2.5 px-4 text-muted-foreground font-medium">Bien</th>
-                          <th className="text-center py-2.5 px-4 text-muted-foreground font-medium">Unités</th>
-                          <th className="text-right py-2.5 px-4 text-muted-foreground font-medium">Revenus</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {properties.slice(0, 5).map(p => {
-                          const propUnits = units.filter(u => u.property_id === p.id);
-                          const occ = propUnits.filter(u => u.status === "occupied").length;
-                          const rev = propUnits.filter(u => u.status === "occupied").reduce((s, u) => s + u.rent, 0);
-                          return (
+                  {payments.length === 0 ? (
+                    <div className="py-10 text-center text-muted-foreground text-sm">Aucune transaction</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/50">
+                            <th className="text-left py-2.5 px-4 text-muted-foreground font-medium">Locataire</th>
+                            <th className="text-left py-2.5 px-4 text-muted-foreground font-medium">Bien</th>
+                            <th className="text-right py-2.5 px-4 text-muted-foreground font-medium">Montant</th>
+                            <th className="text-center py-2.5 px-4 text-muted-foreground font-medium">Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payments.slice(0, 6).map(p => (
                             <tr key={p.id} className="border-b border-border/50">
                               <td className="py-2.5 px-4">
-                                <p className="font-medium text-card-foreground">{p.name}</p>
-                                <p className="text-xs text-muted-foreground">{p.cities?.name}</p>
+                                <p className="font-medium text-card-foreground">{p.tenants?.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{p.month}</p>
                               </td>
-                              <td className="py-2.5 px-4 text-center text-card-foreground">{occ}/{propUnits.length}</td>
-                              <td className="py-2.5 px-4 text-right text-card-foreground">{rev.toLocaleString()} FCFA</td>
+                              <td className="py-2.5 px-4">
+                                <p className="text-card-foreground">{p.tenants?.units?.properties?.name}</p>
+                                <p className="text-xs text-muted-foreground">{p.tenants?.units?.name}</p>
+                              </td>
+                              <td className="py-2.5 px-4 text-right text-card-foreground">{p.amount.toLocaleString()} FCFA</td>
+                              <td className="py-2.5 px-4 text-center">
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  p.status === "paid" ? "bg-success/10 text-success" :
+                                  p.status === "late" ? "bg-destructive/10 text-destructive" :
+                                  p.status === "partial" ? "bg-warning/10 text-warning" :
+                                  "bg-muted text-muted-foreground"
+                                }`}>
+                                  {p.status === "paid" ? "Payé" : p.status === "late" ? "En retard" : p.status === "partial" ? "Partiel" : "En attente"}
+                                </span>
+                              </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
