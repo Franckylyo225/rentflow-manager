@@ -3,10 +3,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useUnits } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Loader2 } from "lucide-react";
-import { StatCard } from "@/components/dashboard/StatCard";
 import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2 } from "lucide-react";
+import { StatCard } from "@/components/dashboard/StatCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
@@ -17,8 +21,12 @@ export default function PropertyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [showAddUnit, setShowAddUnit] = useState(false);
+  const [showEditUnit, setShowEditUnit] = useState(false);
+  const [showDeleteUnit, setShowDeleteUnit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [unitForm, setUnitForm] = useState({ name: "", rent: "", charges: "" });
+  const [editingUnit, setEditingUnit] = useState<any>(null);
+  const [deletingUnit, setDeletingUnit] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
   const [propLoading, setPropLoading] = useState(true);
 
@@ -74,6 +82,68 @@ export default function PropertyDetail() {
     }
   };
 
+  const handleEditUnit = async () => {
+    if (!unitForm.name || !unitForm.rent || !editingUnit) return;
+    setSaving(true);
+    const { error } = await supabase.from("units").update({
+      name: unitForm.name,
+      rent: parseInt(unitForm.rent),
+      charges: parseInt(unitForm.charges) || 0,
+    }).eq("id", editingUnit.id);
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success("Unité modifiée");
+      setShowEditUnit(false);
+      setEditingUnit(null);
+      refetchUnits();
+    }
+  };
+
+  const handleDeleteUnit = async () => {
+    if (!deletingUnit) return;
+    setSaving(true);
+    const { error } = await supabase.from("units").delete().eq("id", deletingUnit.id);
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message + ". Supprimez d'abord les locataires associés.");
+    } else {
+      toast.success("Unité supprimée");
+      setShowDeleteUnit(false);
+      setDeletingUnit(null);
+      refetchUnits();
+    }
+  };
+
+  const openEditUnit = (unit: any) => {
+    setEditingUnit(unit);
+    setUnitForm({ name: unit.name, rent: unit.rent.toString(), charges: unit.charges.toString() });
+    setShowEditUnit(true);
+  };
+
+  const openDeleteUnit = (unit: any) => {
+    setDeletingUnit(unit);
+    setShowDeleteUnit(true);
+  };
+
+  const unitFormFields = (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Numéro unité</Label>
+        <Input value={unitForm.name} onChange={e => setUnitForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Apt 301" />
+      </div>
+      <div className="space-y-2">
+        <Label>Loyer mensuel (FCFA)</Label>
+        <Input type="number" value={unitForm.rent} onChange={e => setUnitForm(f => ({ ...f, rent: e.target.value }))} placeholder="Ex: 350000" />
+      </div>
+      <div className="space-y-2">
+        <Label>Charges (FCFA)</Label>
+        <Input type="number" value={unitForm.charges} onChange={e => setUnitForm(f => ({ ...f, charges: e.target.value }))} placeholder="Ex: 25000" />
+      </div>
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -96,7 +166,7 @@ export default function PropertyDetail() {
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Unités locatives</h2>
-          <Button size="sm" className="gap-2" onClick={() => setShowAddUnit(true)}>
+          <Button size="sm" className="gap-2" onClick={() => { setUnitForm({ name: "", rent: "", charges: "" }); setShowAddUnit(true); }}>
             <Plus className="h-3.5 w-3.5" /> Ajouter une unité
           </Button>
         </div>
@@ -116,6 +186,7 @@ export default function PropertyDetail() {
                       <th className="text-right py-3 px-4 text-muted-foreground font-medium">Loyer</th>
                       <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Charges</th>
                       <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
+                      <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -132,6 +203,16 @@ export default function PropertyDetail() {
                             {unit.status === "occupied" ? "Occupé" : "Vacant"}
                           </Badge>
                         </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditUnit(unit)}>
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => openDeleteUnit(unit)} disabled={unit.status === "occupied"}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -142,26 +223,12 @@ export default function PropertyDetail() {
         )}
       </div>
 
+      {/* Add unit */}
       <Dialog open={showAddUnit} onOpenChange={setShowAddUnit}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Ajouter une unité</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Numéro unité</Label>
-              <Input value={unitForm.name} onChange={e => setUnitForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Apt 301" />
-            </div>
-            <div className="space-y-2">
-              <Label>Loyer mensuel (FCFA)</Label>
-              <Input type="number" value={unitForm.rent} onChange={e => setUnitForm(f => ({ ...f, rent: e.target.value }))} placeholder="Ex: 350000" />
-            </div>
-            <div className="space-y-2">
-              <Label>Charges (FCFA)</Label>
-              <Input type="number" value={unitForm.charges} onChange={e => setUnitForm(f => ({ ...f, charges: e.target.value }))} placeholder="Ex: 25000" />
-            </div>
-            <p className="text-xs text-muted-foreground">Statut par défaut : Vacant</p>
-          </div>
+          <DialogHeader><DialogTitle>Ajouter une unité</DialogTitle></DialogHeader>
+          {unitFormFields}
+          <p className="text-xs text-muted-foreground">Statut par défaut : Vacant</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddUnit(false)}>Annuler</Button>
             <Button onClick={handleAddUnit} disabled={saving || !unitForm.name || !unitForm.rent}>
@@ -171,6 +238,40 @@ export default function PropertyDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit unit */}
+      <Dialog open={showEditUnit} onOpenChange={setShowEditUnit}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Modifier l'unité</DialogTitle></DialogHeader>
+          {unitFormFields}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditUnit(false)}>Annuler</Button>
+            <Button onClick={handleEditUnit} disabled={saving || !unitForm.name || !unitForm.rent}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete unit */}
+      <AlertDialog open={showDeleteUnit} onOpenChange={setShowDeleteUnit}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette unité ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              L'unité « {deletingUnit?.name} » sera définitivement supprimée. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUnit} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
