@@ -1,38 +1,57 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useRentPayments, useCities } from "@/hooks/useData";
+import { useEscalationTasks } from "@/hooks/useEscalationTasks";
 import { Card, CardContent } from "@/components/ui/card";
-import { PaymentStatusBadge } from "@/components/ui/status-badge";
+import { PaymentStatusBadge, EscalationBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getEscalationInfo, defaultTasksByLevel, type EscalationInfo } from "@/lib/escalation";
 
 const paymentMethods = ["Espèces", "Virement bancaire", "Chèque", "Mobile Money", "Carte bancaire"];
 
 export default function Rents() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
+  const [escalationFilter, setEscalationFilter] = useState("all");
   const [showPayment, setShowPayment] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [payForm, setPayForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0], method: "", comment: "" });
 
   const { data: payments, loading, refetch } = useRentPayments();
   const { data: cities } = useCities();
+  const { data: allTasks, refetch: refetchTasks } = useEscalationTasks();
 
-  const filtered = payments.filter(r => {
+  // Compute escalation info for each payment
+  const paymentsWithEscalation = useMemo(() =>
+    payments.map(p => ({
+      ...p,
+      escalation: getEscalationInfo(p.due_date, p.status, p.paid_amount, p.amount),
+    })),
+    [payments]
+  );
+
+  const filtered = paymentsWithEscalation.filter(r => {
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
     if (cityFilter !== "all") {
       const cityName = cities.find(c => c.id === cityFilter)?.name;
-      const paymentCity = r.tenants?.units?.properties?.cities?.name;
-      if (paymentCity !== cityName) return false;
+      if (r.tenants?.units?.properties?.cities?.name !== cityName) return false;
+    }
+    if (escalationFilter !== "all") {
+      if (escalationFilter === "light" && r.escalation.level !== "light") return false;
+      if (escalationFilter === "moderate" && r.escalation.level !== "moderate") return false;
+      if (escalationFilter === "critical" && r.escalation.level !== "critical") return false;
     }
     return true;
   });
@@ -40,12 +59,18 @@ export default function Rents() {
   const totalDue = payments.reduce((s, r) => s + r.amount, 0);
   const totalPaid = payments.reduce((s, r) => s + r.paid_amount, 0);
   const totalUnpaid = totalDue - totalPaid;
-  const lateCount = payments.filter(r => r.status === "late").length;
+  const lateCount = paymentsWithEscalation.filter(r => r.escalation.level !== "none").length;
+  const criticalCount = paymentsWithEscalation.filter(r => r.escalation.level === "critical").length;
 
   const openPayment = (payment: any) => {
     setSelectedPayment(payment);
     setPayForm({ amount: (payment.amount - payment.paid_amount).toString(), date: new Date().toISOString().split("T")[0], method: "", comment: "" });
     setShowPayment(true);
+  };
+
+  const openTasks = (payment: any) => {
+    setSelectedPayment(payment);
+    setShowTasks(true);
   };
 
   const handleRecordPayment = async () => {
@@ -55,7 +80,6 @@ export default function Rents() {
     const newPaidTotal = selectedPayment.paid_amount + paidAmount;
     const remaining = selectedPayment.amount - newPaidTotal;
 
-    // Insert payment record
     await supabase.from("payment_records").insert({
       rent_payment_id: selectedPayment.id,
       amount: paidAmount,
@@ -64,7 +88,6 @@ export default function Rents() {
       comment: payForm.comment,
     });
 
-    // Update rent_payment status
     let newStatus: "paid" | "partial" | "late" = "partial";
     if (remaining <= 0) newStatus = "paid";
     else if (new Date(selectedPayment.due_date) < new Date()) newStatus = "late";
@@ -81,13 +104,35 @@ export default function Rents() {
     refetch();
   };
 
+  const handleCreateTask = async (payment: any, title: string, description: string, level: number) => {
+    await supabase.from("escalation_tasks").insert({
+      rent_payment_id: payment.id,
+      title,
+      description,
+      escalation_level: level,
+    });
+    toast.success("Tâche créée");
+    refetchTasks();
+  };
+
+  const handleCompleteTask = async (taskId: string) => {
+    await supabase.from("escalation_tasks").update({
+      status: "done",
+      completed_at: new Date().toISOString(),
+    }).eq("id", taskId);
+    toast.success("Tâche terminée");
+    refetchTasks();
+  };
+
+  const pendingTasks = allTasks.filter(t => t.status === "pending" || t.status === "in_progress");
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Gestion des loyers</h1>
-            <p className="text-muted-foreground text-sm mt-1">Suivi des paiements et échéances</p>
+            <p className="text-muted-foreground text-sm mt-1">Suivi des paiements, escalade et impayés</p>
           </div>
         </div>
 
@@ -95,76 +140,151 @@ export default function Rents() {
           <StatCard title="Total dû" value={`${(totalDue / 1000000).toFixed(1)}M FCFA`} icon={CreditCard} />
           <StatCard title="Total encaissé" value={`${(totalPaid / 1000000).toFixed(1)}M FCFA`} icon={CheckCircle2} variant="success" />
           <StatCard title="Impayés" value={`${(totalUnpaid / 1000000).toFixed(1)}M FCFA`} icon={AlertTriangle} variant="destructive" />
-          <StatCard title="En retard" value={lateCount.toString()} icon={Clock} variant="warning" subtitle="locataires" />
+          <StatCard title="Critiques" value={criticalCount.toString()} icon={Clock} variant="warning" subtitle="impayés 30j+" />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-          <Select value={cityFilter} onValueChange={setCityFilter}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Toutes les villes" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les villes</SelectItem>
-              {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Tous les statuts" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="paid">Payé</SelectItem>
-              <SelectItem value="pending">En attente</SelectItem>
-              <SelectItem value="late">En retard</SelectItem>
-              <SelectItem value="partial">Partiel</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Tabs defaultValue="payments" className="w-full">
+          <TabsList>
+            <TabsTrigger value="payments">Loyers</TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-1.5">
+              <ListTodo className="h-4 w-4" />
+              Tâches
+              {pendingTasks.length > 0 && (
+                <span className="ml-1 rounded-full bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 font-bold">{pendingTasks.length}</span>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            {payments.length === 0 ? "Aucun loyer à afficher. Ajoutez des locataires pour générer des échéances." : "Aucun résultat."}
-          </div>
-        ) : (
-          <Card className="border-border">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Locataire</th>
-                      <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Bien</th>
-                      <th className="text-right py-3 px-4 text-muted-foreground font-medium">Montant</th>
-                      <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Échéance</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(payment => (
-                      <tr key={payment.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                        <td className="py-3 px-4">
-                          <p className="font-medium text-card-foreground">{payment.tenants?.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{payment.tenants?.units?.name}</p>
-                        </td>
-                        <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{payment.tenants?.units?.properties?.name}</td>
-                        <td className="py-3 px-4 text-right font-medium text-card-foreground">{payment.amount.toLocaleString()} FCFA</td>
-                        <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{new Date(payment.due_date).toLocaleDateString("fr-FR")}</td>
-                        <td className="py-3 px-4 text-center"><PaymentStatusBadge status={payment.status} /></td>
-                        <td className="py-3 px-4 text-center">
-                          {payment.status !== "paid" && (
-                            <Button variant="outline" size="sm" onClick={() => openPayment(payment)}>Payer</Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <TabsContent value="payments" className="space-y-4 mt-4">
+            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger className="w-44"><SelectValue placeholder="Toutes les villes" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les villes</SelectItem>
+                  {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-44"><SelectValue placeholder="Tous les statuts" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="paid">Payé</SelectItem>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="late">En retard</SelectItem>
+                  <SelectItem value="partial">Partiel</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={escalationFilter} onValueChange={setEscalationFilter}>
+                <SelectTrigger className="w-52"><SelectValue placeholder="Niveau d'escalade" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les niveaux</SelectItem>
+                  <SelectItem value="light">🟡 Retard léger (1-7j)</SelectItem>
+                  <SelectItem value="moderate">🟠 Retard important (8-30j)</SelectItem>
+                  <SelectItem value="critical">🔴 Impayé critique (30j+)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">
+                {payments.length === 0 ? "Aucun loyer à afficher. Ajoutez des locataires pour générer des échéances." : "Aucun résultat."}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <Card className="border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Locataire</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Bien</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Montant</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Échéance</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Escalade</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map(payment => (
+                          <tr key={payment.id} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${payment.escalation.level === "critical" ? "bg-destructive/5" : ""}`}>
+                            <td className="py-3 px-4">
+                              <p className="font-medium text-card-foreground">{payment.tenants?.full_name}</p>
+                              <p className="text-xs text-muted-foreground">{payment.tenants?.units?.name}</p>
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{payment.tenants?.units?.properties?.name}</td>
+                            <td className="py-3 px-4 text-right font-medium text-card-foreground">{payment.amount.toLocaleString()} FCFA</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{new Date(payment.due_date).toLocaleDateString("fr-FR")}</td>
+                            <td className="py-3 px-4 text-center"><PaymentStatusBadge status={payment.status} /></td>
+                            <td className="py-3 px-4 text-center">
+                              <EscalationBadge level={payment.escalation.level} label={payment.escalation.label} />
+                              {payment.escalation.daysLate > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1">{payment.escalation.daysLate}j</p>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                {payment.status !== "paid" && (
+                                  <Button variant="outline" size="sm" onClick={() => openPayment(payment)}>Payer</Button>
+                                )}
+                                {payment.escalation.level !== "none" && (
+                                  <Button variant="ghost" size="sm" onClick={() => openTasks(payment)} title="Gérer les tâches">
+                                    <ListTodo className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-4 mt-4">
+            {pendingTasks.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">Aucune tâche en cours.</div>
+            ) : (
+              <div className="space-y-3">
+                {pendingTasks.map(task => {
+                  const relatedPayment = payments.find(p => p.id === task.rent_payment_id);
+                  return (
+                    <Card key={task.id} className="border-border">
+                      <CardContent className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-card-foreground">{task.title}</p>
+                            <EscalationBadge
+                              level={task.escalation_level === 1 ? "light" : task.escalation_level === 2 ? "moderate" : "critical"}
+                              label={task.escalation_level === 1 ? "Niv.1" : task.escalation_level === 2 ? "Niv.2" : "Niv.3"}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
+                          {relatedPayment && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {relatedPayment.tenants?.full_name} — {relatedPayment.amount.toLocaleString()} FCFA
+                            </p>
+                          )}
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => handleCompleteTask(task.id)} className="shrink-0">
+                          <Check className="h-4 w-4 mr-1" /> Fait
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
+      {/* Payment dialog */}
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -206,6 +326,71 @@ export default function Rents() {
               Enregistrer
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tasks dialog for a specific payment */}
+      <Dialog open={showTasks} onOpenChange={setShowTasks}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Tâches d'escalade</DialogTitle>
+          </DialogHeader>
+          {selectedPayment && (
+            <>
+              <div className="p-3 rounded-lg bg-muted text-sm mb-2">
+                <p className="font-medium text-card-foreground">{selectedPayment.tenants?.full_name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <EscalationBadge level={selectedPayment.escalation?.level ?? "none"} label={selectedPayment.escalation?.label ?? ""} />
+                  <span className="text-muted-foreground">{selectedPayment.escalation?.daysLate ?? 0} jours de retard</span>
+                </div>
+                <p className="text-muted-foreground mt-1">
+                  Reste dû : {(selectedPayment.amount - selectedPayment.paid_amount).toLocaleString()} FCFA
+                </p>
+              </div>
+
+              {/* Existing tasks for this payment */}
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {allTasks.filter(t => t.rent_payment_id === selectedPayment.id).map(task => (
+                  <div key={task.id} className={`flex items-center justify-between p-2 rounded-md border border-border text-sm ${task.status === "done" ? "opacity-50" : ""}`}>
+                    <div>
+                      <p className="font-medium text-card-foreground">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">{task.status === "done" ? "✓ Terminée" : "En attente"}</p>
+                    </div>
+                    {task.status !== "done" && (
+                      <Button variant="ghost" size="sm" onClick={() => handleCompleteTask(task.id)}>
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Suggested actions */}
+              <div className="border-t border-border pt-3 mt-2">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Actions suggérées</p>
+                <div className="flex flex-wrap gap-2">
+                  {(defaultTasksByLevel[selectedPayment.escalation?.numericLevel ?? 1] ?? []).map((tpl, i) => (
+                    <Button
+                      key={i}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => handleCreateTask(selectedPayment, tpl.title, tpl.description, selectedPayment.escalation?.numericLevel ?? 1)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {tpl.title}
+                    </Button>
+                  ))}
+                  {(selectedPayment.escalation?.numericLevel ?? 0) >= 3 && (
+                    <Button variant="outline" size="sm" className="text-xs border-destructive/30 text-destructive">
+                      <FileText className="h-3 w-3 mr-1" />
+                      Mise en demeure (PDF)
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
