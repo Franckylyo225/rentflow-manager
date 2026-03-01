@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2 } from "lucide-react";
+import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown } from "lucide-react";
 import { useProperties, useUnits, useTenants, useRentPayments } from "@/hooks/useData";
+import { useExpenses } from "@/hooks/useExpenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const { data: units } = useUnits();
   const { data: tenants } = useTenants();
   const { data: payments } = useRentPayments();
+  const { data: expenses } = useExpenses();
 
   const totalUnits = units.length;
   const occupiedUnits = units.filter(u => u.status === "occupied").length;
@@ -40,6 +42,12 @@ export default function Dashboard() {
   const unpaidTotal = payments
     .filter(r => r.status !== "paid")
     .reduce((sum, r) => sum + (r.amount - r.paid_amount), 0);
+
+  // Financial KPIs
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthCA = useMemo(() => payments.filter(p => p.month === currentMonth).reduce((s, p) => s + p.paid_amount, 0), [payments, currentMonth]);
+  const monthExpenses = useMemo(() => expenses.filter(e => e.expense_date.slice(0, 7) === currentMonth).reduce((s, e) => s + e.amount, 0), [expenses, currentMonth]);
+  const monthBenefice = monthCA - monthExpenses;
 
   // Monthly revenue chart data
   const monthlyData = useMemo(() => {
@@ -116,11 +124,14 @@ export default function Dashboard() {
           <p className="text-muted-foreground text-sm mt-1">Vue d'ensemble de votre portefeuille immobilier</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <StatCard title="Revenus mensuels" value={`${(totalRevenue / 1000000).toFixed(1)}M FCFA`} icon={TrendingUp} variant="success" />
           <StatCard title="Loyers impayés" value={`${(unpaidTotal / 1000000).toFixed(1)}M FCFA`} icon={AlertTriangle} variant="destructive" />
           <StatCard title="Taux d'occupation" value={`${occupancyRate}%`} subtitle={`${occupiedUnits}/${totalUnits} unités`} icon={Users} />
           <StatCard title="Nombre de biens" value={properties.length.toString()} icon={Home} subtitle={`${totalUnits} unités · ${tenants.length} locataires`} />
+          <StatCard title="CA du mois" value={`${(monthCA / 1000000).toFixed(1)}M`} icon={TrendingUp} variant="success" />
+          <StatCard title="Dépenses du mois" value={`${(monthExpenses / 1000000).toFixed(1)}M`} icon={TrendingDown} variant="destructive" />
+          <StatCard title="Bénéfice net" value={`${(monthBenefice / 1000000).toFixed(1)}M`} icon={Wallet} variant={monthBenefice >= 0 ? "success" : "destructive"} />
         </div>
 
         {properties.length === 0 ? (

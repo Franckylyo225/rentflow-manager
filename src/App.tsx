@@ -12,6 +12,10 @@ import PropertyDetail from "./pages/PropertyDetail";
 import Tenants from "./pages/Tenants";
 import TenantDetail from "./pages/TenantDetail";
 import Rents from "./pages/Rents";
+import Expenses from "./pages/Expenses";
+import Employees from "./pages/Employees";
+import ExpenseCategories from "./pages/ExpenseCategories";
+import FinancialReports from "./pages/FinancialReports";
 import Notifications from "./pages/Notifications";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -33,6 +37,10 @@ const App = () => (
             <Route path="/tenants" element={<ProtectedRoute><Tenants /></ProtectedRoute>} />
             <Route path="/tenants/:id" element={<ProtectedRoute><TenantDetail /></ProtectedRoute>} />
             <Route path="/rents" element={<ProtectedRoute><Rents /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+            <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
+            <Route path="/expense-categories" element={<ProtectedRoute><ExpenseCategories /></ProtectedRoute>} />
+            <Route path="/financial-reports" element={<ProtectedRoute><FinancialReports /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
