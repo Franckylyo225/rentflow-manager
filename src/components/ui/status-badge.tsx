@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { type EscalationLevel, escalationStyles } from "@/lib/escalation";
 
 type PaymentStatus = "paid" | "late" | "partial" | "pending";
 
@@ -23,4 +24,10 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
 export function OccupancyBadge({ status }: { status: "occupied" | "vacant" }) {
   const config = occupancyConfig[status];
   return <Badge variant="outline" className={cn("font-medium", config.className)}>{config.label}</Badge>;
+}
+
+export function EscalationBadge({ level, label }: { level: EscalationLevel; label: string }) {
+  if (level === "none") return null;
+  const style = escalationStyles[level];
+  return <Badge variant="outline" className={cn("font-medium text-xs", style.className)}>{label}</Badge>;
 }
