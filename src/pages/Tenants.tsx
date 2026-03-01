@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 export default function Tenants() {
   const [search, setSearch] = useState("");
   const [riskFilter, setRiskFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
+  const [propertyFilter, setPropertyFilter] = useState("all");
   const [sortByRisk, setSortByRisk] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,10 +47,36 @@ export default function Tenants() {
     ? vacantUnits.filter(u => u.property_id === selectedProperty)
     : vacantUnits;
 
+  // Extract unique cities from properties
+  const cities = useMemo(() => {
+    const cityMap = new Map<string, string>();
+    properties.forEach(p => {
+      const cityName = (p as any).cities?.name;
+      const cityId = p.city_id;
+      if (cityId && cityName) cityMap.set(cityId, cityName);
+    });
+    return Array.from(cityMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [properties]);
+
+  // Properties filtered by selected city
+  const filteredProperties = useMemo(() => {
+    if (cityFilter === "all") return properties;
+    return properties.filter(p => p.city_id === cityFilter);
+  }, [properties, cityFilter]);
+
   const filtered = useMemo(() => {
     let result = tenants.filter(t =>
       !search || t.full_name.toLowerCase().includes(search.toLowerCase()) || t.phone.includes(search)
     );
+    if (cityFilter !== "all") {
+      const propertyIdsInCity = properties.filter(p => p.city_id === cityFilter).map(p => p.id);
+      const unitIdsInCity = allUnits.filter(u => propertyIdsInCity.includes(u.property_id)).map(u => u.id);
+      result = result.filter(t => unitIdsInCity.includes(t.unit_id));
+    }
+    if (propertyFilter !== "all") {
+      const unitIdsInProperty = allUnits.filter(u => u.property_id === propertyFilter).map(u => u.id);
+      result = result.filter(t => unitIdsInProperty.includes(t.unit_id));
+    }
     if (riskFilter !== "all") {
       result = result.filter(t => riskScores.get(t.id)?.level === riskFilter);
     }
@@ -56,7 +84,7 @@ export default function Tenants() {
       result = [...result].sort((a, b) => (riskScores.get(b.id)?.score ?? 0) - (riskScores.get(a.id)?.score ?? 0));
     }
     return result;
-  }, [tenants, search, riskFilter, sortByRisk, riskScores]);
+  }, [tenants, search, cityFilter, propertyFilter, riskFilter, sortByRisk, riskScores, properties, allUnits]);
 
   const selectedUnit = allUnits.find(u => u.id === form.unit_id);
 
@@ -115,8 +143,22 @@ export default function Tenants() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Rechercher par nom ou téléphone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
+          <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); setPropertyFilter("all"); }}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Ville" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les villes</SelectItem>
+              {cities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Bien" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les biens</SelectItem>
+              {filteredProperties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Select value={riskFilter} onValueChange={setRiskFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Niveau de risque" /></SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Risque" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les niveaux</SelectItem>
               <SelectItem value="low">🟢 Faible</SelectItem>
