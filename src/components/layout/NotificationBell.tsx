@@ -99,8 +99,8 @@ export function NotificationBell() {
         </ScrollArea>
         {notifications.length > 0 && (
           <div className="border-t border-border px-4 py-2">
-            <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setOpen(false); navigate("/rents"); }}>
-              Voir tous les loyers
+          <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setOpen(false); navigate("/notifications"); }}>
+              Voir tout l'historique
             </Button>
           </div>
         )}
