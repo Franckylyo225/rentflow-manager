@@ -1,4 +1,4 @@
-import { ChevronDown, Menu, LogOut, Settings, LayoutGrid, Building2, UserPlus, Banknote, Receipt } from "lucide-react";
+import { ChevronDown, Menu, LogOut, Settings, LayoutGrid, Building2, UserPlus, Banknote, Receipt, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { GlobalSearch } from "./GlobalSearch";
 import { NotificationBell } from "./NotificationBell";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { useTheme } from "next-themes";
 
 interface AppHeaderProps {
   onMenuClick: () => void;
@@ -16,6 +17,7 @@ interface AppHeaderProps {
 export function AppHeader({ onMenuClick, orgName, userName }: AppHeaderProps) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
 
   const initials = userName
     ? userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
@@ -60,6 +62,23 @@ export function AppHeader({ onMenuClick, orgName, userName }: AppHeaderProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Dark mode toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-xl"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Changer le thème</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Changer le thème</TooltipContent>
+        </Tooltip>
 
         <NotificationBell />
 
