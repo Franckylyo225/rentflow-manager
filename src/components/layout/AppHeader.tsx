@@ -1,10 +1,11 @@
-import { ChevronDown, Menu, LogOut, Settings } from "lucide-react";
+import { ChevronDown, Menu, LogOut, Settings, Plus, Building2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { GlobalSearch } from "./GlobalSearch";
 import { NotificationBell } from "./NotificationBell";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface AppHeaderProps {
   onMenuClick: () => void;
@@ -31,6 +32,27 @@ export function AppHeader({ onMenuClick, orgName, userName }: AppHeaderProps) {
 
       <div className="flex items-center gap-2 sm:gap-3">
         <GlobalSearch />
+
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Actions rapides</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate("/properties?action=new")}>
+              <Building2 className="h-4 w-4 mr-2" /> Nouveau bien
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/tenants?action=new")}>
+              <UserPlus className="h-4 w-4 mr-2" /> Nouveau locataire
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <NotificationBell />
 
