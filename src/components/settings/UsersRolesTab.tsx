@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Users, Shield, Loader2, Crown, UserCog, Calculator, Plus, Trash2, Pencil, Save,
-  Eye, Edit3, Gavel, Settings2, MapPin, LayoutDashboard, Home, UserCheck, Banknote, Receipt, BarChart3
+  Eye, Edit3, Gavel, Settings2, MapPin, LayoutDashboard, Home, UserCheck, Banknote, Receipt, BarChart3,
+  UserPlus, KeyRound
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -148,6 +149,7 @@ function MembersSection({ isAdmin, currentUserId, orgId }: { isAdmin: boolean; c
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editMember, setEditMember] = useState<OrgMember | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
 
   const fetch = useCallback(async () => {
     if (!orgId) return;
@@ -219,12 +221,19 @@ function MembersSection({ isAdmin, currentUserId, orgId }: { isAdmin: boolean; c
     <div className="space-y-4">
       <Card className="border-border">
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10"><Users className="h-4 w-4 text-primary" /></div>
-            <div>
-              <CardTitle className="text-base">Membres de l'équipe</CardTitle>
-              <CardDescription>{members.length} utilisateur{members.length > 1 ? "s" : ""}</CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10"><Users className="h-4 w-4 text-primary" /></div>
+              <div>
+                <CardTitle className="text-base">Membres de l'équipe</CardTitle>
+                <CardDescription>{members.length} utilisateur{members.length > 1 ? "s" : ""}</CardDescription>
+              </div>
             </div>
+            {isAdmin && (
+              <Button size="sm" className="gap-2" onClick={() => setShowAddUser(true)}>
+                <UserPlus className="h-4 w-4" /> Ajouter
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -316,6 +325,16 @@ function MembersSection({ isAdmin, currentUserId, orgId }: { isAdmin: boolean; c
           onClose={() => setEditMember(null)}
         />
       )}
+
+      {showAddUser && orgId && (
+        <AddUserDialog
+          orgId={orgId}
+          roles={roles}
+          cities={cities}
+          onClose={() => setShowAddUser(false)}
+          onCreated={() => { setShowAddUser(false); fetch(); }}
+        />
+      )}
     </div>
   );
 }
@@ -361,6 +380,155 @@ function CityRestrictionDialog({ member, cities, onSave, onClose }: {
           <Button variant="outline" onClick={onClose}>Annuler</Button>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Enregistrer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Add User Dialog ─── */
+function AddUserDialog({ orgId, roles, cities, onClose, onCreated }: {
+  orgId: string;
+  roles: CustomRole[];
+  cities: CityOption[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedRoleId, setSelectedRoleId] = useState(roles.find(r => r.base_role === "gestionnaire")?.id || "");
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+    let pwd = "";
+    for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    setPassword(pwd);
+    setShowPassword(true);
+  };
+
+  useEffect(() => { generatePassword(); }, []);
+
+  const selectedRole = roles.find(r => r.id === selectedRoleId);
+
+  const handleSubmit = async () => {
+    if (!email.trim() || !fullName.trim() || !password.trim()) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: {
+          email: email.trim(),
+          password,
+          full_name: fullName.trim(),
+          role: selectedRole?.base_role || "gestionnaire",
+          custom_role_id: selectedRoleId || null,
+          city_ids: selectedCities,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Utilisateur ${fullName.trim()} créé avec succès`);
+      onCreated();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la création");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleCity = (id: string) => {
+    setSelectedCities(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            Ajouter un utilisateur
+          </DialogTitle>
+          <DialogDescription>
+            Créez un compte avec un mot de passe temporaire. L'utilisateur pourra le modifier après connexion.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Nom complet *</Label>
+            <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Ex: Jean Kouadio" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Adresse email *</Label>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ex: jean@entreprise.com" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Mot de passe temporaire *</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+              </div>
+              <Button type="button" variant="outline" size="icon" onClick={() => setShowPassword(!showPassword)}>
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={generatePassword} className="gap-1.5">
+                <KeyRound className="h-3.5 w-3.5" /> Générer
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Communiquez ce mot de passe à l'utilisateur de manière sécurisée.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Rôle</Label>
+            <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner un rôle" /></SelectTrigger>
+              <SelectContent>
+                {roles.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="flex items-center gap-2">
+                      {r.name}
+                      <Badge variant="secondary" className="text-[10px] py-0">{BASE_ROLE_CONFIG[r.base_role]?.label}</Badge>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {cities.length > 0 && (
+            <div className="space-y-2">
+              <Label>Restriction par ville (optionnel)</Label>
+              <p className="text-xs text-muted-foreground">Aucune sélection = accès à toutes les villes.</p>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                {cities.map(city => (
+                  <label key={city.id} className="flex items-center gap-2.5 p-2 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
+                    <Checkbox checked={selectedCities.includes(city.id)} onCheckedChange={() => toggleCity(city.id)} />
+                    <span className="text-sm text-card-foreground">{city.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button onClick={handleSubmit} disabled={saving || !email.trim() || !fullName.trim() || !password.trim()} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+            Créer l'utilisateur
           </Button>
         </DialogFooter>
       </DialogContent>
