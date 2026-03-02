@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown } from "lucide-react";
@@ -124,14 +125,49 @@ export default function Dashboard() {
           <p className="text-muted-foreground text-sm mt-1">Vue d'ensemble de votre portefeuille immobilier</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        {/* Financial summary banner */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="border-border bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-success/15">
+                <TrendingUp className="h-6 w-6 text-success" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">CA du mois</p>
+                <p className="text-2xl font-bold text-card-foreground">{(monthCA / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border bg-gradient-to-br from-destructive/5 to-destructive/10">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-destructive/15">
+                <TrendingDown className="h-6 w-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dépenses du mois</p>
+                <p className="text-2xl font-bold text-card-foreground">{(monthExpenses / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={cn("border-border bg-gradient-to-br", monthBenefice >= 0 ? "from-success/5 to-success/10" : "from-destructive/5 to-destructive/10")}>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className={cn("p-3 rounded-xl", monthBenefice >= 0 ? "bg-success/15" : "bg-destructive/15")}>
+                <Wallet className={cn("h-6 w-6", monthBenefice >= 0 ? "text-success" : "text-destructive")} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bénéfice net</p>
+                <p className={cn("text-2xl font-bold", monthBenefice >= 0 ? "text-success" : "text-destructive")}>{(monthBenefice / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Rent & portfolio stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Revenus mensuels" value={`${(totalRevenue / 1000000).toFixed(1)}M FCFA`} icon={TrendingUp} variant="success" />
           <StatCard title="Loyers impayés" value={`${(unpaidTotal / 1000000).toFixed(1)}M FCFA`} icon={AlertTriangle} variant="destructive" />
           <StatCard title="Taux d'occupation" value={`${occupancyRate}%`} subtitle={`${occupiedUnits}/${totalUnits} unités`} icon={Users} />
           <StatCard title="Nombre de biens" value={properties.length.toString()} icon={Home} subtitle={`${totalUnits} unités · ${tenants.length} locataires`} />
-          <StatCard title="CA du mois" value={`${(monthCA / 1000000).toFixed(1)}M`} icon={TrendingUp} variant="success" />
-          <StatCard title="Dépenses du mois" value={`${(monthExpenses / 1000000).toFixed(1)}M`} icon={TrendingDown} variant="destructive" />
-          <StatCard title="Bénéfice net" value={`${(monthBenefice / 1000000).toFixed(1)}M`} icon={Wallet} variant={monthBenefice >= 0 ? "success" : "destructive"} />
         </div>
 
         {properties.length === 0 ? (
