@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown, ChevronLeft, ChevronRight, Calendar, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { useProperties, useUnits, useTenants, useRentPayments } from "@/hooks/useData";
 import { useExpenses } from "@/hooks/useExpenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,9 +55,26 @@ export default function Dashboard() {
   const isCurrentMonth = selectedMonth === now;
 
   // Financial KPIs for selected month
+  const prevMonth = useMemo(() => shiftMonth(selectedMonth, -1), [selectedMonth]);
   const monthCA = useMemo(() => payments.filter(p => p.month === selectedMonth).reduce((s, p) => s + p.paid_amount, 0), [payments, selectedMonth]);
   const monthExpenses = useMemo(() => expenses.filter(e => e.expense_date.slice(0, 7) === selectedMonth).reduce((s, e) => s + e.amount, 0), [expenses, selectedMonth]);
   const monthBenefice = monthCA - monthExpenses;
+
+  // Previous month KPIs for comparison
+  const prevCA = useMemo(() => payments.filter(p => p.month === prevMonth).reduce((s, p) => s + p.paid_amount, 0), [payments, prevMonth]);
+  const prevExpenses = useMemo(() => expenses.filter(e => e.expense_date.slice(0, 7) === prevMonth).reduce((s, e) => s + e.amount, 0), [expenses, prevMonth]);
+  const prevBenefice = prevCA - prevExpenses;
+
+  function pctChange(current: number, previous: number): { pct: number; direction: "up" | "down" | "flat" } {
+    if (previous === 0 && current === 0) return { pct: 0, direction: "flat" };
+    if (previous === 0) return { pct: 100, direction: "up" };
+    const pct = Math.round(((current - previous) / Math.abs(previous)) * 100);
+    return { pct: Math.abs(pct), direction: pct > 0 ? "up" : pct < 0 ? "down" : "flat" };
+  }
+
+  const caChange = pctChange(monthCA, prevCA);
+  const expChange = pctChange(monthExpenses, prevExpenses);
+  const benChange = pctChange(monthBenefice, prevBenefice);
 
   // Filtered payments & unpaid for selected month
   const monthPayments = useMemo(() => payments.filter(p => p.month === selectedMonth), [payments, selectedMonth]);
@@ -166,9 +183,15 @@ export default function Dashboard() {
               <div className="p-3 rounded-xl bg-success/15">
                 <TrendingUp className="h-6 w-6 text-success" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">CA du mois</p>
-                <p className="text-2xl font-bold text-card-foreground">{(monthCA / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-card-foreground">{(monthCA / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                  <span className={cn("inline-flex items-center gap-0.5 text-xs font-semibold", caChange.direction === "up" ? "text-success" : caChange.direction === "down" ? "text-destructive" : "text-muted-foreground")}>
+                    {caChange.direction === "up" ? <ArrowUpRight className="h-3 w-3" /> : caChange.direction === "down" ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                    {caChange.pct}%
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -177,9 +200,15 @@ export default function Dashboard() {
               <div className="p-3 rounded-xl bg-destructive/15">
                 <TrendingDown className="h-6 w-6 text-destructive" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dépenses du mois</p>
-                <p className="text-2xl font-bold text-card-foreground">{(monthExpenses / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-card-foreground">{(monthExpenses / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                  <span className={cn("inline-flex items-center gap-0.5 text-xs font-semibold", expChange.direction === "up" ? "text-destructive" : expChange.direction === "down" ? "text-success" : "text-muted-foreground")}>
+                    {expChange.direction === "up" ? <ArrowUpRight className="h-3 w-3" /> : expChange.direction === "down" ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                    {expChange.pct}%
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -188,9 +217,15 @@ export default function Dashboard() {
               <div className={cn("p-3 rounded-xl", monthBenefice >= 0 ? "bg-success/15" : "bg-destructive/15")}>
                 <Wallet className={cn("h-6 w-6", monthBenefice >= 0 ? "text-success" : "text-destructive")} />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bénéfice net</p>
-                <p className={cn("text-2xl font-bold", monthBenefice >= 0 ? "text-success" : "text-destructive")}>{(monthBenefice / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                <div className="flex items-baseline gap-2">
+                  <p className={cn("text-2xl font-bold", monthBenefice >= 0 ? "text-success" : "text-destructive")}>{(monthBenefice / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                  <span className={cn("inline-flex items-center gap-0.5 text-xs font-semibold", benChange.direction === "up" ? "text-success" : benChange.direction === "down" ? "text-destructive" : "text-muted-foreground")}>
+                    {benChange.direction === "up" ? <ArrowUpRight className="h-3 w-3" /> : benChange.direction === "down" ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                    {benChange.pct}%
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
