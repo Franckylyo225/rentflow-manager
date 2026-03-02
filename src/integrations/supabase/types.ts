@@ -451,30 +451,75 @@ export type Database = {
       }
       organizations: {
         Row: {
+          accepted_payment_methods: string[]
           address: string | null
           created_at: string
+          currency: string
+          date_format: string
+          deposit_months: number
           email: string | null
+          fiscal_year_start: number
           id: string
+          late_fee_enabled: boolean
+          late_fee_grace_days: number
+          late_fee_type: string
+          late_fee_value: number
+          legal_address: string | null
+          legal_id: string | null
+          legal_name: string | null
+          logo_url: string | null
           name: string
           phone: string | null
+          rent_due_day: number
+          timezone: string
           updated_at: string
         }
         Insert: {
+          accepted_payment_methods?: string[]
           address?: string | null
           created_at?: string
+          currency?: string
+          date_format?: string
+          deposit_months?: number
           email?: string | null
+          fiscal_year_start?: number
           id?: string
+          late_fee_enabled?: boolean
+          late_fee_grace_days?: number
+          late_fee_type?: string
+          late_fee_value?: number
+          legal_address?: string | null
+          legal_id?: string | null
+          legal_name?: string | null
+          logo_url?: string | null
           name: string
           phone?: string | null
+          rent_due_day?: number
+          timezone?: string
           updated_at?: string
         }
         Update: {
+          accepted_payment_methods?: string[]
           address?: string | null
           created_at?: string
+          currency?: string
+          date_format?: string
+          deposit_months?: number
           email?: string | null
+          fiscal_year_start?: number
           id?: string
+          late_fee_enabled?: boolean
+          late_fee_grace_days?: number
+          late_fee_type?: string
+          late_fee_value?: number
+          legal_address?: string | null
+          legal_id?: string | null
+          legal_name?: string | null
+          logo_url?: string | null
           name?: string
           phone?: string | null
+          rent_due_day?: number
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
