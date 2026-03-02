@@ -1,11 +1,12 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown } from "lucide-react";
+import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useProperties, useUnits, useTenants, useRentPayments } from "@/hooks/useData";
 import { useExpenses } from "@/hooks/useExpenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -29,6 +30,19 @@ const CITY_COLORS = [
   "hsl(190, 70%, 50%)",
 ];
 
+const MONTH_LABELS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+function formatMonthLabel(month: string) {
+  const [year, m] = month.split("-");
+  return `${MONTH_LABELS[parseInt(m, 10) - 1]} ${year}`;
+}
+
+function shiftMonth(month: string, delta: number): string {
+  const d = new Date(month + "-01");
+  d.setMonth(d.getMonth() + delta);
+  return d.toISOString().slice(0, 7);
+}
+
 export default function Dashboard() {
   const { data: properties, loading: pLoading } = useProperties();
   const { data: units } = useUnits();
@@ -36,19 +50,23 @@ export default function Dashboard() {
   const { data: payments } = useRentPayments();
   const { data: expenses } = useExpenses();
 
+  const now = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(now);
+  const isCurrentMonth = selectedMonth === now;
+
+  // Financial KPIs for selected month
+  const monthCA = useMemo(() => payments.filter(p => p.month === selectedMonth).reduce((s, p) => s + p.paid_amount, 0), [payments, selectedMonth]);
+  const monthExpenses = useMemo(() => expenses.filter(e => e.expense_date.slice(0, 7) === selectedMonth).reduce((s, e) => s + e.amount, 0), [expenses, selectedMonth]);
+  const monthBenefice = monthCA - monthExpenses;
+
+  // Filtered payments & unpaid for selected month
+  const monthPayments = useMemo(() => payments.filter(p => p.month === selectedMonth), [payments, selectedMonth]);
+  const unpaidTotal = useMemo(() => monthPayments.filter(r => r.status !== "paid").reduce((sum, r) => sum + (r.amount - r.paid_amount), 0), [monthPayments]);
+  const totalRevenue = useMemo(() => monthPayments.reduce((s, p) => s + p.amount, 0), [monthPayments]);
+
   const totalUnits = units.length;
   const occupiedUnits = units.filter(u => u.status === "occupied").length;
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
-  const totalRevenue = units.filter(u => u.status === "occupied").reduce((s, u) => s + u.rent, 0);
-  const unpaidTotal = payments
-    .filter(r => r.status !== "paid")
-    .reduce((sum, r) => sum + (r.amount - r.paid_amount), 0);
-
-  // Financial KPIs
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthCA = useMemo(() => payments.filter(p => p.month === currentMonth).reduce((s, p) => s + p.paid_amount, 0), [payments, currentMonth]);
-  const monthExpenses = useMemo(() => expenses.filter(e => e.expense_date.slice(0, 7) === currentMonth).reduce((s, e) => s + e.amount, 0), [expenses, currentMonth]);
-  const monthBenefice = monthCA - monthExpenses;
 
   // Monthly revenue chart data
   const monthlyData = useMemo(() => {
@@ -63,37 +81,32 @@ export default function Dashboard() {
       .map(d => ({
         ...d,
         label: new Date(d.month + "-01").toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
+        isSelected: d.month === selectedMonth,
       }));
-  }, [payments]);
+  }, [payments, selectedMonth]);
 
-  // Revenue by city
+  // Revenue by city for selected month
   const cityData = useMemo(() => {
+    const tenantsByUnit: Record<string, boolean> = {};
+    monthPayments.forEach(p => {
+      const tenant = tenants.find(t => t.id === p.tenant_id);
+      if (tenant) tenantsByUnit[tenant.unit_id] = true;
+    });
     const byCity: Record<string, { city: string; revenue: number }> = {};
-    units.filter(u => u.status === "occupied").forEach(u => {
+    units.filter(u => tenantsByUnit[u.id]).forEach(u => {
       const prop = properties.find(p => p.id === u.property_id);
       const cityName = prop?.cities?.name || "Autre";
       if (!byCity[cityName]) byCity[cityName] = { city: cityName, revenue: 0 };
       byCity[cityName].revenue += u.rent;
     });
     return Object.values(byCity).sort((a, b) => b.revenue - a.revenue);
-  }, [units, properties]);
+  }, [monthPayments, units, properties, tenants]);
 
-  // Payment status breakdown for current month
+  // Payment status breakdown for selected month
   const statusData = useMemo(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const currentPayments = payments.filter(p => p.month === currentMonth);
-    if (currentPayments.length === 0) {
-      // Fallback to latest month
-      const months = [...new Set(payments.map(p => p.month))].sort().reverse();
-      if (months.length > 0) {
-        const latest = months[0];
-        const latestPayments = payments.filter(p => p.month === latest);
-        return buildStatusData(latestPayments);
-      }
-      return [];
-    }
-    return buildStatusData(currentPayments);
-  }, [payments]);
+    if (monthPayments.length === 0) return [];
+    return buildStatusData(monthPayments);
+  }, [monthPayments]);
 
   function buildStatusData(list: typeof payments) {
     const counts: Record<string, { name: string; value: number; count: number }> = {
@@ -120,9 +133,30 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Tableau de bord</h1>
-          <p className="text-muted-foreground text-sm mt-1">Vue d'ensemble de votre portefeuille immobilier</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Tableau de bord</h1>
+            <p className="text-muted-foreground text-sm mt-1">Vue d'ensemble de votre portefeuille immobilier</p>
+          </div>
+          {/* Month selector */}
+          <div className="flex items-center gap-1 bg-muted/60 rounded-lg p-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedMonth(m => shiftMonth(m, -1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <button
+              onClick={() => setSelectedMonth(now)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                isCurrentMonth ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+              )}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              {formatMonthLabel(selectedMonth)}
+            </button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedMonth(m => shiftMonth(m, 1))} disabled={isCurrentMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Financial summary banner */}
@@ -164,7 +198,7 @@ export default function Dashboard() {
 
         {/* Rent & portfolio stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Revenus mensuels" value={`${(totalRevenue / 1000000).toFixed(1)}M FCFA`} icon={TrendingUp} variant="success" />
+          <StatCard title="Loyers attendus" value={`${(totalRevenue / 1000000).toFixed(1)}M FCFA`} icon={TrendingUp} variant="success" />
           <StatCard title="Loyers impayés" value={`${(unpaidTotal / 1000000).toFixed(1)}M FCFA`} icon={AlertTriangle} variant="destructive" />
           <StatCard title="Taux d'occupation" value={`${occupancyRate}%`} subtitle={`${occupiedUnits}/${totalUnits} unités`} icon={Users} />
           <StatCard title="Nombre de biens" value={properties.length.toString()} icon={Home} subtitle={`${totalUnits} unités · ${tenants.length} locataires`} />
@@ -277,14 +311,14 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Dernières transactions */}
+              {/* Transactions du mois */}
               <Card className="border-border lg:col-span-2">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Dernières transactions</CardTitle>
+                  <CardTitle className="text-base font-semibold">Transactions du mois</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  {payments.length === 0 ? (
-                    <div className="py-10 text-center text-muted-foreground text-sm">Aucune transaction</div>
+                  {monthPayments.length === 0 ? (
+                    <div className="py-10 text-center text-muted-foreground text-sm">Aucune transaction pour ce mois</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -297,11 +331,10 @@ export default function Dashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {payments.slice(0, 6).map(p => (
+                          {monthPayments.slice(0, 8).map(p => (
                             <tr key={p.id} className="border-b border-border/50">
                               <td className="py-2.5 px-4">
                                 <p className="font-medium text-card-foreground">{p.tenants?.full_name}</p>
-                                <p className="text-xs text-muted-foreground">{p.month}</p>
                               </td>
                               <td className="py-2.5 px-4">
                                 <p className="text-card-foreground">{p.tenants?.units?.properties?.name}</p>
