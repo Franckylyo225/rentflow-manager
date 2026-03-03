@@ -55,7 +55,12 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel — hero image */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary/5">
+      <motion.div
+        initial={{ opacity: 0, x: -40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary/5"
+      >
         {/* Decorative gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent z-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent z-10" />
@@ -69,19 +74,30 @@ export default function AuthPage() {
 
         {/* Hero message overlay */}
         <div className="absolute inset-0 z-20 flex flex-col justify-end p-12 xl:p-16">
-          <div className="space-y-4 max-w-lg">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
+            className="space-y-4 max-w-lg"
+          >
             <h2 className="text-4xl xl:text-5xl font-extrabold leading-tight text-white drop-shadow-lg">
               Gérez vos biens<br />en toute simplicité
             </h2>
             <p className="text-lg text-white/85 leading-relaxed drop-shadow-md">
               Suivi des loyers, gestion des locataires, rapports financiers — tout ce dont vous avez besoin, au même endroit.
             </p>
-            <div className="flex items-center gap-3 pt-2">
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              transition={{ duration: 0.5, delay: 0.8 }}
+              className="flex items-center gap-3 pt-2"
+            >
               <div className="h-1 w-12 rounded-full bg-primary" />
               <span className="text-sm font-medium text-white/70">Plateforme de gestion locative</span>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
+      </motion.div>
       </div>
 
       {/* Right panel — form */}
