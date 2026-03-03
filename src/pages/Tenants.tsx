@@ -37,6 +37,8 @@ export default function Tenants() {
   const [form, setForm] = useState({
     unit_id: "", full_name: "", phone: "", email: "", id_number: "",
     lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "",
+    tenant_type: "individual" as "individual" | "company",
+    company_name: "", contact_person: "", rccm: "",
   });
   const [formerSearch, setFormerSearch] = useState("");
   const [formerTenants, setFormerTenants] = useState<any[]>([]);
