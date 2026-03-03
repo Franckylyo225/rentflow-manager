@@ -47,7 +47,7 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems
-            .filter(item => item.path !== "/employees" || settings?.salaries_enabled !== false)
+            .filter(item => item.path !== "/employees" || settings?.salaries_enabled === true)
             .map((item) => {
             const isActive = location.pathname === item.path;
             return (
