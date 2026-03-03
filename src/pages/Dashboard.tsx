@@ -52,6 +52,7 @@ function shiftMonth(month: string, delta: number): string {
 }
 
 export default function Dashboard() {
+  const { profile } = useProfile();
   const { data: properties, loading: pLoading } = useProperties();
   const { data: units } = useUnits();
   const { data: tenants } = useTenants();
