@@ -59,8 +59,13 @@ export default function TenantDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">{tenant.full_name}</h1>
-            <p className="text-muted-foreground text-sm">{tenant.units?.properties?.name} · {tenant.units?.name}</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              {tenant.tenant_type === "company" ? tenant.company_name || tenant.full_name : tenant.full_name}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {tenant.tenant_type === "company" && <Badge variant="outline" className="mr-2 text-xs">Entreprise</Badge>}
+              {tenant.units?.properties?.name} · {tenant.units?.name}
+            </p>
           </div>
           {tenant.is_active && (
             <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
