@@ -66,11 +66,20 @@ export default function AuthPage() {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Bottom-left branding on image */}
-        <div className="absolute bottom-8 left-8 z-20 space-y-2">
-          <p className="text-sm font-medium text-primary-foreground/80 bg-primary/60 backdrop-blur-sm rounded-lg px-4 py-2 inline-block">
-            Gérez vos biens en toute simplicité
-          </p>
+        {/* Hero message overlay */}
+        <div className="absolute inset-0 z-20 flex flex-col justify-end p-12 xl:p-16">
+          <div className="space-y-4 max-w-lg">
+            <h2 className="text-4xl xl:text-5xl font-extrabold leading-tight text-white drop-shadow-lg">
+              Gérez vos biens<br />en toute simplicité
+            </h2>
+            <p className="text-lg text-white/85 leading-relaxed drop-shadow-md">
+              Suivi des loyers, gestion des locataires, rapports financiers — tout ce dont vous avez besoin, au même endroit.
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+              <div className="h-1 w-12 rounded-full bg-primary" />
+              <span className="text-sm font-medium text-white/70">Plateforme de gestion locative</span>
+            </div>
+          </div>
         </div>
       </div>
 
