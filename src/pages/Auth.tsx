@@ -98,10 +98,14 @@ export default function AuthPage() {
           </motion.div>
         </div>
       </motion.div>
-      </div>
 
       {/* Right panel — form */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-background relative">
+      <motion.div
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+        className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-background relative"
+      >
         {/* Company name header */}
         <div className="absolute top-8 left-6 sm:left-12 lg:left-16 xl:left-24 flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
