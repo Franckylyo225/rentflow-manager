@@ -114,7 +114,15 @@ export default function AuthPage() {
           <span className="text-2xl font-bold tracking-tight text-foreground">Rentflow</span>
         </div>
 
-        <div className="w-full max-w-md mx-auto space-y-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={isSignUp ? "signup" : "signin"}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="w-full max-w-md mx-auto space-y-8"
+          >
           {/* Title */}
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
