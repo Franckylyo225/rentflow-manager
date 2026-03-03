@@ -408,7 +408,19 @@ export default function Tenants() {
           <DialogHeader>
             <DialogTitle>Ajouter un locataire</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            {/* Type de locataire */}
+            <div className="space-y-2">
+              <Label>Type de locataire</Label>
+              <Select value={form.tenant_type} onValueChange={(v: "individual" | "company") => setForm(f => ({ ...f, tenant_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Particulier</SelectItem>
+                  <SelectItem value="company">Entreprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Bien immobilier</Label>
               <Select value={selectedProperty} onValueChange={v => { setSelectedProperty(v); setForm(f => ({ ...f, unit_id: "" })); }}>
@@ -430,9 +442,30 @@ export default function Tenants() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Company-specific fields */}
+            {form.tenant_type === "company" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nom de l'entreprise</Label>
+                    <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="Ex: SARL Ivoire Immo" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>RCCM</Label>
+                    <Input value={form.rccm} onChange={e => setForm(f => ({ ...f, rccm: e.target.value }))} placeholder="CI-ABJ-XXXX-X-XXXXX" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Personne ressource</Label>
+                  <Input value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} placeholder="Nom du contact principal" />
+                </div>
+              </>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nom complet</Label>
+                <Label>{form.tenant_type === "company" ? "Nom du représentant" : "Nom complet"}</Label>
                 <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ex: Kouadio Jean" />
               </div>
               <div className="space-y-2">
@@ -470,7 +503,7 @@ export default function Tenants() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving || !form.unit_id || !form.full_name}>
+            <Button onClick={handleSave} disabled={saving || !form.unit_id || !form.full_name || (form.tenant_type === "company" && !form.company_name)}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Valider
             </Button>
