@@ -794,6 +794,8 @@ export type Database = {
       }
       tenants: {
         Row: {
+          company_name: string | null
+          contact_person: string | null
           created_at: string
           deposit: number
           email: string | null
@@ -804,11 +806,15 @@ export type Database = {
           lease_duration: number
           lease_start: string
           phone: string
+          rccm: string | null
           rent: number
+          tenant_type: string
           unit_id: string
           updated_at: string
         }
         Insert: {
+          company_name?: string | null
+          contact_person?: string | null
           created_at?: string
           deposit?: number
           email?: string | null
@@ -819,11 +825,15 @@ export type Database = {
           lease_duration?: number
           lease_start?: string
           phone?: string
+          rccm?: string | null
           rent?: number
+          tenant_type?: string
           unit_id: string
           updated_at?: string
         }
         Update: {
+          company_name?: string | null
+          contact_person?: string | null
           created_at?: string
           deposit?: number
           email?: string | null
@@ -834,7 +844,9 @@ export type Database = {
           lease_duration?: number
           lease_start?: string
           phone?: string
+          rccm?: string | null
           rent?: number
+          tenant_type?: string
           unit_id?: string
           updated_at?: string
         }

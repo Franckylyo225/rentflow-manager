@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Search, Loader2, ShieldAlert, UserX } from "lucide-react";
+import { Plus, Search, Loader2, ShieldAlert, UserX, Building2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -37,6 +37,8 @@ export default function Tenants() {
   const [form, setForm] = useState({
     unit_id: "", full_name: "", phone: "", email: "", id_number: "",
     lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "",
+    tenant_type: "individual" as "individual" | "company",
+    company_name: "", contact_person: "", rccm: "",
   });
   const [formerSearch, setFormerSearch] = useState("");
   const [formerTenants, setFormerTenants] = useState<any[]>([]);
@@ -167,17 +169,24 @@ export default function Tenants() {
     setSaving(true);
     const unit = allUnits.find(u => u.id === form.unit_id);
     if (!unit) { setSaving(false); return; }
-    const { error: tenantError } = await supabase.from("tenants").insert({
+    const insertData: any = {
       unit_id: form.unit_id, full_name: form.full_name, phone: form.phone,
       email: form.email, id_number: form.id_number, lease_start: form.lease_start,
       lease_duration: parseInt(form.lease_duration) || 12, rent: unit.rent,
       deposit: parseInt(form.deposit) || unit.rent * 2,
-    });
+      tenant_type: form.tenant_type,
+    };
+    if (form.tenant_type === "company") {
+      insertData.company_name = form.company_name;
+      insertData.contact_person = form.contact_person;
+      insertData.rccm = form.rccm;
+    }
+    const { error: tenantError } = await supabase.from("tenants").insert(insertData);
     if (tenantError) { toast.error("Erreur : " + tenantError.message); setSaving(false); return; }
     await supabase.from("units").update({ status: "occupied" as const }).eq("id", form.unit_id);
     toast.success("Locataire ajouté et unité mise à jour");
     setShowAdd(false);
-    setForm({ unit_id: "", full_name: "", phone: "", email: "", id_number: "", lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "" });
+    setForm({ unit_id: "", full_name: "", phone: "", email: "", id_number: "", lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "", tenant_type: "individual", company_name: "", contact_person: "", rccm: "" });
     setSelectedProperty("");
     setSaving(false);
     refetch();
@@ -268,12 +277,15 @@ export default function Tenants() {
                           {filtered.map(tenant => (
                             <tr key={tenant.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/tenants/${tenant.id}`)}>
                               <td className="py-3 px-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                                    {tenant.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                                      {tenant.tenant_type === "company" ? <Building2 className="h-3.5 w-3.5" /> : tenant.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-card-foreground">{tenant.tenant_type === "company" ? tenant.company_name || tenant.full_name : tenant.full_name}</span>
+                                      {tenant.tenant_type === "company" && <p className="text-xs text-muted-foreground">{tenant.full_name}</p>}
+                                    </div>
                                   </div>
-                                  <span className="font-medium text-card-foreground">{tenant.full_name}</span>
-                                </div>
                               </td>
                               <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{tenant.phone}</td>
                               <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{tenant.units?.properties?.name}</td>
@@ -399,7 +411,19 @@ export default function Tenants() {
           <DialogHeader>
             <DialogTitle>Ajouter un locataire</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            {/* Type de locataire */}
+            <div className="space-y-2">
+              <Label>Type de locataire</Label>
+              <Select value={form.tenant_type} onValueChange={(v: "individual" | "company") => setForm(f => ({ ...f, tenant_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Particulier</SelectItem>
+                  <SelectItem value="company">Entreprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Bien immobilier</Label>
               <Select value={selectedProperty} onValueChange={v => { setSelectedProperty(v); setForm(f => ({ ...f, unit_id: "" })); }}>
@@ -421,9 +445,30 @@ export default function Tenants() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Company-specific fields */}
+            {form.tenant_type === "company" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nom de l'entreprise</Label>
+                    <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="Ex: SARL Ivoire Immo" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>RCCM</Label>
+                    <Input value={form.rccm} onChange={e => setForm(f => ({ ...f, rccm: e.target.value }))} placeholder="CI-ABJ-XXXX-X-XXXXX" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Personne ressource</Label>
+                  <Input value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} placeholder="Nom du contact principal" />
+                </div>
+              </>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nom complet</Label>
+                <Label>{form.tenant_type === "company" ? "Nom du représentant" : "Nom complet"}</Label>
                 <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ex: Kouadio Jean" />
               </div>
               <div className="space-y-2">
@@ -461,7 +506,7 @@ export default function Tenants() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving || !form.unit_id || !form.full_name}>
+            <Button onClick={handleSave} disabled={saving || !form.unit_id || !form.full_name || (form.tenant_type === "company" && !form.company_name)}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Valider
             </Button>

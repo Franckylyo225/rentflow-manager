@@ -2,8 +2,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText } from "lucide-react";
 import { PaymentStatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LeaseTerminationDialog } from "@/components/tenant/LeaseTerminationDialog";
@@ -59,8 +60,13 @@ export default function TenantDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">{tenant.full_name}</h1>
-            <p className="text-muted-foreground text-sm">{tenant.units?.properties?.name} · {tenant.units?.name}</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              {tenant.tenant_type === "company" ? tenant.company_name || tenant.full_name : tenant.full_name}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {tenant.tenant_type === "company" && <Badge variant="outline" className="mr-2 text-xs">Entreprise</Badge>}
+              {tenant.units?.properties?.name} · {tenant.units?.name}
+            </p>
           </div>
           {tenant.is_active && (
             <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
@@ -76,10 +82,18 @@ export default function TenantDetail() {
           <Card className="border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" /> Informations personnelles
+                <User className="h-4 w-4 text-primary" /> {tenant.tenant_type === "company" ? "Informations entreprise" : "Informations personnelles"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {tenant.tenant_type === "company" && (
+                <>
+                  <div className="flex items-center gap-2 text-muted-foreground"><Building2 className="h-3.5 w-3.5" /> {tenant.company_name || "—"}</div>
+                  <div className="flex items-center gap-2 text-muted-foreground"><FileText className="h-3.5 w-3.5" /> RCCM : {tenant.rccm || "—"}</div>
+                  <div className="flex items-center gap-2 text-muted-foreground"><User className="h-3.5 w-3.5" /> Personne ressource : {tenant.contact_person || "—"}</div>
+                </>
+              )}
+              <div className="flex items-center gap-2 text-muted-foreground"><User className="h-3.5 w-3.5" /> {tenant.full_name}</div>
               <div className="flex items-center gap-2 text-muted-foreground"><Phone className="h-3.5 w-3.5" /> {tenant.phone}</div>
               <div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-3.5 w-3.5" /> {tenant.email || "—"}</div>
               <div className="flex items-center gap-2 text-muted-foreground"><CreditCard className="h-3.5 w-3.5" /> {tenant.id_number || "—"}</div>
