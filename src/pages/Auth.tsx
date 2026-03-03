@@ -241,7 +241,8 @@ export default function AuthPage() {
               )}
             </button>
           </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
 
         {/* Footer */}
         <p className="absolute bottom-6 left-6 sm:left-12 lg:left-16 xl:left-24 text-xs text-muted-foreground">
