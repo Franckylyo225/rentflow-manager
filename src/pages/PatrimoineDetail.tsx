@@ -41,6 +41,8 @@ export default function PatrimoineDetail() {
   const [contactForm, setContactForm] = useState({ full_name: "", phone: "", role: "", email: "" });
   const [docForm, setDocForm] = useState({ name: "", document_type: "autre" });
   const [docFile, setDocFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!id) return;
