@@ -245,88 +245,139 @@ export default function Patrimoine() {
           );
         })()}
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-          </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Tous les types" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
-              {ASSET_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Tous les statuts" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="complet">Complet</SelectItem>
-              <SelectItem value="en_cours">En cours</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="actifs">Actifs</TabsTrigger>
+            <TabsTrigger value="titulaires">Titulaires</TabsTrigger>
+          </TabsList>
 
-        {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            {assets.length === 0 ? "Aucun actif. Commencez par en ajouter un." : "Aucun résultat."}
-          </div>
-        ) : (
-          <Card className="border-border">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                     <tr className="border-b border-border bg-muted/50">
-                       <th className="text-left py-3 px-4 text-muted-foreground font-medium">Titre</th>
-                       <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Titulaire</th>
-                       <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Type</th>
-                       <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
-                       <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Localité</th>
-                       <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Titre foncier</th>
-                       <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(asset => (
-                      <tr
-                        key={asset.id}
-                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/patrimoine/${asset.id}`)}
-                      >
-                        <td className="py-3 px-4">
-                          <p className="font-medium text-card-foreground">{asset.title}</p>
-                          <p className="text-xs text-muted-foreground">{asset.subdivision_name}</p>
-                        </td>
-                        <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.asset_holders?.full_name || "—"}</td>
-                         <td className="py-3 px-4 text-center hidden md:table-cell">
-                           <Badge variant="outline" className="text-xs">{ASSET_TYPES.find(t => t.value === asset.asset_type)?.label || asset.asset_type}</Badge>
-                         </td>
-                         <td className="py-3 px-4 text-center">
-                           {(asset.patrimony_documents || []).some((d: any) => d.document_type === "acd") ? (
-                             <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Complet</Badge>
-                           ) : (
-                             <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">Dossier en cours</Badge>
-                           )}
-                         </td>
-                         <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{asset.locality || "—"}</td>
-                         <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{asset.land_title || "—"}</td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => openEdit(asset, e)}><Edit className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingAsset(asset); setShowDelete(true); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <TabsContent value="actifs" className="space-y-4 mt-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-48"><SelectValue placeholder="Tous les types" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les types</SelectItem>
+                  {ASSET_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48"><SelectValue placeholder="Tous les statuts" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="complet">Complet</SelectItem>
+                  <SelectItem value="en_cours">En cours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">
+                {assets.length === 0 ? "Aucun actif. Commencez par en ajouter un." : "Aucun résultat."}
+              </div>
+            ) : (
+              <Card className="border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Titre</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Titulaire</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Type</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Localité</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Titre foncier</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map(asset => (
+                          <tr key={asset.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/patrimoine/${asset.id}`)}>
+                            <td className="py-3 px-4">
+                              <p className="font-medium text-card-foreground">{asset.title}</p>
+                              <p className="text-xs text-muted-foreground">{asset.subdivision_name}</p>
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.asset_holders?.full_name || "—"}</td>
+                            <td className="py-3 px-4 text-center hidden md:table-cell">
+                              <Badge variant="outline" className="text-xs">{ASSET_TYPES.find(t => t.value === asset.asset_type)?.label || asset.asset_type}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {hasAcd(asset) ? (
+                                <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Complet</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">Dossier en cours</Badge>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{asset.locality || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{asset.land_title || "—"}</td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => openEdit(asset, e)}><Edit className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingAsset(asset); setShowDelete(true); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="titulaires" className="space-y-4 mt-4">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Rechercher un titulaire..." value={holderSearch} onChange={e => setHolderSearch(e.target.value)} className="pl-9" />
+              </div>
+              <Button size="sm" className="gap-2" onClick={() => { setHolderForm({ full_name: "", phone: "", email: "", address: "" }); setShowAddHolder(true); }}>
+                <Plus className="h-4 w-4" /> Ajouter un titulaire
+              </Button>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : filteredHolders.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">
+                {holders.length === 0 ? "Aucun titulaire. Commencez par en ajouter un." : "Aucun résultat."}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredHolders.map(h => (
+                  <Card key={h.id} className="border-border">
+                    <CardContent className="pt-5 pb-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-card-foreground">{h.full_name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {assets.filter(a => a.holder_id === h.id).length} actif(s) associé(s)
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditHolder(h)}><Edit className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeletingHolder(h); setShowDeleteHolder(true); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 text-sm text-muted-foreground">
+                        {h.phone && <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" />{h.phone}</div>}
+                        {h.email && <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" />{h.email}</div>}
+                        {h.address && <div className="flex items-center gap-2"><MapPinned className="h-3.5 w-3.5" />{h.address}</div>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add asset */}
@@ -397,6 +448,51 @@ export default function Patrimoine() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit holder */}
+      <Dialog open={showEditHolder} onOpenChange={setShowEditHolder}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Modifier le titulaire</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nom complet</Label>
+              <Input value={holderForm.full_name} onChange={e => setHolderForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ex: Kouadio Jean" />
+            </div>
+            <div className="space-y-2">
+              <Label>Téléphone</Label>
+              <Input value={holderForm.phone} onChange={e => setHolderForm(f => ({ ...f, phone: e.target.value }))} placeholder="+225 07 00 00 00" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={holderForm.email} onChange={e => setHolderForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemple.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Adresse</Label>
+              <Input value={holderForm.address} onChange={e => setHolderForm(f => ({ ...f, address: e.target.value }))} placeholder="Adresse..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditHolder(false)}>Annuler</Button>
+            <Button onClick={handleEditHolder} disabled={saving || !holderForm.full_name}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete holder */}
+      <AlertDialog open={showDeleteHolder} onOpenChange={setShowDeleteHolder}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce titulaire ?</AlertDialogTitle>
+            <AlertDialogDescription>Le titulaire « {deletingHolder?.full_name} » sera supprimé. Les actifs associés ne seront pas supprimés.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteHolder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
