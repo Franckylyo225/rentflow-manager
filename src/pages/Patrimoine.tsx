@@ -350,31 +350,43 @@ export default function Patrimoine() {
                 {holders.length === 0 ? "Aucun titulaire. Commencez par en ajouter un." : "Aucun résultat."}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredHolders.map(h => (
-                  <Card key={h.id} className="border-border">
-                    <CardContent className="pt-5 pb-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-card-foreground">{h.full_name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {assets.filter(a => a.holder_id === h.id).length} actif(s) associé(s)
-                          </p>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditHolder(h)}><Edit className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeletingHolder(h); setShowDeleteHolder(true); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 text-sm text-muted-foreground">
-                        {h.phone && <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" />{h.phone}</div>}
-                        {h.email && <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" />{h.email}</div>}
-                        {h.address && <div className="flex items-center gap-2"><MapPinned className="h-3.5 w-3.5" />{h.address}</div>}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <Card className="border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Nom</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Téléphone</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Email</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Adresse</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Actifs</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredHolders.map(h => (
+                          <tr key={h.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                            <td className="py-3 px-4 font-medium text-card-foreground">{h.full_name}</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{h.phone || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{h.email || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{h.address || "—"}</td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant="secondary" className="text-xs">{assets.filter(a => a.holder_id === h.id).length}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditHolder(h)}><Edit className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeletingHolder(h); setShowDeleteHolder(true); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
