@@ -225,7 +225,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="CA du mois"
-            value={`${(monthCA / 1000000).toFixed(1)}M FCFA`}
+            value={`${formatAmount(monthCA, short)} FCFA`}
             icon={TrendingUp}
             variant="success"
             trend={caChange.direction !== "flat" ? { value: `${caChange.pct}%`, positive: caChange.direction === "up" } : undefined}
