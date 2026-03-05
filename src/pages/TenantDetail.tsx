@@ -2,12 +2,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil } from "lucide-react";
 import { PaymentStatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LeaseTerminationDialog } from "@/components/tenant/LeaseTerminationDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export default function TenantDetail() {
   const { id } = useParams();
@@ -16,6 +21,9 @@ export default function TenantDetail() {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTermination, setShowTermination] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   const fetchData = () => {
     if (!id) return;
@@ -31,6 +39,55 @@ export default function TenantDetail() {
   };
 
   useEffect(() => { fetchData(); }, [id]);
+
+  const openEdit = () => {
+    if (!tenant) return;
+    setEditForm({
+      full_name: tenant.full_name || "",
+      phone: tenant.phone || "",
+      email: tenant.email || "",
+      id_number: tenant.id_number || "",
+      tenant_type: tenant.tenant_type || "individual",
+      company_name: tenant.company_name || "",
+      contact_person: tenant.contact_person || "",
+      rccm: tenant.rccm || "",
+      lease_duration: String(tenant.lease_duration || 12),
+      deposit: String(tenant.deposit || 0),
+    });
+    setShowEdit(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!id || !editForm.full_name) return;
+    setSaving(true);
+    const updateData: any = {
+      full_name: editForm.full_name,
+      phone: editForm.phone,
+      email: editForm.email,
+      id_number: editForm.id_number,
+      tenant_type: editForm.tenant_type,
+      lease_duration: parseInt(editForm.lease_duration) || 12,
+      deposit: parseInt(editForm.deposit) || 0,
+    };
+    if (editForm.tenant_type === "company") {
+      updateData.company_name = editForm.company_name;
+      updateData.contact_person = editForm.contact_person;
+      updateData.rccm = editForm.rccm;
+    } else {
+      updateData.company_name = null;
+      updateData.contact_person = null;
+      updateData.rccm = null;
+    }
+    const { error } = await supabase.from("tenants").update(updateData).eq("id", id);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success("Locataire mis à jour");
+      setShowEdit(false);
+      fetchData();
+    }
+    setSaving(false);
+  };
 
   if (loading) {
     return <AppLayout><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
@@ -68,14 +125,19 @@ export default function TenantDetail() {
               {tenant.units?.properties?.name} · {tenant.units?.name}
             </p>
           </div>
-          {tenant.is_active && (
-            <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
-              <LogOut className="h-4 w-4 mr-2" /> Initier fin de bail
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={openEdit}>
+              <Pencil className="h-4 w-4 mr-2" /> Modifier
             </Button>
-          )}
-          {!tenant.is_active && (
-            <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">Ancien locataire</span>
-          )}
+            {tenant.is_active && (
+              <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
+                <LogOut className="h-4 w-4 mr-2" /> Initier fin de bail
+              </Button>
+            )}
+            {!tenant.is_active && (
+              <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">Ancien locataire</span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -160,6 +222,7 @@ export default function TenantDetail() {
             </CardContent>
           </Card>
         )}
+
         {tenant.is_active && (
           <LeaseTerminationDialog
             open={showTermination}
@@ -169,6 +232,80 @@ export default function TenantDetail() {
             onComplete={() => navigate("/tenants")}
           />
         )}
+
+        {/* Edit Dialog */}
+        <Dialog open={showEdit} onOpenChange={setShowEdit}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Modifier le locataire</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Type de locataire</Label>
+                <Select value={editForm.tenant_type} onValueChange={v => setEditForm((f: any) => ({ ...f, tenant_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Particulier</SelectItem>
+                    <SelectItem value="company">Entreprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {editForm.tenant_type === "company" && (
+                <>
+                  <div>
+                    <Label>Nom de l'entreprise</Label>
+                    <Input value={editForm.company_name} onChange={e => setEditForm((f: any) => ({ ...f, company_name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Personne ressource</Label>
+                    <Input value={editForm.contact_person} onChange={e => setEditForm((f: any) => ({ ...f, contact_person: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>RCCM</Label>
+                    <Input value={editForm.rccm} onChange={e => setEditForm((f: any) => ({ ...f, rccm: e.target.value }))} />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <Label>Nom complet</Label>
+                <Input value={editForm.full_name} onChange={e => setEditForm((f: any) => ({ ...f, full_name: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Téléphone</Label>
+                  <Input value={editForm.phone} onChange={e => setEditForm((f: any) => ({ ...f, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input value={editForm.email} onChange={e => setEditForm((f: any) => ({ ...f, email: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <Label>N° pièce d'identité</Label>
+                <Input value={editForm.id_number} onChange={e => setEditForm((f: any) => ({ ...f, id_number: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Durée du bail (mois)</Label>
+                  <Input type="number" value={editForm.lease_duration} onChange={e => setEditForm((f: any) => ({ ...f, lease_duration: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Caution (FCFA)</Label>
+                  <Input type="number" value={editForm.deposit} onChange={e => setEditForm((f: any) => ({ ...f, deposit: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
+              <Button onClick={handleEditSave} disabled={saving || !editForm.full_name}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
