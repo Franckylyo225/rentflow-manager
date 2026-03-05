@@ -106,6 +106,15 @@ export default function PatrimoineDetail() {
   };
 
   const previewDoc = async (doc: any) => {
+    const isPdf = /\.pdf$/i.test(doc.file_url) || /\.pdf$/i.test(doc.name);
+    if (isPdf) {
+      // PDFs are blocked by Chrome in blob iframes — use signed URL in new tab
+      const { data, error } = await supabase.storage.from("patrimony-docs").createSignedUrl(doc.file_url, 3600);
+      if (error || !data?.signedUrl) { toast.error("Erreur visualisation"); return; }
+      window.open(data.signedUrl, "_blank");
+      return;
+    }
+    // Images: show in dialog
     const { data, error } = await supabase.storage.from("patrimony-docs").download(doc.file_url);
     if (error || !data) { toast.error("Erreur visualisation"); return; }
     const url = URL.createObjectURL(data);
@@ -346,17 +355,13 @@ export default function PatrimoineDetail() {
 
       {/* Document preview */}
       <Dialog open={!!previewUrl} onOpenChange={v => !v && closePreview()}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{previewName}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-auto">
             {previewUrl && (
-              previewUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(previewName) ? (
-                <img src={previewUrl} alt={previewName} className="max-w-full h-auto mx-auto rounded" />
-              ) : (
-                <iframe src={previewUrl} className="w-full h-[70vh] rounded border border-border" title={previewName} />
-              )
+              <img src={previewUrl} alt={previewName} className="max-w-full h-auto mx-auto rounded" />
             )}
           </div>
         </DialogContent>
