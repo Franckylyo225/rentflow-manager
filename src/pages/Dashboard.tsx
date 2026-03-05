@@ -234,7 +234,7 @@ export default function Dashboard() {
           />
           <StatCard
             title="Dépenses"
-            value={`${(monthExpenses / 1000000).toFixed(1)}M FCFA`}
+            value={`${formatAmount(monthExpenses, short)} FCFA`}
             icon={TrendingDown}
             variant="destructive"
             trend={expChange.direction !== "flat" ? { value: `${expChange.pct}%`, positive: expChange.direction === "down" } : undefined}
