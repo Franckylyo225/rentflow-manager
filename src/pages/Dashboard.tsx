@@ -293,7 +293,7 @@ export default function Dashboard() {
               <div className="flex-1">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bénéfice net</p>
                 <div className="flex items-baseline gap-2">
-                  <p className={cn("text-xl font-bold", monthBenefice >= 0 ? "text-success" : "text-destructive")}>{(monthBenefice / 1000000).toFixed(1)}M <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                  <p className={cn("text-xl font-bold", monthBenefice >= 0 ? "text-success" : "text-destructive")}>{formatAmount(monthBenefice, short)} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
                   <span className={cn("inline-flex items-center gap-0.5 text-xs font-semibold", benChange.direction === "up" ? "text-success" : benChange.direction === "down" ? "text-destructive" : "text-muted-foreground")}>
                     {benChange.direction === "up" ? <ArrowUpRight className="h-3 w-3" /> : benChange.direction === "down" ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                     {benChange.pct}%
