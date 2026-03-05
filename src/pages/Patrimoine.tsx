@@ -46,7 +46,7 @@ export default function Patrimoine() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [assetsRes, holdersRes] = await Promise.all([
-      supabase.from("patrimony_assets").select("*, asset_holders(full_name)").order("created_at", { ascending: false }),
+      supabase.from("patrimony_assets").select("*, asset_holders(full_name), patrimony_documents(document_type)").order("created_at", { ascending: false }),
       supabase.from("asset_holders").select("*").order("full_name"),
     ]);
     setAssets(assetsRes.data || []);
