@@ -166,35 +166,6 @@ export default function PatrimoineDetail() {
           </Card>
         )}
 
-        {/* Contacts */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Personnes ressources</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowAddContact(true)}>
-              <UserPlus className="h-3.5 w-3.5" /> Ajouter
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {contacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucune personne ressource.</p>
-            ) : (
-              <div className="space-y-2">
-                {contacts.map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div>
-                      <p className="font-medium text-sm text-card-foreground">{c.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{c.role}{c.phone ? ` · ${c.phone}` : ""}{c.email ? ` · ${c.email}` : ""}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingContact(c)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Documents */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -221,6 +192,9 @@ export default function PatrimoineDetail() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => previewDoc(doc)}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadDoc(doc)}>
                         <Download className="h-3.5 w-3.5" />
                       </Button>
@@ -228,6 +202,35 @@ export default function PatrimoineDetail() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Contacts */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base">Personnes ressources</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowAddContact(true)}>
+              <UserPlus className="h-3.5 w-3.5" /> Ajouter
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {contacts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Aucune personne ressource.</p>
+            ) : (
+              <div className="space-y-2">
+                {contacts.map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <div>
+                      <p className="font-medium text-sm text-card-foreground">{c.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{c.role}{c.phone ? ` · ${c.phone}` : ""}{c.email ? ` · ${c.email}` : ""}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingContact(c)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 ))}
               </div>
