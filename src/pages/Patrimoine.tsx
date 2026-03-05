@@ -222,6 +222,14 @@ export default function Patrimoine() {
               {ASSET_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Tous les statuts" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="complet">Complet</SelectItem>
+              <SelectItem value="en_cours">En cours</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
