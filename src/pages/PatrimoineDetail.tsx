@@ -106,6 +106,15 @@ export default function PatrimoineDetail() {
   };
 
   const previewDoc = async (doc: any) => {
+    const isPdf = /\.pdf$/i.test(doc.file_url) || /\.pdf$/i.test(doc.name);
+    if (isPdf) {
+      // PDFs are blocked by Chrome in blob iframes — use signed URL in new tab
+      const { data, error } = await supabase.storage.from("patrimony-docs").createSignedUrl(doc.file_url, 3600);
+      if (error || !data?.signedUrl) { toast.error("Erreur visualisation"); return; }
+      window.open(data.signedUrl, "_blank");
+      return;
+    }
+    // Images: show in dialog
     const { data, error } = await supabase.storage.from("patrimony-docs").download(doc.file_url);
     if (error || !data) { toast.error("Erreur visualisation"); return; }
     const url = URL.createObjectURL(data);
