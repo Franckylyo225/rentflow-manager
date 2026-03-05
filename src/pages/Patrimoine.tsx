@@ -11,12 +11,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
+import { StatCard } from "@/components/dashboard/StatCard";
 
 const ASSET_TYPES = [
   { value: "terrain", label: "Terrain" },
@@ -183,12 +184,26 @@ export default function Patrimoine() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Patrimoine</h1>
-            <p className="text-muted-foreground text-sm mt-1">{assets.length} actifs · {holders.length} titulaires</p>
+            <p className="text-muted-foreground text-sm mt-1">Gestion de vos actifs fonciers et immobiliers</p>
           </div>
           <Button className="gap-2 self-start" onClick={() => { resetForm(); setShowAdd(true); }}>
             <Plus className="h-4 w-4" /> Ajouter un actif
           </Button>
         </div>
+
+        {/* Stats */}
+        {(() => {
+          const completCount = assets.filter(a => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd")).length;
+          const enCoursCount = assets.length - completCount;
+          return (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard title="Propriétés" value={String(assets.length)} icon={Landmark} variant="info" />
+              <StatCard title="Dossiers complets" value={String(completCount)} icon={FolderCheck} variant="success" />
+              <StatCard title="Dossiers en cours" value={String(enCoursCount)} icon={FolderClock} variant="warning" />
+              <StatCard title="Titulaires" value={String(holders.length)} icon={UserCheck} variant="default" />
+            </div>
+          );
+        })()}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
