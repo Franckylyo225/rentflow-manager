@@ -367,7 +367,7 @@ export default function Patrimoine() {
                       </thead>
                       <tbody>
                         {filteredHolders.map(h => (
-                          <tr key={h.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <tr key={h.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setViewingHolder(h)}>
                             <td className="py-3 px-4 font-medium text-card-foreground">{h.full_name}</td>
                             <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{h.phone || "—"}</td>
                             <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{h.email || "—"}</td>
