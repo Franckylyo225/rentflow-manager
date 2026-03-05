@@ -68,6 +68,9 @@ export default function Dashboard() {
   const { data: payments } = useRentPayments();
   const { data: expenses } = useExpenses();
 
+  const isMobile = useIsMobile();
+  const short = isMobile;
+
   const now = new Date().toISOString().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(now);
   const isCurrentMonth = selectedMonth === now;
