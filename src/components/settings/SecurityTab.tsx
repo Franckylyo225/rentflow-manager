@@ -293,6 +293,66 @@ export function SecurityTab() {
         </Card>
       )}
 
+      {/* Password change */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <KeyRound className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Modifier le mot de passe</CardTitle>
+              <CardDescription>Changez votre mot de passe de connexion</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">Nouveau mot de passe</Label>
+            <Input
+              id="new-password"
+              type="password"
+              placeholder="••••••••"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">Les mots de passe ne correspondent pas</p>
+            )}
+          </div>
+          <Button
+            disabled={changingPassword || newPassword.length < 6 || newPassword !== confirmPassword}
+            onClick={async () => {
+              setChangingPassword(true);
+              try {
+                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+                toast.success("Mot de passe modifié avec succès");
+                setNewPassword("");
+                setConfirmPassword("");
+              } catch (e: any) {
+                toast.error("Erreur : " + e.message);
+              } finally {
+                setChangingPassword(false);
+              }
+            }}
+          >
+            {changingPassword ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Mettre à jour le mot de passe
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Delete confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
