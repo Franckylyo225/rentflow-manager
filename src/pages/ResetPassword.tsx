@@ -18,8 +18,56 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if we have a recovery session from the email link
-    const checkSession = async () => {
+    // Listen for auth events (PASSWORD_RECOVERY)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" && session) {
+        setValidSession(true);
+        setLoading(false);
+      }
+      if (event === "SIGNED_IN" && session) {
+        setValidSession(true);
+        setLoading(false);
+      }
+    });
+
+    const handleRecovery = async () => {
+      // Handle PKCE flow: exchange code from URL query params
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      
+      if (code) {
+        try {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error("Code exchange error:", error);
+            setLoading(false);
+            return;
+          }
+          // Session will be set via onAuthStateChange
+          return;
+        } catch (err) {
+          console.error("Recovery error:", err);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Handle implicit flow: check hash fragments
+      const hash = window.location.hash;
+      if (hash && hash.includes("type=recovery")) {
+        // Supabase client will auto-detect and fire PASSWORD_RECOVERY event
+        // Wait a bit for the client to process
+        setTimeout(async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setValidSession(true);
+          }
+          setLoading(false);
+        }, 1500);
+        return;
+      }
+
+      // Check existing session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setValidSession(true);
@@ -27,15 +75,7 @@ export default function ResetPassword() {
       setLoading(false);
     };
 
-    // Listen for auth events (PASSWORD_RECOVERY)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" && session) {
-        setValidSession(true);
-        setLoading(false);
-      }
-    });
-
-    checkSession();
+    handleRecovery();
     return () => subscription.unsubscribe();
   }, []);
 
