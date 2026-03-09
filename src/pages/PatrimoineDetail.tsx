@@ -1,29 +1,23 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const DOC_TYPES = [
-  { value: "acd", label: "ACD" },
-  { value: "cnpf", label: "CNPF" },
-  { value: "extrait_topographique", label: "Extrait Topographique" },
-  { value: "titre_foncier", label: "Titre Foncier" },
-  { value: "permis_construire", label: "Permis de Construire" },
-  { value: "autre", label: "Autre" },
-];
+import { AssetHeader } from "@/components/patrimoine/AssetHeader";
+import { AssetInfoSection } from "@/components/patrimoine/AssetInfoSection";
+import { AssetDocumentsSection, DOC_TYPES } from "@/components/patrimoine/AssetDocumentsSection";
+import { AssetContactsSection } from "@/components/patrimoine/AssetContactsSection";
 
 export default function PatrimoineDetail() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +54,8 @@ export default function PatrimoineDetail() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const documentsHaveAcd = documents.some(d => d.document_type === "acd");
+
   const handleAddContact = async () => {
     if (!contactForm.full_name || !id) return;
     setSaving(true);
@@ -84,7 +80,6 @@ export default function PatrimoineDetail() {
     const { error: uploadError } = await supabase.storage.from("patrimony-docs").upload(filePath, docFile);
     if (uploadError) { toast.error("Erreur upload : " + uploadError.message); setUploading(false); return; }
 
-    const { data: urlData } = supabase.storage.from("patrimony-docs").getPublicUrl(filePath);
     const { error } = await supabase.from("patrimony_documents").insert({
       asset_id: id,
       name: docForm.name,
@@ -108,13 +103,11 @@ export default function PatrimoineDetail() {
   const previewDoc = async (doc: any) => {
     const isPdf = /\.pdf$/i.test(doc.file_url) || /\.pdf$/i.test(doc.name);
     if (isPdf) {
-      // PDFs are blocked by Chrome in blob iframes — use signed URL in new tab
       const { data, error } = await supabase.storage.from("patrimony-docs").createSignedUrl(doc.file_url, 3600);
       if (error || !data?.signedUrl) { toast.error("Erreur visualisation"); return; }
       window.open(data.signedUrl, "_blank");
       return;
     }
-    // Images: show in dialog
     const { data, error } = await supabase.storage.from("patrimony-docs").download(doc.file_url);
     if (error || !data) { toast.error("Erreur visualisation"); return; }
     const url = URL.createObjectURL(data);
@@ -142,129 +135,26 @@ export default function PatrimoineDetail() {
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!asset) return <AppLayout><div className="text-center py-20 text-muted-foreground">Actif introuvable.</div></AppLayout>;
 
-  const typeLabel = { terrain: "Terrain", maison: "Maison", titre: "Titre de propriété", autre: "Autre" }[asset.asset_type as string] || asset.asset_type;
-
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/patrimoine")}><ArrowLeft className="h-4 w-4" /></Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-foreground">{asset.title}</h1>
-              <Badge variant="outline">{typeLabel}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{asset.locality}{asset.subdivision_name ? ` · ${asset.subdivision_name}` : ""}</p>
-          </div>
-        </div>
-
-        {/* Info cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">Titre foncier</p>
-              <p className="font-medium text-card-foreground">{asset.land_title || "—"}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">Titulaire</p>
-              <p className="font-medium text-card-foreground">{asset.asset_holders?.full_name || "—"}</p>
-              {asset.asset_holders?.phone && <p className="text-xs text-muted-foreground">{asset.asset_holders.phone}</p>}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">Cabinet traitant</p>
-              <p className="font-medium text-card-foreground">{asset.handling_firm || "—"}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {asset.description && (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-xs text-muted-foreground mb-1">Description</p>
-              <p className="text-sm text-card-foreground">{asset.description}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Documents */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Documents</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowAddDoc(true)}>
-              <Upload className="h-3.5 w-3.5" /> Ajouter
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {documents.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucun document.</p>
-            ) : (
-              <div className="space-y-2">
-                {documents.map(doc => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-sm text-card-foreground">{doc.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {DOC_TYPES.find(t => t.value === doc.document_type)?.label || doc.document_type}
-                          {doc.file_size ? ` · ${(doc.file_size / 1024).toFixed(0)} Ko` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => previewDoc(doc)}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadDoc(doc)}>
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingDoc(doc)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Contacts */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Personnes ressources</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowAddContact(true)}>
-              <UserPlus className="h-3.5 w-3.5" /> Ajouter
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {contacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucune personne ressource.</p>
-            ) : (
-              <div className="space-y-2">
-                {contacts.map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div>
-                      <p className="font-medium text-sm text-card-foreground">{c.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{c.role}{c.phone ? ` · ${c.phone}` : ""}{c.email ? ` · ${c.email}` : ""}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingContact(c)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className="space-y-5 max-w-4xl mx-auto">
+        <AssetHeader asset={asset} documentsHaveAcd={documentsHaveAcd} />
+        <AssetInfoSection asset={asset} />
+        <AssetDocumentsSection
+          documents={documents}
+          onAdd={() => setShowAddDoc(true)}
+          onPreview={previewDoc}
+          onDownload={downloadDoc}
+          onDelete={setDeletingDoc}
+        />
+        <AssetContactsSection
+          contacts={contacts}
+          onAdd={() => setShowAddContact(true)}
+          onDelete={setDeletingContact}
+        />
       </div>
 
-      {/* Add contact */}
+      {/* Add contact dialog */}
       <Dialog open={showAddContact} onOpenChange={setShowAddContact}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>Ajouter une personne ressource</DialogTitle></DialogHeader>
@@ -293,7 +183,7 @@ export default function PatrimoineDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Add document */}
+      {/* Add document dialog */}
       <Dialog open={showAddDoc} onOpenChange={setShowAddDoc}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>Ajouter un document</DialogTitle></DialogHeader>
@@ -351,7 +241,7 @@ export default function PatrimoineDetail() {
             <AlertDialogAction onClick={handleDeleteDoc} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-       </AlertDialog>
+      </AlertDialog>
 
       {/* Document preview */}
       <Dialog open={!!previewUrl} onOpenChange={v => !v && closePreview()}>
@@ -360,9 +250,7 @@ export default function PatrimoineDetail() {
             <DialogTitle>{previewName}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-auto">
-            {previewUrl && (
-              <img src={previewUrl} alt={previewName} className="max-w-full h-auto mx-auto rounded" />
-            )}
+            {previewUrl && <img src={previewUrl} alt={previewName} className="max-w-full h-auto mx-auto rounded" />}
           </div>
         </DialogContent>
       </Dialog>
