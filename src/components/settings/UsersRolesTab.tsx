@@ -225,6 +225,9 @@ function MembersSection({ isAdmin, currentUserId, orgId }: { isAdmin: boolean; c
 
   return (
     <div className="space-y-4">
+      {/* Invite Link Card */}
+      {isAdmin && <InviteLinkCard orgId={orgId} />}
+
       <Card className="border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -322,7 +325,6 @@ function MembersSection({ isAdmin, currentUserId, orgId }: { isAdmin: boolean; c
         </Card>
       )}
 
-      {/* City Restriction Dialog */}
       {editMember && (
         <CityRestrictionDialog
           member={editMember}
@@ -342,6 +344,155 @@ function MembersSection({ isAdmin, currentUserId, orgId }: { isAdmin: boolean; c
         />
       )}
     </div>
+  );
+}
+
+/* ─── Invite Link Card ─── */
+function InviteLinkCard({ orgId }: { orgId?: string }) {
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!orgId) return;
+    supabase.from("organizations").select("invite_token").eq("id", orgId).single().then(({ data }) => {
+      if (data) setInviteToken((data as any).invite_token);
+      setLoading(false);
+    });
+  }, [orgId]);
+
+  const inviteUrl = inviteToken ? `${window.location.origin}/auth?invite=${inviteToken}` : "";
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    toast.success("Lien copié !");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (loading) return null;
+
+  return (
+    <Card className="border-border bg-primary/5">
+      <CardContent className="p-4 flex items-center gap-4">
+        <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+          <Link2 className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-card-foreground">Lien d'invitation</p>
+          <p className="text-xs text-muted-foreground truncate">{inviteUrl}</p>
+        </div>
+        <Button size="sm" variant="outline" className="gap-2 flex-shrink-0" onClick={handleCopy}>
+          {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copié" : "Copier"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Pending Users Section ─── */
+function PendingUsersSection({ orgId }: { orgId?: string }) {
+  const [pendingUsers, setPendingUsers] = useState<Array<{ id: string; user_id: string; full_name: string; email: string | null; created_at: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const fetchPending = useCallback(async () => {
+    if (!orgId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, user_id, full_name, email, created_at")
+      .eq("organization_id", orgId)
+      .eq("is_approved", false)
+      .order("created_at", { ascending: false });
+    if (data) setPendingUsers(data as any);
+    setLoading(false);
+  }, [orgId]);
+
+  useEffect(() => { fetchPending(); }, [fetchPending]);
+
+  const handleApprove = async (userId: string, fullName: string) => {
+    setProcessingId(userId);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_approved: true } as any)
+      .eq("user_id", userId);
+    if (error) toast.error("Erreur : " + error.message);
+    else { toast.success(`${fullName} a été approuvé`); await fetchPending(); }
+    setProcessingId(null);
+  };
+
+  const handleReject = async (userId: string, fullName: string) => {
+    setProcessingId(userId);
+    // Delete profile and role, then the auth user via edge function would be ideal
+    // For now, just delete profile and role to effectively block access
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+    const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
+    if (error) toast.error("Erreur : " + error.message);
+    else { toast.success(`Demande de ${fullName} refusée`); await fetchPending(); }
+    setProcessingId(null);
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  return (
+    <Card className="border-border">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-amber-500/10"><Clock className="h-4 w-4 text-amber-500" /></div>
+          <div>
+            <CardTitle className="text-base">Demandes en attente</CardTitle>
+            <CardDescription>{pendingUsers.length} demande{pendingUsers.length > 1 ? "s" : ""} d'inscription</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {pendingUsers.length === 0 ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            Aucune demande en attente
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {pendingUsers.map(user => (
+              <div key={user.user_id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-9 w-9 rounded-full bg-amber-500/15 flex items-center justify-center text-xs font-semibold text-amber-600 flex-shrink-0">
+                    {user.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-card-foreground truncate">{user.full_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-destructive hover:text-destructive"
+                    disabled={processingId === user.user_id}
+                    onClick={() => handleReject(user.user_id, user.full_name)}
+                  >
+                    <XCircle className="h-3.5 w-3.5" /> Refuser
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={processingId === user.user_id}
+                    onClick={() => handleApprove(user.user_id, user.full_name)}
+                  >
+                    {processingId === user.user_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                    Approuver
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
