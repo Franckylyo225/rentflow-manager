@@ -39,6 +39,11 @@ export function SecurityTab() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [factorToDelete, setFactorToDelete] = useState<string | null>(null);
 
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
   const loadFactors = async () => {
     setLoading(true);
     try {
