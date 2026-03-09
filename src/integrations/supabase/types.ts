@@ -595,6 +595,7 @@ export type Database = {
           email: string | null
           fiscal_year_start: number
           id: string
+          invite_token: string
           late_fee_enabled: boolean
           late_fee_grace_days: number
           late_fee_type: string
@@ -620,6 +621,7 @@ export type Database = {
           email?: string | null
           fiscal_year_start?: number
           id?: string
+          invite_token?: string
           late_fee_enabled?: boolean
           late_fee_grace_days?: number
           late_fee_type?: string
@@ -645,6 +647,7 @@ export type Database = {
           email?: string | null
           fiscal_year_start?: number
           id?: string
+          invite_token?: string
           late_fee_enabled?: boolean
           late_fee_grace_days?: number
           late_fee_type?: string
@@ -845,6 +848,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_approved: boolean
           organization_id: string
           phone: string | null
           updated_at: string
@@ -855,6 +859,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_approved?: boolean
           organization_id: string
           phone?: string | null
           updated_at?: string
@@ -865,6 +870,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_approved?: boolean
           organization_id?: string
           phone?: string | null
           updated_at?: string
