@@ -49,6 +49,10 @@ export default function SettingsPage() {
             <TabsContent value="users">
               <UsersRolesTab />
             </TabsContent>
+
+            <TabsContent value="security">
+              <SecurityTab />
+            </TabsContent>
           </Tabs>
         )}
       </div>
