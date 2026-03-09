@@ -15,6 +15,7 @@ export default function AuthPage() {
   const inviteToken = searchParams.get("invite");
 
   const [isSignUp, setIsSignUp] = useState(!!inviteToken);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
