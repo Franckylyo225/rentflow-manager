@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Users, Shield, Loader2, Crown, UserCog, Calculator, Plus, Trash2, Pencil, Save,
   Eye, Edit3, Gavel, Settings2, MapPin, LayoutDashboard, Home, UserCheck, Banknote, Receipt, BarChart3,
-  UserPlus, KeyRound
+  UserPlus, KeyRound, Link2, Copy, CheckCircle, XCircle, Clock
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
