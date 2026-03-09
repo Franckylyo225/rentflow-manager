@@ -126,12 +126,18 @@ export function UsersRolesTab() {
     <Tabs defaultValue="members" className="space-y-4">
       <TabsList>
         <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Membres</TabsTrigger>
+        {isAdmin && <TabsTrigger value="pending" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Demandes</TabsTrigger>}
         <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Rôles & Permissions</TabsTrigger>
       </TabsList>
 
       <TabsContent value="members">
         <MembersSection isAdmin={isAdmin} currentUserId={user?.id} orgId={profile?.organization_id} />
       </TabsContent>
+      {isAdmin && (
+        <TabsContent value="pending">
+          <PendingUsersSection orgId={profile?.organization_id} />
+        </TabsContent>
+      )}
       <TabsContent value="roles">
         <RolesSection isAdmin={isAdmin} orgId={profile?.organization_id} />
       </TabsContent>
