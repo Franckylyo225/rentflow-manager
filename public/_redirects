@@ -1,0 +1,16 @@
+/*
+  Catch-all rewrite so client-side routing works on page refresh.
+  Netlify / Lovable hosting reads this file automatically.
+*/
+/*
+  /auth              /index.html   200
+  /properties/*      /index.html   200
+  /patrimoine/*      /index.html   200
+  /tenants/*         /index.html   200
+  /rents             /index.html   200
+  /expenses          /index.html   200
+  /employees         /index.html   200
+  /financial-reports /index.html   200
+  /notifications     /index.html   200
+  /settings          /index.html   200
+  /*                 /index.html   200
