@@ -29,6 +29,9 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
     ? new Date(data.paymentDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : today;
 
+  // Helper to format numbers with regular space as thousand separator (jsPDF doesn't handle nbsp well)
+  const formatNumber = (num: number) => num.toLocaleString("fr-FR").replace(/\u00A0/g, " ");
+
   const marginLeft = 25;
   const pageWidth = 210;
   const contentWidth = pageWidth - marginLeft * 2;
@@ -114,13 +117,13 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   y += 10;
   doc.setFont("helvetica", "normal");
   doc.text("Loyer mensuel :", marginLeft + 8, y);
-  doc.text(`${data.amount.toLocaleString("fr-FR")} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+  doc.text(`${formatNumber(data.amount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
 
   y += 7;
   doc.text("Montant réglé :", marginLeft + 8, y);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 120, 60);
-  doc.text(`${data.paidAmount.toLocaleString("fr-FR")} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+  doc.text(`${formatNumber(data.paidAmount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
   doc.setTextColor(0);
 
   y += 7;
@@ -146,7 +149,7 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   const signataire = data.agentName || data.organizationName || "l'agence immobilière";
-  const confirmParagraph = `Je soussigné(e), ${signataire}, représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${data.paidAmount.toLocaleString("fr-FR")} FCFA au titre du loyer du mois de ${data.month}, et lui en donne quittance, sous réserve de tous droits.`;
+  const confirmParagraph = `Je soussigné(e), ${signataire}, représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${formatNumber(data.paidAmount)} FCFA au titre du loyer du mois de ${data.month}, et lui en donne quittance, sous réserve de tous droits.`;
 
   const wrappedLines = doc.splitTextToSize(confirmParagraph, contentWidth);
   doc.text(wrappedLines, marginLeft, y);
