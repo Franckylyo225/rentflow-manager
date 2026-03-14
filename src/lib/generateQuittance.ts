@@ -145,7 +145,8 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   // Confirmation text - use splitTextToSize to avoid overflow
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  const confirmParagraph = `Je soussigné(e), représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${data.paidAmount.toLocaleString("fr-FR")} FCFA au titre du loyer du mois de ${data.month}, et lui en donne quittance, sous réserve de tous droits.`;
+  const signataire = data.agentName || data.organizationName || "l'agence immobilière";
+  const confirmParagraph = `Je soussigné(e), ${signataire}, représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${data.paidAmount.toLocaleString("fr-FR")} FCFA au titre du loyer du mois de ${data.month}, et lui en donne quittance, sous réserve de tous droits.`;
 
   const wrappedLines = doc.splitTextToSize(confirmParagraph, contentWidth);
   doc.text(wrappedLines, marginLeft, y);
