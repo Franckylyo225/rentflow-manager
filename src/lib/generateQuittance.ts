@@ -117,7 +117,7 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   y += 10;
   doc.setFont("helvetica", "normal");
   doc.text("Loyer mensuel :", marginLeft + 8, y);
-  doc.text(`${data.amount.toLocaleString("fr-FR")} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+  doc.text(`${formatNumber(data.amount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
 
   y += 7;
   doc.text("Montant réglé :", marginLeft + 8, y);
