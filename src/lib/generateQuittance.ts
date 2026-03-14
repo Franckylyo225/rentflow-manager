@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 
 export interface QuittanceData {
+  quittanceNumber?: string;
   tenantName: string;
   tenantPhone: string;
   tenantEmail: string;
@@ -23,10 +24,14 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   const doc = new jsPDF();
   const today = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const dueDateFormatted = new Date(data.dueDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const paymentDateFormatted = data.paymentDate
+    ? new Date(data.paymentDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : today;
 
   const marginLeft = 25;
   const pageWidth = 210;
   const contentWidth = pageWidth - marginLeft * 2;
+  const maxTextWidth = contentWidth - 16; // inner padding for boxes
   let y = 25;
 
   // Header - Organization
@@ -42,10 +47,16 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   if (data.organizationEmail) { doc.text(data.organizationEmail, marginLeft, y); y += 4; }
   doc.setTextColor(0);
 
-  // Date aligned right
+  // Date & quittance number aligned right
   y = 25;
   doc.setFontSize(9);
   doc.text(`Fait le ${today}`, pageWidth - marginLeft, y, { align: "right" });
+  if (data.quittanceNumber) {
+    y += 5;
+    doc.setFont("helvetica", "bold");
+    doc.text(`N° ${data.quittanceNumber}`, pageWidth - marginLeft, y, { align: "right" });
+    doc.setFont("helvetica", "normal");
+  }
 
   y = 55;
 
@@ -77,16 +88,23 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   doc.text("Locataire", marginLeft + 8, y + 2);
   doc.setFont("helvetica", "normal");
   doc.text(data.tenantName, marginLeft + 8, y + 9);
-  doc.text(`Logement : ${data.unitName} — ${data.propertyName}`, marginLeft + 8, y + 16);
+  const logementText = `Logement : ${data.unitName} — ${data.propertyName}`;
+  const logementLines = doc.splitTextToSize(logementText, maxTextWidth);
+  doc.text(logementLines, marginLeft + 8, y + 16);
   if (data.propertyAddress) {
     doc.text(data.propertyAddress, marginLeft + 8, y + 22);
   }
   y += 38;
 
-  // Payment details box
+  // Payment details box - calculate height dynamically
+  let boxLines = 3; // loyer, montant réglé, échéance
+  if (data.paymentDate) boxLines++;
+  if (data.paymentMethod) boxLines++;
+  const boxHeight = 18 + boxLines * 7;
+
   doc.setFillColor(240, 248, 255);
   doc.setDrawColor(180, 200, 220);
-  doc.roundedRect(marginLeft, y - 5, contentWidth, 40, 3, 3, "FD");
+  doc.roundedRect(marginLeft, y - 5, contentWidth, boxHeight, 3, 3, "FD");
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
@@ -95,19 +113,25 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   y += 10;
   doc.setFont("helvetica", "normal");
   doc.text("Loyer mensuel :", marginLeft + 8, y);
-  doc.text(`${data.amount.toLocaleString()} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+  doc.text(`${data.amount.toLocaleString("fr-FR")} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
 
   y += 7;
   doc.text("Montant réglé :", marginLeft + 8, y);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 120, 60);
-  doc.text(`${data.paidAmount.toLocaleString()} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+  doc.text(`${data.paidAmount.toLocaleString("fr-FR")} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
   doc.setTextColor(0);
 
   y += 7;
   doc.setFont("helvetica", "normal");
   doc.text("Échéance :", marginLeft + 8, y);
   doc.text(dueDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+
+  if (data.paymentDate) {
+    y += 7;
+    doc.text("Date de paiement :", marginLeft + 8, y);
+    doc.text(paymentDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+  }
 
   if (data.paymentMethod) {
     y += 7;
@@ -117,22 +141,14 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
 
   y += 20;
 
-  // Confirmation text
-  doc.setFontSize(11);
+  // Confirmation text - use splitTextToSize to avoid overflow
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  const confirmText = [
-    `Je soussigné(e), représentant(e) de ${data.organizationName || "l'agence immobilière"},`,
-    `reconnais avoir reçu de ${data.tenantName} la somme de ${data.paidAmount.toLocaleString()} FCFA`,
-    `au titre du loyer du mois de ${data.month}, et lui en donne quittance,`,
-    `sous réserve de tous droits.`,
-  ];
+  const confirmParagraph = `Je soussigné(e), représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${data.paidAmount.toLocaleString("fr-FR")} FCFA au titre du loyer du mois de ${data.month}, et lui en donne quittance, sous réserve de tous droits.`;
 
-  for (const line of confirmText) {
-    doc.text(line, marginLeft, y);
-    y += 7;
-  }
-
-  y += 15;
+  const wrappedLines = doc.splitTextToSize(confirmParagraph, contentWidth);
+  doc.text(wrappedLines, marginLeft, y);
+  y += wrappedLines.length * 5 + 15;
 
   // Signature
   doc.setFont("helvetica", "bold");
@@ -153,7 +169,7 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
 
 export function downloadQuittance(data: QuittanceData) {
   const doc = buildQuittancePDF(data);
-  doc.save(`quittance-${data.month}-${data.tenantName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  doc.save(`quittance-${data.quittanceNumber || data.month}-${data.tenantName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
 }
 
 export function getQuittanceBlob(data: QuittanceData): Blob {

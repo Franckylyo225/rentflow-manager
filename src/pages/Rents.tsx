@@ -98,7 +98,13 @@ export default function Rents() {
   };
 
   const openQuittance = (payment: any) => {
+    // Generate unique quittance number from payment id and date
+    const datePrefix = payment.due_date?.replace(/-/g, "").slice(2, 8) ?? "";
+    const idSuffix = payment.id?.slice(0, 6).toUpperCase() ?? "";
+    const quittanceNumber = `Q-${datePrefix}-${idSuffix}`;
+
     setQuittanceData({
+      quittanceNumber,
       tenantName: payment.tenants?.full_name ?? "",
       tenantPhone: payment.tenants?.phone ?? "",
       tenantEmail: payment.tenants?.email ?? "",
@@ -109,6 +115,7 @@ export default function Rents() {
       paidAmount: payment.paid_amount,
       dueDate: payment.due_date,
       month: payment.month,
+      paymentDate: payment.updated_at ?? payment.due_date,
       organizationName: orgSettings?.name,
       organizationAddress: orgSettings?.address ?? undefined,
       organizationPhone: orgSettings?.phone ?? undefined,
