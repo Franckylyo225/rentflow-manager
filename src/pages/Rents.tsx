@@ -21,6 +21,7 @@ import { generateMiseEnDemeure } from "@/lib/generateMiseEnDemeure";
 import { QuittanceDialog } from "@/components/rent/QuittanceDialog";
 import type { QuittanceData } from "@/lib/generateQuittance";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
+import { useProfile } from "@/hooks/useProfile";
 
 const paymentMethods = ["Espèces", "Virement bancaire", "Chèque", "Mobile Money", "Carte bancaire"];
 

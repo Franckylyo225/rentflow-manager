@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 
 export interface QuittanceData {
   quittanceNumber?: string;
+  agentName?: string;
   tenantName: string;
   tenantPhone: string;
   tenantEmail: string;
