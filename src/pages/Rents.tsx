@@ -48,6 +48,7 @@ export default function Rents() {
   const { data: payments, loading, refetch } = useRentPayments();
   const { data: cities } = useCities();
   const { data: allTasks, refetch: refetchTasks } = useEscalationTasks();
+  const { settings: orgSettings } = useOrganizationSettings();
 
   // Compute escalation info for each payment
   const paymentsWithEscalation = useMemo(() =>
