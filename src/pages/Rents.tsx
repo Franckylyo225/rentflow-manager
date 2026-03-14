@@ -35,6 +35,8 @@ export default function Rents() {
   const [saving, setSaving] = useState(false);
   const [payForm, setPayForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0], method: "", comment: "" });
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showQuittance, setShowQuittance] = useState(false);
+  const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
