@@ -107,6 +107,7 @@ export default function Rents() {
 
     setQuittanceData({
       quittanceNumber,
+      agentName: profile?.full_name || undefined,
       tenantName: payment.tenants?.full_name ?? "",
       tenantPhone: payment.tenants?.phone ?? "",
       tenantEmail: payment.tenants?.email ?? "",
