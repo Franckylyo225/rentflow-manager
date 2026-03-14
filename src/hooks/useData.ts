@@ -99,7 +99,7 @@ export interface DbRentPayment {
   due_date: string;
   status: "pending" | "paid" | "partial" | "late";
   month: string;
-  tenants?: { full_name: string; unit_id: string; units?: { name: string; property_id: string; properties?: { name: string; city_id: string; cities?: { name: string } } } };
+  tenants?: { full_name: string; phone?: string; email?: string; unit_id: string; units?: { name: string; property_id: string; properties?: { name: string; city_id: string; cities?: { name: string } } } };
 }
 
 // Specific hooks
@@ -174,7 +174,7 @@ export function useRentPayments() {
     setLoading(true);
     const { data: result } = await supabase
       .from("rent_payments")
-      .select("*, tenants(full_name, unit_id, units(name, property_id, properties(name, city_id, cities(name))))")
+      .select("*, tenants(full_name, phone, email, unit_id, units(name, property_id, properties(name, city_id, cities(name))))")
       .order("due_date", { ascending: false });
     if (result) setData(result as any);
     setLoading(false);

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, Receipt } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getEscalationInfo, defaultTasksByLevel, type EscalationInfo } from "@/lib/escalation";
 import { generateMiseEnDemeure } from "@/lib/generateMiseEnDemeure";
+import { QuittanceDialog } from "@/components/rent/QuittanceDialog";
+import type { QuittanceData } from "@/lib/generateQuittance";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 const paymentMethods = ["Espèces", "Virement bancaire", "Chèque", "Mobile Money", "Carte bancaire"];
 
@@ -32,6 +35,8 @@ export default function Rents() {
   const [saving, setSaving] = useState(false);
   const [payForm, setPayForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0], method: "", comment: "" });
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showQuittance, setShowQuittance] = useState(false);
+  const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
@@ -43,6 +48,7 @@ export default function Rents() {
   const { data: payments, loading, refetch } = useRentPayments();
   const { data: cities } = useCities();
   const { data: allTasks, refetch: refetchTasks } = useEscalationTasks();
+  const { settings: orgSettings } = useOrganizationSettings();
 
   // Compute escalation info for each payment
   const paymentsWithEscalation = useMemo(() =>
@@ -89,6 +95,26 @@ export default function Rents() {
   const openTasks = (payment: any) => {
     setSelectedPayment(payment);
     setShowTasks(true);
+  };
+
+  const openQuittance = (payment: any) => {
+    setQuittanceData({
+      tenantName: payment.tenants?.full_name ?? "",
+      tenantPhone: payment.tenants?.phone ?? "",
+      tenantEmail: payment.tenants?.email ?? "",
+      unitName: payment.tenants?.units?.name ?? "",
+      propertyName: payment.tenants?.units?.properties?.name ?? "",
+      propertyAddress: "",
+      amount: payment.amount,
+      paidAmount: payment.paid_amount,
+      dueDate: payment.due_date,
+      month: payment.month,
+      organizationName: orgSettings?.name,
+      organizationAddress: orgSettings?.address ?? undefined,
+      organizationPhone: orgSettings?.phone ?? undefined,
+      organizationEmail: orgSettings?.email ?? undefined,
+    });
+    setShowQuittance(true);
   };
 
   const handleRecordPayment = async () => {
@@ -251,6 +277,11 @@ export default function Rents() {
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-1">
+                                {payment.status === "paid" && (
+                                  <Button variant="ghost" size="sm" onClick={() => openQuittance(payment)} title="Quittance">
+                                    <Receipt className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 {payment.status !== "paid" && (
                                   <Button variant="outline" size="sm" onClick={() => openPayment(payment)}>Payer</Button>
                                 )}
@@ -437,6 +468,8 @@ export default function Rents() {
           )}
         </DialogContent>
       </Dialog>
+
+      <QuittanceDialog open={showQuittance} onOpenChange={setShowQuittance} data={quittanceData} />
     </AppLayout>
   );
 }
