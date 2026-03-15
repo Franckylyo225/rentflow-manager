@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, RefreshCw, CheckCircle2, XCircle, Clock, MessageSquare } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, XCircle, Clock, MessageSquare, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -13,6 +13,11 @@ const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; 
   sent: { label: "Envoyé", icon: CheckCircle2, className: "bg-success/10 text-success border-success/20" },
   failed: { label: "Échoué", icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20" },
   pending: { label: "En attente", icon: Clock, className: "bg-warning/10 text-warning border-warning/20" },
+  DeliveredToTerminal: { label: "Livré", icon: CheckCircle2, className: "bg-success/10 text-success border-success/20" },
+  DeliveredToNetwork: { label: "Réseau OK", icon: AlertCircle, className: "bg-warning/10 text-warning border-warning/20" },
+  DeliveryUncertain: { label: "Statut incertain", icon: AlertCircle, className: "bg-warning/10 text-warning border-warning/20" },
+  MessageWaiting: { label: "En file", icon: Clock, className: "bg-warning/10 text-warning border-warning/20" },
+  DeliveryImpossible: { label: "Non livré", icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
 const TEMPLATE_LABELS: Record<string, string> = {
@@ -26,19 +31,32 @@ export function SmsHistoryTable() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchHistory = async () => {
+  const syncDeliveryStatuses = async () => {
+    if (!user) return;
+    await supabase.functions.invoke("sync-sms-delivery", { body: {} });
+  };
+
+  const fetchHistory = async (withSync = true) => {
     if (!user) return;
     setLoading(true);
+
+    if (withSync) {
+      await syncDeliveryStatuses();
+    }
+
     const { data } = await supabase
       .from("sms_history")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
+
     if (data) setHistory(data);
     setLoading(false);
   };
 
-  useEffect(() => { fetchHistory(); }, [user]);
+  useEffect(() => {
+    fetchHistory(true);
+  }, [user]);
 
   if (loading) {
     return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
@@ -57,7 +75,7 @@ export function SmsHistoryTable() {
               <CardDescription>{history.length} message{history.length > 1 ? "s" : ""} envoyé{history.length > 1 ? "s" : ""}</CardDescription>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={fetchHistory}>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => fetchHistory(true)}>
             <RefreshCw className="h-3.5 w-3.5" /> Actualiser
           </Button>
         </div>
@@ -81,6 +99,7 @@ export function SmsHistoryTable() {
                 {history.map((sms) => {
                   const statusConf = STATUS_CONFIG[sms.status] || STATUS_CONFIG.pending;
                   const StatusIcon = statusConf.icon;
+
                   return (
                     <TableRow key={sms.id}>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
