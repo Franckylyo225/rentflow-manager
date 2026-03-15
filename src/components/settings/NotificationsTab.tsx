@@ -67,10 +67,22 @@ export function NotificationsTab() {
       return;
     }
     setSendingTest(true);
-    // Simulate sending — replace with actual SMS API call
-    await new Promise(r => setTimeout(r, 1500));
-    setSendingTest(false);
-    toast.info("Fonctionnalité SMS non configurée. Connectez un fournisseur SMS (ex: Twilio) pour envoyer des messages.", { duration: 5000 });
+    try {
+      const { data, error } = await supabase.functions.invoke("send-sms", {
+        body: { to: testPhone.trim(), message: testMessage.trim(), senderName: "Rentflow" },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("SMS de test envoyé avec succès !");
+      } else {
+        toast.error("Erreur : " + (data?.error || "Échec de l'envoi"));
+      }
+    } catch (err: any) {
+      console.error("SMS test error:", err);
+      toast.error("Erreur lors de l'envoi : " + (err.message || "Erreur inconnue"));
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   if (loading) {
