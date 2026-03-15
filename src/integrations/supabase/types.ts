@@ -981,6 +981,56 @@ export type Database = {
           },
         ]
       }
+      sms_history: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          orange_message_id: string | null
+          organization_id: string
+          recipient_name: string | null
+          recipient_phone: string
+          sender_name: string | null
+          status: string
+          template_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message: string
+          orange_message_id?: string | null
+          organization_id: string
+          recipient_name?: string | null
+          recipient_phone: string
+          sender_name?: string | null
+          status?: string
+          template_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          orange_message_id?: string | null
+          organization_id?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          sender_name?: string | null
+          status?: string
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           company_name: string | null
