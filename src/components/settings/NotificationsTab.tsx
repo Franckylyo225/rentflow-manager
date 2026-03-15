@@ -22,6 +22,7 @@ const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: 
 
 export function NotificationsTab() {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
