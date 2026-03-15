@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ORANGE_TOKEN_URL = "https://api.orange.com/oauth/v1/token";
+const ORANGE_TOKEN_URL = "https://api.orange.com/oauth/v3/token";
 const ORANGE_SMS_URL = "https://api.orange.com/smsmessaging/v1/outbound";
 
 async function getOrangeAccessToken(clientId: string, clientSecret: string): Promise<string> {
