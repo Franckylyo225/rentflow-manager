@@ -6,11 +6,26 @@ const corsHeaders = {
 };
 
 // Orange Developer OAuth & SMS endpoints
-const ORANGE_TOKEN_URLS = [
-  "https://api.orange.com/oauth/v3/token",
-  "https://api.orange.com/oauth/v2/token",
-];
+const ORANGE_TOKEN_URL = "https://api.orange.com/oauth/v3/token";
 const ORANGE_SMS_URL = "https://api.orange.com/smsmessaging/v1/outbound";
+
+// Country sender numbers as per Orange Developer docs
+// https://developer.orange.com/apis/sms/getting-started
+const COUNTRY_SENDER_NUMBERS: Record<string, string> = {
+  "225": "2250000", // Côte d'Ivoire
+  "237": "2370000", // Cameroon
+  "226": "2260000", // Burkina Faso
+  "224": "2240000", // Guinea Conakry
+  "245": "2450000", // Guinea Bissau
+  "243": "2430000", // DR Congo
+  "231": "2310000", // Liberia
+  "223": "2230000", // Mali
+  "261": "2610000", // Madagascar
+  "221": "2210000", // Senegal
+  "216": "2160000", // Tunisia
+  "267": "2670000", // Botswana
+  "962": "9620000", // Jordan
+};
 
 async function getOrangeAccessToken(clientId: string, clientSecret: string): Promise<string> {
   const credentials = btoa(`${clientId}:${clientSecret}`);
