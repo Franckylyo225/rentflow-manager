@@ -80,17 +80,23 @@ async function getOrangeAccessToken(clientId: string, clientSecret: string): Pro
 
 async function getOrganizationIdFromAuth(req: Request, supabaseUrl: string): Promise<string | null> {
   const authHeader = req.headers.get("Authorization");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  if (!authHeader?.startsWith("Bearer ")) return null;
 
-  if (!authHeader || !anonKey) return null;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  if (!anonKey) return null;
 
   const supabaseUser = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
 
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims?.sub) return null;
+
   const { data, error } = await supabaseUser
     .from("profiles")
     .select("organization_id")
+    .eq("user_id", claimsData.claims.sub)
     .maybeSingle();
 
   if (error || !data?.organization_id) return null;

@@ -1,1 +1,10 @@
 project_id = "vqlscgyjvattafvuxtks"
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.sync-sms-delivery]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
