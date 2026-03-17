@@ -677,6 +677,7 @@ export type Database = {
           latitude: number | null
           locality: string
           longitude: number | null
+          map_link: string | null
           organization_id: string
           status: string
           subdivision_name: string
@@ -694,6 +695,7 @@ export type Database = {
           latitude?: number | null
           locality?: string
           longitude?: number | null
+          map_link?: string | null
           organization_id: string
           status?: string
           subdivision_name?: string
@@ -711,6 +713,7 @@ export type Database = {
           latitude?: number | null
           locality?: string
           longitude?: number | null
+          map_link?: string | null
           organization_id?: string
           status?: string
           subdivision_name?: string
