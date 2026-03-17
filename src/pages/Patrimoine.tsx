@@ -76,16 +76,33 @@ export default function Patrimoine() {
     return true;
   });
 
+  const parseMapLink = (link: string): { lat: number | null; lng: number | null } => {
+    if (!link) return { lat: null, lng: null };
+    // Match patterns like @5.36,-4.01 or ?q=5.36,-4.01 or /place/5.36,-4.01
+    const patterns = [
+      /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+      /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+      /\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+      /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    ];
+    for (const p of patterns) {
+      const m = link.match(p);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    }
+    return { lat: null, lng: null };
+  };
+
   const handleSave = async () => {
     if (!form.title || !profile) return;
     setSaving(true);
-    const { latitude, longitude, ...rest } = form;
+    const { lat, lng } = parseMapLink(form.map_link);
     const { error } = await supabase.from("patrimony_assets").insert({
-      ...rest,
-      holder_id: rest.holder_id || null,
+      ...form,
+      holder_id: form.holder_id || null,
       organization_id: profile.organization_id,
-      latitude: latitude ? parseFloat(latitude) : null,
-      longitude: longitude ? parseFloat(longitude) : null,
+      map_link: form.map_link || null,
+      latitude: lat,
+      longitude: lng,
     });
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
@@ -95,12 +112,13 @@ export default function Patrimoine() {
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
     setSaving(true);
-    const { latitude, longitude, ...rest } = form;
+    const { lat, lng } = parseMapLink(form.map_link);
     const { error } = await supabase.from("patrimony_assets").update({
-      ...rest,
-      holder_id: rest.holder_id || null,
-      latitude: latitude ? parseFloat(latitude) : null,
-      longitude: longitude ? parseFloat(longitude) : null,
+      ...form,
+      holder_id: form.holder_id || null,
+      map_link: form.map_link || null,
+      latitude: lat,
+      longitude: lng,
     }).eq("id", editingAsset.id);
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
