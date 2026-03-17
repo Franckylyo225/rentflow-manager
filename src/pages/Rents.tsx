@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, Receipt } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -288,8 +288,9 @@ export default function Rents() {
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-1">
                                 {payment.status === "paid" && (
-                                  <Button variant="ghost" size="sm" onClick={() => openQuittance(payment)} title="Quittance">
-                                    <Receipt className="h-4 w-4" />
+                                  <Button variant="ghost" size="sm" onClick={() => openQuittance(payment)} title="Voir la quittance">
+                                    <FileText className="h-4 w-4 mr-1" />
+                                    <span className="text-xs">Quittance</span>
                                   </Button>
                                 )}
                                 {payment.status !== "paid" && (
