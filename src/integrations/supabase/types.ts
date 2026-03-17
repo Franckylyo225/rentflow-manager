@@ -679,9 +679,11 @@ export type Database = {
           longitude: number | null
           map_link: string | null
           organization_id: string
+          receipt_order_number: string | null
           status: string
           subdivision_name: string
           title: string
+          title_creation_date: string | null
           updated_at: string
         }
         Insert: {
@@ -697,9 +699,11 @@ export type Database = {
           longitude?: number | null
           map_link?: string | null
           organization_id: string
+          receipt_order_number?: string | null
           status?: string
           subdivision_name?: string
           title: string
+          title_creation_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -715,9 +719,11 @@ export type Database = {
           longitude?: number | null
           map_link?: string | null
           organization_id?: string
+          receipt_order_number?: string | null
           status?: string
           subdivision_name?: string
           title?: string
+          title_creation_date?: string | null
           updated_at?: string
         }
         Relationships: [

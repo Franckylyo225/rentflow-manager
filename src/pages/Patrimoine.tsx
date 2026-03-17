@@ -51,7 +51,7 @@ export default function Patrimoine() {
   const [deletingHolder, setDeletingHolder] = useState<any>(null);
   const [holderSearch, setHolderSearch] = useState("");
   const [viewingHolder, setViewingHolder] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "" });
+  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "" });
   const [holderForm, setHolderForm] = useState({ full_name: "", phone: "", email: "", address: "" });
   const navigate = useNavigate();
   const { profile } = useProfile();
@@ -113,13 +113,15 @@ export default function Patrimoine() {
     if (!form.title || !profile) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
+    const { title_creation_date, ...rest } = form;
     const { error } = await supabase.from("patrimony_assets").insert({
-      ...form,
-      holder_id: form.holder_id || null,
+      ...rest,
+      holder_id: rest.holder_id || null,
       organization_id: profile.organization_id,
-      map_link: form.map_link || null,
+      map_link: rest.map_link || null,
       latitude: lat,
       longitude: lng,
+      title_creation_date: title_creation_date || null,
     });
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
@@ -130,12 +132,14 @@ export default function Patrimoine() {
     if (!form.title || !editingAsset) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
+    const { title_creation_date: tcd, ...editRest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
-      ...form,
-      holder_id: form.holder_id || null,
-      map_link: form.map_link || null,
+      ...editRest,
+      holder_id: editRest.holder_id || null,
+      map_link: editRest.map_link || null,
       latitude: lat,
       longitude: lng,
+      title_creation_date: tcd || null,
     }).eq("id", editingAsset.id);
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
@@ -191,7 +195,7 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "" });
+  const resetForm = () => setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "" });
 
   const openEdit = (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -200,7 +204,8 @@ export default function Patrimoine() {
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
-      map_link: asset.map_link || "",
+      map_link: asset.map_link || "", receipt_order_number: asset.receipt_order_number || "",
+      title_creation_date: asset.title_creation_date || "",
     });
     setShowEdit(true);
   };
@@ -242,12 +247,22 @@ export default function Patrimoine() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Localité</Label>
+          <Label>Lotissement</Label>
           <Input value={form.locality} onChange={e => setForm(f => ({ ...f, locality: e.target.value }))} placeholder="Ex: Cocody, Abidjan" />
         </div>
         <div className="space-y-2">
           <Label>Nom du lotissement</Label>
           <Input value={form.subdivision_name} onChange={e => setForm(f => ({ ...f, subdivision_name: e.target.value }))} placeholder="Ex: Lot 45, Ilot 12" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>N° Ordre de recette</Label>
+          <Input value={form.receipt_order_number} onChange={e => setForm(f => ({ ...f, receipt_order_number: e.target.value }))} placeholder="Ex: OR-2024-001" />
+        </div>
+        <div className="space-y-2">
+          <Label>Date création du titre</Label>
+          <Input type="date" value={form.title_creation_date} onChange={e => setForm(f => ({ ...f, title_creation_date: e.target.value }))} />
         </div>
       </div>
       <div className="space-y-2">
@@ -339,7 +354,7 @@ export default function Patrimoine() {
                           <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Titulaire</th>
                           <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Type</th>
                           <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
-                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Localité</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Lotissement</th>
                           <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Titre foncier</th>
                           <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
                         </tr>
