@@ -10,11 +10,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const DOC_TYPES = [
   { value: "acd", label: "ACD" },
@@ -25,6 +27,64 @@ const DOC_TYPES = [
   { value: "ordre_recette", label: "Ordre de recette" },
   { value: "autre", label: "Autre" },
 ];
+
+function PatrimoineMap({ latitude, longitude, title }: { latitude: number | null; longitude: number | null; title: string }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const [showMap, setShowMap] = useState(false);
+
+  const hasCoords = latitude != null && longitude != null;
+
+  useEffect(() => {
+    if (!showMap || !hasCoords || !mapRef.current) return;
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+    const map = L.map(mapRef.current).setView([latitude, longitude], 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; OpenStreetMap',
+    }).addTo(map);
+    const icon = L.icon({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      iconSize: [25, 41], iconAnchor: [12, 41],
+    });
+    L.marker([latitude, longitude], { icon }).addTo(map).bindPopup(title).openPopup();
+    mapInstanceRef.current = map;
+    setTimeout(() => map.invalidateSize(), 200);
+    return () => { map.remove(); mapInstanceRef.current = null; };
+  }, [showMap, latitude, longitude, title, hasCoords]);
+
+  if (!hasCoords) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex items-center gap-3 text-muted-foreground">
+          <MapPin className="h-5 w-5" />
+          <p className="text-sm">Aucune géolocalisation enregistrée pour cet actif.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> Localisation</CardTitle>
+        <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowMap(v => !v)}>
+          {showMap ? "Masquer" : "Afficher la localisation"}
+        </Button>
+      </CardHeader>
+      {showMap && (
+        <CardContent>
+          <div ref={mapRef} className="h-[350px] w-full rounded-lg border border-border overflow-hidden" />
+          <p className="text-xs text-muted-foreground mt-2">Coordonnées : {latitude}, {longitude}</p>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
 
 export default function PatrimoineDetail() {
   const { id } = useParams<{ id: string }>();
@@ -191,6 +251,9 @@ export default function PatrimoineDetail() {
             </CardContent>
           </Card>
         )}
+
+        {/* Map / Geolocation */}
+        <PatrimoineMap latitude={asset.latitude} longitude={asset.longitude} title={asset.title} />
 
         {/* Documents */}
         <Card>

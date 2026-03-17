@@ -674,7 +674,9 @@ export type Database = {
           holder_id: string | null
           id: string
           land_title: string
+          latitude: number | null
           locality: string
+          longitude: number | null
           organization_id: string
           status: string
           subdivision_name: string
@@ -689,7 +691,9 @@ export type Database = {
           holder_id?: string | null
           id?: string
           land_title?: string
+          latitude?: number | null
           locality?: string
+          longitude?: number | null
           organization_id: string
           status?: string
           subdivision_name?: string
@@ -704,7 +708,9 @@ export type Database = {
           holder_id?: string | null
           id?: string
           land_title?: string
+          latitude?: number | null
           locality?: string
+          longitude?: number | null
           organization_id?: string
           status?: string
           subdivision_name?: string

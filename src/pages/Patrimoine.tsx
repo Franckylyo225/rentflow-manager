@@ -48,7 +48,7 @@ export default function Patrimoine() {
   const [deletingHolder, setDeletingHolder] = useState<any>(null);
   const [holderSearch, setHolderSearch] = useState("");
   const [viewingHolder, setViewingHolder] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "" });
+  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", latitude: "", longitude: "" });
   const [holderForm, setHolderForm] = useState({ full_name: "", phone: "", email: "", address: "" });
   const navigate = useNavigate();
   const { profile } = useProfile();
@@ -79,10 +79,13 @@ export default function Patrimoine() {
   const handleSave = async () => {
     if (!form.title || !profile) return;
     setSaving(true);
+    const { latitude, longitude, ...rest } = form;
     const { error } = await supabase.from("patrimony_assets").insert({
-      ...form,
-      holder_id: form.holder_id || null,
+      ...rest,
+      holder_id: rest.holder_id || null,
       organization_id: profile.organization_id,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
     });
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
@@ -92,9 +95,12 @@ export default function Patrimoine() {
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
     setSaving(true);
+    const { latitude, longitude, ...rest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
-      ...form,
-      holder_id: form.holder_id || null,
+      ...rest,
+      holder_id: rest.holder_id || null,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
     }).eq("id", editingAsset.id);
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
@@ -150,7 +156,7 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "" });
+  const resetForm = () => setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", latitude: "", longitude: "" });
 
   const openEdit = (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -159,6 +165,7 @@ export default function Patrimoine() {
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
+      latitude: asset.latitude != null ? String(asset.latitude) : "", longitude: asset.longitude != null ? String(asset.longitude) : "",
     });
     setShowEdit(true);
   };
@@ -211,6 +218,16 @@ export default function Patrimoine() {
       <div className="space-y-2">
         <Label>Cabinet traitant</Label>
         <Input value={form.handling_firm} onChange={e => setForm(f => ({ ...f, handling_firm: e.target.value }))} placeholder="Ex: Cabinet Me Koné" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Latitude</Label>
+          <Input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="Ex: 5.3600" />
+        </div>
+        <div className="space-y-2">
+          <Label>Longitude</Label>
+          <Input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="Ex: -4.0083" />
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Description</Label>
