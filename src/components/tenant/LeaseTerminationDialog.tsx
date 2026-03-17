@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +29,7 @@ const NOTICE_DURATIONS = [
   { value: 1, label: "1 mois" },
   { value: 2, label: "2 mois" },
   { value: 3, label: "3 mois" },
+  { value: 6, label: "6 mois" },
 ];
 
 interface Props {
@@ -42,6 +45,8 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
   const [reason, setReason] = useState("");
   const [notificationDate, setNotificationDate] = useState<Date | undefined>(new Date());
   const [noticeDuration, setNoticeDuration] = useState("1");
+  const [repairCost, setRepairCost] = useState(0);
+  const [repairDescription, setRepairDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
   const effectiveDate = useMemo(() => {
@@ -58,19 +63,20 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
       .reduce((sum: number, p: any) => sum + (p.amount - p.paid_amount), 0);
 
     const depositAmount = tenant.deposit;
-    const totalDue = remainingRentDue;
+    const totalDue = remainingRentDue + repairCost;
     const balance = depositAmount - totalDue;
 
     return {
       remainingRentDue,
-      pendingCharges: 0,
+      repairCost,
+      pendingCharges: repairCost,
       penalties: 0,
       depositAmount,
       totalDue: Math.max(0, totalDue),
       depositRetained: Math.max(0, Math.min(depositAmount, totalDue)),
       balance,
     };
-  }, [effectiveDate, payments, tenant]);
+  }, [effectiveDate, payments, tenant, repairCost]);
 
   const canProceed = reason && notificationDate && noticeDuration;
 
@@ -98,6 +104,7 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
         total_due: financialSummary.totalDue,
         deposit_retained: financialSummary.depositRetained,
         balance: financialSummary.balance,
+        inspection_notes: repairDescription || null,
         status: "closed",
         closed_at: new Date().toISOString(),
       });
@@ -126,6 +133,8 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
     setReason("");
     setNotificationDate(new Date());
     setNoticeDuration("1");
+    setRepairCost(0);
+    setRepairDescription("");
   };
 
   return (
@@ -178,6 +187,29 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
               </Select>
             </div>
 
+            {/* Repair costs */}
+            <div className="space-y-2">
+              <Label>Coût des réparations (FCFA)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={repairCost || ""}
+                onChange={e => setRepairCost(Number(e.target.value) || 0)}
+                placeholder="0"
+              />
+            </div>
+            {repairCost > 0 && (
+              <div className="space-y-2">
+                <Label>Description des réparations</Label>
+                <Textarea
+                  value={repairDescription}
+                  onChange={e => setRepairDescription(e.target.value)}
+                  placeholder="Détaillez les réparations à effectuer..."
+                  rows={3}
+                />
+              </div>
+            )}
+
             {/* Computed effective date */}
             {effectiveDate && (
               <Card className="bg-muted/50 border-border">
@@ -208,6 +240,12 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
                   <span className="text-muted-foreground">Loyers restants dus</span>
                   <span className="font-medium text-foreground">{financialSummary.remainingRentDue.toLocaleString()} FCFA</span>
                 </div>
+                {financialSummary.repairCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Coût des réparations</span>
+                    <span className="font-medium text-foreground">{financialSummary.repairCost.toLocaleString()} FCFA</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total dû</span>
