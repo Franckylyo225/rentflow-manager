@@ -10,8 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, AlertTriangle, CheckCircle2, Loader2, ClipboardCheck, Wrench, Circle } from "lucide-react";
+import { CalendarIcon, AlertTriangle, CheckCircle2, Loader2, Plus, Trash2, Wrench } from "lucide-react";
 import { format, addMonths, startOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -32,39 +31,11 @@ const NOTICE_DURATIONS = [
   { value: 6, label: "6 mois" },
 ];
 
-interface InspectionItem {
+interface RepairItem {
   id: string;
   label: string;
-  category: string;
-  checked: boolean;
-  status: "bon" | "usure" | "degrade" | "";
-  repairCost: number;
-  comment: string;
+  cost: number;
 }
-
-const DEFAULT_INSPECTION_ITEMS: Omit<InspectionItem, "checked" | "status" | "repairCost" | "comment">[] = [
-  { id: "murs", label: "Murs et peintures", category: "Intérieur" },
-  { id: "sols", label: "Sols et revêtements", category: "Intérieur" },
-  { id: "plafonds", label: "Plafonds", category: "Intérieur" },
-  { id: "portes", label: "Portes et serrures", category: "Intérieur" },
-  { id: "fenetres", label: "Fenêtres et vitres", category: "Intérieur" },
-  { id: "electricite", label: "Installation électrique", category: "Équipements" },
-  { id: "plomberie", label: "Plomberie et robinetterie", category: "Équipements" },
-  { id: "sanitaires", label: "Sanitaires (WC, douche, lavabo)", category: "Équipements" },
-  { id: "cuisine", label: "Cuisine (évier, plan de travail)", category: "Équipements" },
-  { id: "climatisation", label: "Climatisation / Ventilation", category: "Équipements" },
-  { id: "exterieur", label: "Terrasse / Balcon / Jardin", category: "Extérieur" },
-  { id: "clotures", label: "Clôtures et portails", category: "Extérieur" },
-  { id: "cles", label: "Remise des clés", category: "Général" },
-  { id: "compteurs", label: "Relevé des compteurs (eau/élec)", category: "Général" },
-  { id: "proprete", label: "Propreté générale", category: "Général" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "bon", label: "Bon état", color: "text-emerald-600" },
-  { value: "usure", label: "Usure normale", color: "text-amber-600" },
-  { value: "degrade", label: "Dégradé", color: "text-destructive" },
-];
 
 interface Props {
   open: boolean;
@@ -75,32 +46,17 @@ interface Props {
 }
 
 export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, onComplete }: Props) {
-  const [step, setStep] = useState<"init" | "inspection" | "summary" | "confirm">("init");
+  const [step, setStep] = useState<"init" | "repairs" | "summary" | "confirm">("init");
   const [reason, setReason] = useState("");
   const [notificationDate, setNotificationDate] = useState<Date | undefined>(new Date());
   const [noticeDuration, setNoticeDuration] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [repairs, setRepairs] = useState<RepairItem[]>([]);
+  const [newLabel, setNewLabel] = useState("");
+  const [newCost, setNewCost] = useState("");
   const [generalNotes, setGeneralNotes] = useState("");
 
-  const [inspectionItems, setInspectionItems] = useState<InspectionItem[]>(
-    DEFAULT_INSPECTION_ITEMS.map(item => ({
-      ...item,
-      checked: false,
-      status: "" as const,
-      repairCost: 0,
-      comment: "",
-    }))
-  );
-
-  const totalRepairCost = useMemo(
-    () => inspectionItems.reduce((sum, item) => sum + item.repairCost, 0),
-    [inspectionItems]
-  );
-
-  const inspectionComplete = useMemo(
-    () => inspectionItems.every(item => item.checked && item.status),
-    [inspectionItems]
-  );
+  const totalRepairCost = useMemo(() => repairs.reduce((s, r) => s + r.cost, 0), [repairs]);
 
   const effectiveDate = useMemo(() => {
     if (!notificationDate) return null;
@@ -109,15 +65,12 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
 
   const financialSummary = useMemo(() => {
     if (!effectiveDate) return null;
-
     const remainingRentDue = payments
       .filter(p => p.status !== "paid")
       .reduce((sum: number, p: any) => sum + (p.amount - p.paid_amount), 0);
-
     const depositAmount = tenant.deposit;
     const totalDue = remainingRentDue + totalRepairCost;
     const balance = depositAmount - totalDue;
-
     return {
       remainingRentDue,
       repairCost: totalRepairCost,
@@ -132,30 +85,29 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
 
   const canProceed = reason && notificationDate && noticeDuration;
 
-  const updateItem = (id: string, updates: Partial<InspectionItem>) => {
-    setInspectionItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
-    );
+  const addRepair = () => {
+    if (!newLabel.trim() || !newCost) return;
+    setRepairs(prev => [...prev, { id: crypto.randomUUID(), label: newLabel.trim(), cost: Number(newCost) || 0 }]);
+    setNewLabel("");
+    setNewCost("");
   };
+
+  const removeRepair = (id: string) => setRepairs(prev => prev.filter(r => r.id !== id));
 
   const buildInspectionNotes = () => {
     const lines: string[] = [];
-    const categories = [...new Set(inspectionItems.map(i => i.category))];
-    for (const cat of categories) {
-      lines.push(`\n=== ${cat} ===`);
-      for (const item of inspectionItems.filter(i => i.category === cat)) {
-        const statusLabel = STATUS_OPTIONS.find(s => s.value === item.status)?.label || "";
-        lines.push(`• ${item.label}: ${statusLabel}${item.repairCost > 0 ? ` — Réparation: ${item.repairCost.toLocaleString()} FCFA` : ""}`);
-        if (item.comment) lines.push(`  → ${item.comment}`);
-      }
+    if (repairs.length > 0) {
+      lines.push("=== Réparations ===");
+      repairs.forEach(r => lines.push(`• ${r.label}: ${r.cost.toLocaleString()} FCFA`));
+      lines.push(`Total: ${totalRepairCost.toLocaleString()} FCFA`);
     }
-    if (generalNotes) lines.push(`\n=== Observations générales ===\n${generalNotes}`);
-    return lines.join("\n");
+    if (generalNotes) lines.push(`\nObservations: ${generalNotes}`);
+    return lines.join("\n") || null;
   };
 
   const handleNext = () => {
-    if (step === "init" && canProceed) setStep("inspection");
-    else if (step === "inspection") setStep("summary");
+    if (step === "init" && canProceed) setStep("repairs");
+    else if (step === "repairs") setStep("summary");
     else if (step === "summary") setStep("confirm");
   };
 
@@ -178,7 +130,7 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
         deposit_retained: financialSummary.depositRetained,
         balance: financialSummary.balance,
         inspection_notes: buildInspectionNotes(),
-        inspection_status: inspectionComplete ? "completed" : "partial",
+        inspection_status: repairs.length > 0 ? "completed" : null,
         status: "closed",
         closed_at: new Date().toISOString(),
       });
@@ -205,45 +157,20 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
     setReason("");
     setNotificationDate(new Date());
     setNoticeDuration("1");
+    setRepairs([]);
+    setNewLabel("");
+    setNewCost("");
     setGeneralNotes("");
-    setInspectionItems(
-      DEFAULT_INSPECTION_ITEMS.map(item => ({
-        ...item,
-        checked: false,
-        status: "" as const,
-        repairCost: 0,
-        comment: "",
-      }))
-    );
   };
-
-  const categories = [...new Set(inspectionItems.map(i => i.category))];
-  const degradedCount = inspectionItems.filter(i => i.status === "degrade").length;
-  const checkedCount = inspectionItems.filter(i => i.checked && i.status).length;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleReset(); onOpenChange(v); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             Fin de bail — {tenant.full_name}
           </DialogTitle>
-          {/* Step indicator */}
-          <div className="flex items-center gap-1 pt-2">
-            {(["init", "inspection", "summary", "confirm"] as const).map((s, i) => (
-              <div key={s} className="flex items-center gap-1">
-                <div className={cn(
-                  "h-2 w-2 rounded-full transition-colors",
-                  step === s ? "bg-primary" : (["init", "inspection", "summary", "confirm"].indexOf(step) > i ? "bg-primary/50" : "bg-muted-foreground/20")
-                )} />
-                {i < 3 && <div className="w-6 h-px bg-border" />}
-              </div>
-            ))}
-            <span className="text-xs text-muted-foreground ml-2">
-              {step === "init" ? "Informations" : step === "inspection" ? "État des lieux" : step === "summary" ? "Solde" : "Confirmation"}
-            </span>
-          </div>
         </DialogHeader>
 
         {/* STEP 1: Init */}
@@ -297,68 +224,80 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
             )}
 
             <Button className="w-full" disabled={!canProceed} onClick={handleNext}>
-              Suivant — État des lieux
+              Suivant — Réparations
             </Button>
           </div>
         )}
 
-        {/* STEP 2: Inspection / État des lieux */}
-        {step === "inspection" && (
+        {/* STEP 2: Repairs */}
+        {step === "repairs" && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ClipboardCheck className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm text-foreground">État des lieux de sortie</span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>{checkedCount}/{inspectionItems.length} vérifié(s)</span>
-                {degradedCount > 0 && (
-                  <Badge variant="destructive" className="text-xs">{degradedCount} dégradé(s)</Badge>
-                )}
-              </div>
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm text-foreground">Réparations à déduire du dépôt</span>
             </div>
 
-            {categories.map(category => (
-              <div key={category} className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</h4>
-                <div className="space-y-1">
-                  {inspectionItems
-                    .filter(item => item.category === category)
-                    .map(item => (
-                      <InspectionRow key={item.id} item={item} onUpdate={updateItem} />
-                    ))}
-                </div>
-              </div>
-            ))}
-
-            {/* Total repair cost banner */}
-            {totalRepairCost > 0 && (
-              <Card className="border-destructive/30 bg-destructive/5">
-                <CardContent className="py-3 px-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Wrench className="h-4 w-4 text-destructive" />
-                    <span className="text-sm font-medium text-foreground">Total réparations</span>
+            {/* List */}
+            {repairs.length > 0 && (
+              <div className="space-y-2">
+                {repairs.map(r => (
+                  <div key={r.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                    <span className="text-sm text-foreground flex-1">{r.label}</span>
+                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{r.cost.toLocaleString()} FCFA</span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removeRepair(r.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <span className="font-bold text-destructive">{totalRepairCost.toLocaleString()} FCFA</span>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Add form */}
+            <Card className="border-border">
+              <CardContent className="py-3 px-3 space-y-3">
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <Input
+                    value={newLabel}
+                    onChange={e => setNewLabel(e.target.value)}
+                    placeholder="Ex: Peinture salon"
+                    className="text-sm"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newCost}
+                    onChange={e => setNewCost(e.target.value)}
+                    placeholder="Coût (FCFA)"
+                    className="text-sm w-32"
+                  />
+                </div>
+                <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={addRepair} disabled={!newLabel.trim() || !newCost}>
+                  <Plus className="h-3.5 w-3.5" /> Ajouter une réparation
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Total */}
+            {totalRepairCost > 0 && (
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2.5 border border-border">
+                <span className="text-sm font-medium text-foreground">Total réparations</span>
+                <span className="font-bold text-destructive">{totalRepairCost.toLocaleString()} FCFA</span>
+              </div>
             )}
 
             <div className="space-y-2">
-              <Label>Observations générales</Label>
+              <Label>Observations (optionnel)</Label>
               <Textarea
                 value={generalNotes}
                 onChange={e => setGeneralNotes(e.target.value)}
-                placeholder="Remarques complémentaires sur l'état du logement..."
-                rows={3}
+                placeholder="Remarques..."
+                rows={2}
               />
             </div>
 
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setStep("init")}>Retour</Button>
-              <Button className="flex-1" onClick={handleNext} disabled={!inspectionComplete}>
-                {inspectionComplete ? "Calculer le solde" : `${inspectionItems.length - checkedCount} élément(s) restant(s)`}
-              </Button>
+              <Button className="flex-1" onClick={handleNext}>Calculer le solde</Button>
             </div>
           </div>
         )}
@@ -377,7 +316,7 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
                 </div>
                 {financialSummary.repairCost > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Coût des réparations</span>
+                    <span className="text-muted-foreground">Réparations ({repairs.length})</span>
                     <span className="font-medium text-foreground">{financialSummary.repairCost.toLocaleString()} FCFA</span>
                   </div>
                 )}
@@ -405,7 +344,7 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
                     </>
                   ) : (
                     <>
-                      <span className="font-semibold text-foreground">Solde à payer</span>
+                      <span className="font-semibold text-foreground">Solde à payer par le locataire</span>
                       <Badge variant="destructive" className="text-base px-3">
                         {Math.abs(financialSummary.balance).toLocaleString()} FCFA
                       </Badge>
@@ -415,29 +354,8 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
               </CardContent>
             </Card>
 
-            {/* Inspection recap */}
-            {degradedCount > 0 && (
-              <Card className="border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Wrench className="h-4 w-4" /> Réparations identifiées
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1.5 text-sm">
-                  {inspectionItems
-                    .filter(i => i.status === "degrade" && i.repairCost > 0)
-                    .map(item => (
-                      <div key={item.id} className="flex justify-between">
-                        <span className="text-muted-foreground">{item.label}</span>
-                        <span className="font-medium text-foreground">{item.repairCost.toLocaleString()} FCFA</span>
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-            )}
-
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep("inspection")}>Retour</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setStep("repairs")}>Retour</Button>
               <Button className="flex-1" onClick={handleNext}>Clôturer le bail</Button>
             </div>
           </div>
@@ -452,16 +370,13 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
                   <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
                   <div>
                     <p className="font-medium text-foreground">Confirmer la clôture du bail</p>
-                    <p className="text-sm text-muted-foreground mt-1">Cette action est irréversible. Le bail sera clôturé, le locataire passera en "Ancien locataire" et l'unité sera libérée.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Cette action est irréversible.</p>
                   </div>
                 </div>
-
                 <div className="text-sm space-y-1 pl-7">
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> État des lieux complété</div>
                   <div className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> Bail clôturé</div>
                   <div className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> Unité → Vacant</div>
                   <div className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> Locataire → Ancien locataire</div>
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> Historique conservé</div>
                 </div>
               </CardContent>
             </Card>
@@ -477,79 +392,5 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-/* ─── Inspection Row Component ─── */
-function InspectionRow({ item, onUpdate }: { item: InspectionItem; onUpdate: (id: string, updates: Partial<InspectionItem>) => void }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className={cn(
-      "rounded-lg border border-border transition-colors",
-      item.status === "degrade" && "border-destructive/30 bg-destructive/5",
-      item.status === "bon" && "border-emerald-200 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10",
-      item.status === "usure" && "border-amber-200 bg-amber-50/30 dark:border-amber-900/30 dark:bg-amber-900/10",
-    )}>
-      <div
-        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <Checkbox
-          checked={item.checked && !!item.status}
-          onCheckedChange={() => {}}
-          className="pointer-events-none"
-        />
-        <span className="text-sm font-medium text-foreground flex-1">{item.label}</span>
-
-        <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-          {STATUS_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => onUpdate(item.id, { status: opt.value as any, checked: true })}
-              className={cn(
-                "px-2 py-0.5 rounded text-xs font-medium border transition-all",
-                item.status === opt.value
-                  ? opt.value === "bon"
-                    ? "bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-700 dark:text-emerald-400"
-                    : opt.value === "usure"
-                    ? "bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-400"
-                    : "bg-destructive/10 border-destructive/30 text-destructive"
-                  : "bg-transparent border-border text-muted-foreground hover:bg-muted/50"
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-border">
-          {item.status === "degrade" && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Coût de réparation (FCFA)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={item.repairCost || ""}
-                onChange={e => onUpdate(item.id, { repairCost: Number(e.target.value) || 0 })}
-                placeholder="0"
-                className="h-8 text-sm"
-              />
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Commentaire</Label>
-            <Input
-              value={item.comment}
-              onChange={e => onUpdate(item.id, { comment: e.target.value })}
-              placeholder="Détails..."
-              className="h-8 text-sm"
-            />
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
