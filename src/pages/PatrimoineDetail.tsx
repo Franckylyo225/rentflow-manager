@@ -39,6 +39,7 @@ function DocThumbnail({ fileUrl, name }: { fileUrl: string; name: string }) {
   return <img src={src} alt={name} className="absolute inset-0 w-full h-full object-cover" />;
 }
 
+function PatrimoineMapDialog({ latitude, longitude, title, open, onOpenChange }: { latitude: number; longitude: number; title: string; open: boolean; onOpenChange: (v: boolean) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
