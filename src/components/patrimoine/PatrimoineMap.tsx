@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import L from "leaflet";
@@ -19,11 +19,11 @@ interface PatrimoineMapProps {
   onAssetClick: (id: string) => void;
 }
 
-export function PatrimoineMap({ assets, onAssetClick }: PatrimoineMapProps) {
+export const PatrimoineMap = forwardRef<HTMLDivElement, PatrimoineMapProps>(function PatrimoineMap({ assets, onAssetClick }, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
 
-  const geoAssets = assets.filter(a => a.latitude && a.longitude);
+  const geoAssets = assets.filter((a) => a.latitude && a.longitude);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -34,7 +34,7 @@ export function PatrimoineMap({ assets, onAssetClick }: PatrimoineMapProps) {
     }
 
     const map = L.map(mapRef.current, {
-      center: [6.8, -5.3], // Côte d'Ivoire center
+      center: [6.8, -5.3],
       zoom: 7,
       scrollWheelZoom: true,
     });
@@ -45,7 +45,7 @@ export function PatrimoineMap({ assets, onAssetClick }: PatrimoineMapProps) {
 
     const markers: L.Marker[] = [];
 
-    geoAssets.forEach(asset => {
+    geoAssets.forEach((asset) => {
       const marker = L.marker([asset.latitude!, asset.longitude!], {
         icon: L.divIcon({
           className: "custom-marker",
@@ -76,24 +76,24 @@ export function PatrimoineMap({ assets, onAssetClick }: PatrimoineMapProps) {
     }
 
     mapInstance.current = map;
+    requestAnimationFrame(() => map.invalidateSize());
 
-    // Navigation handler for popup links
-    (window as any).__patrimoineNav = (id: string) => {
+    (window as Window & { __patrimoineNav?: (id: string) => void }).__patrimoineNav = (id: string) => {
       onAssetClick(id);
     };
 
     return () => {
-      delete (window as any).__patrimoineNav;
+      delete (window as Window & { __patrimoineNav?: (id: string) => void }).__patrimoineNav;
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
       }
     };
-  }, [geoAssets.length, onAssetClick]);
+  }, [assets, geoAssets, onAssetClick]);
 
   if (geoAssets.length === 0) {
     return (
-      <Card>
+      <Card ref={ref}>
         <CardContent className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
           <MapPin className="h-10 w-10 opacity-40" />
           <p className="text-sm">Aucun actif géolocalisé. Ajoutez un lien Google Maps à vos actifs pour les voir sur la carte.</p>
@@ -103,7 +103,7 @@ export function PatrimoineMap({ assets, onAssetClick }: PatrimoineMapProps) {
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card ref={ref} className="overflow-hidden">
       <CardContent className="p-0">
         <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-2 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4" />
@@ -113,4 +113,4 @@ export function PatrimoineMap({ assets, onAssetClick }: PatrimoineMapProps) {
       </CardContent>
     </Card>
   );
-}
+});

@@ -11,12 +11,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin, Image, File, FileSpreadsheet, FileType } from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 
 const DOC_TYPES = [
   { value: "acd", label: "ACD" },
@@ -40,39 +38,9 @@ function DocThumbnail({ fileUrl, name }: { fileUrl: string; name: string }) {
 }
 
 function PatrimoineMapDialog({ latitude, longitude, title, open, onOpenChange }: { latitude: number; longitude: number; title: string; open: boolean; onOpenChange: (v: boolean) => void }) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-
-  useEffect(() => {
-    if (!open || !mapRef.current) return;
-    // Delay map init to ensure dialog DOM is fully rendered
-    const timeout = setTimeout(() => {
-      if (!mapRef.current) return;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-      const map = L.map(mapRef.current).setView([latitude, longitude], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap',
-      }).addTo(map);
-      const icon = L.icon({
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-        iconSize: [25, 41], iconAnchor: [12, 41],
-      });
-      L.marker([latitude, longitude], { icon }).addTo(map).bindPopup(title).openPopup();
-      mapInstanceRef.current = map;
-      setTimeout(() => {
-        if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
-      }, 300);
-    }, 100);
-    return () => {
-      clearTimeout(timeout);
-      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
-    };
-  }, [open, latitude, longitude, title]);
+  const delta = 0.01;
+  const bbox = `${longitude - delta}%2C${latitude - delta}%2C${longitude + delta}%2C${latitude + delta}`;
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latitude}%2C${longitude}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,9 +48,14 @@ function PatrimoineMapDialog({ latitude, longitude, title, open, onOpenChange }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Localisation — {title}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 min-h-0">
-          <div ref={mapRef} className="h-[450px] w-full rounded-lg border border-border overflow-hidden" />
-          <p className="text-xs text-muted-foreground mt-2">Coordonnées : {latitude}, {longitude}</p>
+        <div className="flex-1 min-h-0 space-y-3">
+          <iframe
+            src={mapUrl}
+            title={`Carte de ${title}`}
+            loading="lazy"
+            className="h-[450px] w-full rounded-lg border border-border"
+          />
+          <p className="text-xs text-muted-foreground">Coordonnées : {latitude}, {longitude}</p>
         </div>
       </DialogContent>
     </Dialog>
