@@ -223,9 +223,23 @@ export default function PatrimoineDetail() {
         {/* Info cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">Titre foncier</p>
-              <p className="font-medium text-card-foreground">{asset.land_title || "—"}</p>
+            <CardContent className="pt-6 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Titre foncier</p>
+                <p className="font-medium text-card-foreground">{asset.land_title || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Lotissement</p>
+                <p className="font-medium text-card-foreground">{asset.locality || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">N° Ordre de recette</p>
+                <p className="font-medium text-card-foreground">{asset.receipt_order_number || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Date création du titre</p>
+                <p className="font-medium text-card-foreground">{asset.title_creation_date ? new Date(asset.title_creation_date).toLocaleDateString("fr-FR") : "—"}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -239,24 +253,6 @@ export default function PatrimoineDetail() {
             <CardContent className="pt-6 space-y-2">
               <p className="text-xs text-muted-foreground">Cabinet traitant</p>
               <p className="font-medium text-card-foreground">{asset.handling_firm || "—"}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">N° Ordre de recette</p>
-              <p className="font-medium text-card-foreground">{asset.receipt_order_number || "—"}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">Date création du titre</p>
-              <p className="font-medium text-card-foreground">{asset.title_creation_date ? new Date(asset.title_creation_date).toLocaleDateString("fr-FR") : "—"}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground">Lotissement</p>
-              <p className="font-medium text-card-foreground">{asset.locality || "—"}</p>
             </CardContent>
           </Card>
         </div>
