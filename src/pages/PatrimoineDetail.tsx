@@ -10,11 +10,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const DOC_TYPES = [
   { value: "acd", label: "ACD" },
