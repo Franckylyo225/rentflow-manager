@@ -87,6 +87,7 @@ export default function PatrimoineDetail() {
   const [docFile, setDocFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState("");
+  const [showMapDialog, setShowMapDialog] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
