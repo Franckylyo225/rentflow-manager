@@ -194,6 +194,9 @@ export default function PatrimoineDetail() {
           </Card>
         )}
 
+        {/* Map / Geolocation */}
+        <PatrimoineMap latitude={asset.latitude} longitude={asset.longitude} title={asset.title} />
+
         {/* Documents */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
