@@ -132,12 +132,14 @@ export default function Patrimoine() {
     if (!form.title || !editingAsset) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
+    const { title_creation_date: tcd, ...editRest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
-      ...form,
-      holder_id: form.holder_id || null,
-      map_link: form.map_link || null,
+      ...editRest,
+      holder_id: editRest.holder_id || null,
+      map_link: editRest.map_link || null,
       latitude: lat,
       longitude: lng,
+      title_creation_date: tcd || null,
     }).eq("id", editingAsset.id);
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
