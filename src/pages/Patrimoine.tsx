@@ -219,6 +219,16 @@ export default function Patrimoine() {
         <Label>Cabinet traitant</Label>
         <Input value={form.handling_firm} onChange={e => setForm(f => ({ ...f, handling_firm: e.target.value }))} placeholder="Ex: Cabinet Me Koné" />
       </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Latitude</Label>
+          <Input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="Ex: 5.3600" />
+        </div>
+        <div className="space-y-2">
+          <Label>Longitude</Label>
+          <Input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="Ex: -4.0083" />
+        </div>
+      </div>
       <div className="space-y-2">
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Notes..." rows={2} />
