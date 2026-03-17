@@ -277,8 +277,10 @@ export default function PatrimoineDetail() {
           </Card>
         )}
 
-        {/* Map / Geolocation */}
-        <PatrimoineMap latitude={asset.latitude} longitude={asset.longitude} title={asset.title} />
+        {/* Map dialog */}
+        {asset.latitude && asset.longitude && (
+          <PatrimoineMapDialog latitude={asset.latitude} longitude={asset.longitude} title={asset.title} open={showMapDialog} onOpenChange={setShowMapDialog} />
+        )}
 
         {/* Documents */}
         <Card>
