@@ -308,7 +308,7 @@ export default function Dashboard() {
           <Card className="border-border">
             <CardContent className="py-16 text-center">
               <Building2 className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-1">Bienvenue sur Rentflow</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Bienvenue sur SCI Binieba</h3>
               <p className="text-muted-foreground text-sm max-w-md mx-auto">
                 Commencez par ajouter vos biens immobiliers dans la section "Biens" pour voir apparaître vos données ici.
               </p>

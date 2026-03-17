@@ -367,7 +367,7 @@ export default function AuthPage() {
         </AnimatePresence>
 
         <p className="absolute bottom-6 left-6 sm:left-12 lg:left-16 xl:left-24 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Rentflow. Développé avec ❤️ à Abidjan. Tous droits réservés.
+          © {new Date().getFullYear()} SCI Binieba. Développé avec ❤️ à Abidjan. Tous droits réservés.
         </p>
       </motion.div>
     </div>

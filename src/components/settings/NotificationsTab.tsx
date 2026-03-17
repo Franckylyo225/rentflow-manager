@@ -75,7 +75,7 @@ export function NotificationsTab() {
         body: {
           to: testPhone.trim(),
           message: testMessage.trim(),
-          senderName: "Rentflow",
+          senderName: "SCI Binieba",
           organizationId: profile?.organization_id,
           recipientName: "",
           templateKey: null,
