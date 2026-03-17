@@ -293,41 +293,83 @@ export default function PatrimoineDetail() {
         {/* Documents */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Documents</CardTitle>
+            <CardTitle className="text-base">Documents ({documents.length})</CardTitle>
             <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowAddDoc(true)}>
               <Upload className="h-3.5 w-3.5" /> Ajouter
             </Button>
           </CardHeader>
           <CardContent>
             {documents.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucun document.</p>
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <FileText className="h-10 w-10 opacity-30 mb-3" />
+                <p className="text-sm">Aucun document ajouté.</p>
+                <p className="text-xs mt-1">Cliquez sur "Ajouter" pour uploader un fichier.</p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {documents.map(doc => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-sm text-card-foreground">{doc.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {DOC_TYPES.find(t => t.value === doc.document_type)?.label || doc.document_type}
-                          {doc.file_size ? ` · ${(doc.file_size / 1024).toFixed(0)} Ko` : ""}
-                        </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {documents.map(doc => {
+                  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.file_url) || /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.name);
+                  const isPdf = /\.pdf$/i.test(doc.file_url) || /\.pdf$/i.test(doc.name);
+                  const typeColor = {
+                    acd: "bg-emerald-500/10 text-emerald-600",
+                    cnpf: "bg-blue-500/10 text-blue-600",
+                    extrait_topographique: "bg-amber-500/10 text-amber-600",
+                    titre_foncier: "bg-purple-500/10 text-purple-600",
+                    permis_construire: "bg-cyan-500/10 text-cyan-600",
+                    ordre_recette: "bg-orange-500/10 text-orange-600",
+                    autre: "bg-muted text-muted-foreground",
+                  }[doc.document_type] || "bg-muted text-muted-foreground";
+
+                  const DocIcon = isPdf ? FileType : isImage ? Image : FileText;
+
+                  return (
+                    <div key={doc.id} className="group relative rounded-xl border border-border bg-card overflow-hidden hover:shadow-md transition-all duration-200">
+                      {/* Thumbnail area */}
+                      <div
+                        className="relative h-28 bg-muted/40 flex items-center justify-center cursor-pointer"
+                        onClick={() => previewDoc(doc)}
+                      >
+                        {isImage ? (
+                          <DocThumbnail fileUrl={doc.file_url} name={doc.name} />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5">
+                            <DocIcon className="h-10 w-10 text-muted-foreground/50" />
+                            <span className="text-[10px] uppercase font-medium text-muted-foreground/60 tracking-wider">
+                              {isPdf ? "PDF" : doc.file_url.split(".").pop()?.toUpperCase() || "DOC"}
+                            </span>
+                          </div>
+                        )}
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <Eye className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                      {/* Info area */}
+                      <div className="p-2.5">
+                        <p className="text-xs font-medium text-card-foreground truncate" title={doc.name}>{doc.name}</p>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${typeColor}`}>
+                            {DOC_TYPES.find(t => t.value === doc.document_type)?.label || doc.document_type}
+                          </span>
+                          {doc.file_size && (
+                            <span className="text-[10px] text-muted-foreground">{(doc.file_size / 1024).toFixed(0)} Ko</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5 mt-2 justify-end">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => previewDoc(doc)} title="Aperçu">
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => downloadDoc(doc)} title="Télécharger">
+                            <Download className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeletingDoc(doc)} title="Supprimer">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => previewDoc(doc)}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadDoc(doc)}>
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingDoc(doc)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
