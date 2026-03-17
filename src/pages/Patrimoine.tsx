@@ -159,6 +159,7 @@ export default function Patrimoine() {
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
+      latitude: asset.latitude != null ? String(asset.latitude) : "", longitude: asset.longitude != null ? String(asset.longitude) : "",
     });
     setShowEdit(true);
   };
