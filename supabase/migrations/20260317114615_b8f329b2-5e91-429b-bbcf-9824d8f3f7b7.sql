@@ -1,0 +1,1 @@
+ALTER TABLE public.patrimony_assets ADD COLUMN map_link text DEFAULT NULL;
