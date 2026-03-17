@@ -95,9 +95,12 @@ export default function Patrimoine() {
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
     setSaving(true);
+    const { latitude, longitude, ...rest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
-      ...form,
-      holder_id: form.holder_id || null,
+      ...rest,
+      holder_id: rest.holder_id || null,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
     }).eq("id", editingAsset.id);
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
