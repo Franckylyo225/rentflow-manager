@@ -113,13 +113,15 @@ export default function Patrimoine() {
     if (!form.title || !profile) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
+    const { title_creation_date, ...rest } = form;
     const { error } = await supabase.from("patrimony_assets").insert({
-      ...form,
-      holder_id: form.holder_id || null,
+      ...rest,
+      holder_id: rest.holder_id || null,
       organization_id: profile.organization_id,
-      map_link: form.map_link || null,
+      map_link: rest.map_link || null,
       latitude: lat,
       longitude: lng,
+      title_creation_date: title_creation_date || null,
     });
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
