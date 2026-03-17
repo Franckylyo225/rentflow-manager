@@ -365,6 +365,10 @@ export default function Patrimoine() {
             )}
           </TabsContent>
 
+          <TabsContent value="carte" className="mt-4">
+            <PatrimoineMap assets={filtered} onAssetClick={(id) => navigate(`/patrimoine/${id}`)} />
+          </TabsContent>
+
           <TabsContent value="titulaires" className="space-y-4 mt-4">
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
               <div className="relative flex-1 max-w-sm">
