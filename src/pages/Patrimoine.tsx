@@ -79,14 +79,14 @@ export default function Patrimoine() {
     return true;
   });
 
-  const parseMapLink = (link: string): { lat: number | null; lng: number | null } => {
+  const parseMapLinkLocal = (link: string): { lat: number | null; lng: number | null } => {
     if (!link) return { lat: null, lng: null };
-    // Match patterns like @5.36,-4.01 or ?q=5.36,-4.01 or /place/5.36,-4.01
     const patterns = [
       /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
       /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
       /\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/,
       /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+      /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/,
     ];
     for (const p of patterns) {
       const m = link.match(p);
@@ -95,10 +95,24 @@ export default function Patrimoine() {
     return { lat: null, lng: null };
   };
 
+  const resolveMapLink = async (link: string): Promise<{ lat: number | null; lng: number | null }> => {
+    if (!link) return { lat: null, lng: null };
+    const local = parseMapLinkLocal(link);
+    if (local.lat !== null) return local;
+    // Short link — resolve via edge function
+    try {
+      const { data, error } = await supabase.functions.invoke("resolve-map-link", { body: { url: link } });
+      if (error || !data?.lat) return { lat: null, lng: null };
+      return { lat: data.lat, lng: data.lng };
+    } catch {
+      return { lat: null, lng: null };
+    }
+  };
+
   const handleSave = async () => {
     if (!form.title || !profile) return;
     setSaving(true);
-    const { lat, lng } = parseMapLink(form.map_link);
+    const { lat, lng } = await resolveMapLink(form.map_link);
     const { error } = await supabase.from("patrimony_assets").insert({
       ...form,
       holder_id: form.holder_id || null,
@@ -115,7 +129,7 @@ export default function Patrimoine() {
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
     setSaving(true);
-    const { lat, lng } = parseMapLink(form.map_link);
+    const { lat, lng } = await resolveMapLink(form.map_link);
     const { error } = await supabase.from("patrimony_assets").update({
       ...form,
       holder_id: form.holder_id || null,
