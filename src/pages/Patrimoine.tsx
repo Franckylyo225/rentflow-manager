@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { PatrimoineMap } from "@/components/patrimoine/PatrimoineMap";
+import { PatrimoineExcelImport } from "@/components/patrimoine/PatrimoineExcelImport";
 
 const ASSET_TYPES = [
   { value: "terrain", label: "Terrain" },
@@ -44,6 +45,7 @@ export default function Patrimoine() {
   const [showAddHolder, setShowAddHolder] = useState(false);
   const [showEditHolder, setShowEditHolder] = useState(false);
   const [showDeleteHolder, setShowDeleteHolder] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [deletingAsset, setDeletingAsset] = useState<any>(null);
@@ -288,9 +290,14 @@ export default function Patrimoine() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Patrimoine</h1>
             <p className="text-muted-foreground text-sm mt-1">Gestion de vos actifs fonciers et immobiliers</p>
           </div>
-          <Button className="gap-2 self-start" onClick={() => { resetForm(); setShowAdd(true); }}>
-            <Plus className="h-4 w-4" /> Ajouter un actif
-          </Button>
+          <div className="flex gap-2 self-start">
+            <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
+              <FileSpreadsheet className="h-4 w-4" /> Importer Excel
+            </Button>
+            <Button className="gap-2" onClick={() => { resetForm(); setShowAdd(true); }}>
+              <Plus className="h-4 w-4" /> Ajouter un actif
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -619,6 +626,15 @@ export default function Patrimoine() {
           )}
         </DialogContent>
       </Dialog>
+
+      {profile && (
+        <PatrimoineExcelImport
+          open={showImport}
+          onOpenChange={setShowImport}
+          organizationId={profile.organization_id}
+          onSuccess={fetchData}
+        />
+      )}
     </AppLayout>
   );
 }
