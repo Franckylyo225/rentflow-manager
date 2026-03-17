@@ -48,7 +48,7 @@ export default function Patrimoine() {
   const [deletingHolder, setDeletingHolder] = useState<any>(null);
   const [holderSearch, setHolderSearch] = useState("");
   const [viewingHolder, setViewingHolder] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "" });
+  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", latitude: "", longitude: "" });
   const [holderForm, setHolderForm] = useState({ full_name: "", phone: "", email: "", address: "" });
   const navigate = useNavigate();
   const { profile } = useProfile();
