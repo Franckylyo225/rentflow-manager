@@ -186,6 +186,29 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
               </Select>
             </div>
 
+            {/* Repair costs */}
+            <div className="space-y-2">
+              <Label>Coût des réparations (FCFA)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={repairCost || ""}
+                onChange={e => setRepairCost(Number(e.target.value) || 0)}
+                placeholder="0"
+              />
+            </div>
+            {repairCost > 0 && (
+              <div className="space-y-2">
+                <Label>Description des réparations</Label>
+                <Textarea
+                  value={repairDescription}
+                  onChange={e => setRepairDescription(e.target.value)}
+                  placeholder="Détaillez les réparations à effectuer..."
+                  rows={3}
+                />
+              </div>
+            )}
+
             {/* Computed effective date */}
             {effectiveDate && (
               <Card className="bg-muted/50 border-border">
@@ -216,6 +239,12 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
                   <span className="text-muted-foreground">Loyers restants dus</span>
                   <span className="font-medium text-foreground">{financialSummary.remainingRentDue.toLocaleString()} FCFA</span>
                 </div>
+                {financialSummary.repairCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Coût des réparations</span>
+                    <span className="font-medium text-foreground">{financialSummary.repairCost.toLocaleString()} FCFA</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total dû</span>
