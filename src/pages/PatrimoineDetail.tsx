@@ -28,7 +28,17 @@ const DOC_TYPES = [
   { value: "autre", label: "Autre" },
 ];
 
-function PatrimoineMapDialog({ latitude, longitude, title, open, onOpenChange }: { latitude: number; longitude: number; title: string; open: boolean; onOpenChange: (v: boolean) => void }) {
+function DocThumbnail({ fileUrl, name }: { fileUrl: string; name: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("patrimony-docs").createSignedUrl(fileUrl, 3600).then(({ data }) => {
+      if (data?.signedUrl) setSrc(data.signedUrl);
+    });
+  }, [fileUrl]);
+  if (!src) return <Image className="h-10 w-10 text-muted-foreground/50" />;
+  return <img src={src} alt={name} className="absolute inset-0 w-full h-full object-cover" />;
+}
+
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
