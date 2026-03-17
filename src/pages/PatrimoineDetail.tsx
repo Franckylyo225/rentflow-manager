@@ -34,24 +34,33 @@ function PatrimoineMapDialog({ latitude, longitude, title, open, onOpenChange }:
 
   useEffect(() => {
     if (!open || !mapRef.current) return;
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
-    const map = L.map(mapRef.current).setView([latitude, longitude], 15);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap',
-    }).addTo(map);
-    const icon = L.icon({
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      iconSize: [25, 41], iconAnchor: [12, 41],
-    });
-    L.marker([latitude, longitude], { icon }).addTo(map).bindPopup(title).openPopup();
-    mapInstanceRef.current = map;
-    setTimeout(() => map.invalidateSize(), 200);
-    return () => { map.remove(); mapInstanceRef.current = null; };
+    // Delay map init to ensure dialog DOM is fully rendered
+    const timeout = setTimeout(() => {
+      if (!mapRef.current) return;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+      const map = L.map(mapRef.current).setView([latitude, longitude], 15);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map);
+      const icon = L.icon({
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconSize: [25, 41], iconAnchor: [12, 41],
+      });
+      L.marker([latitude, longitude], { icon }).addTo(map).bindPopup(title).openPopup();
+      mapInstanceRef.current = map;
+      setTimeout(() => {
+        if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+      }, 300);
+    }, 100);
+    return () => {
+      clearTimeout(timeout);
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
+    };
   }, [open, latitude, longitude, title]);
 
   return (
