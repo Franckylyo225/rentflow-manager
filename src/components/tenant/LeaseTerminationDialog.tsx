@@ -104,6 +104,7 @@ export function LeaseTerminationDialog({ open, onOpenChange, tenant, payments, o
         total_due: financialSummary.totalDue,
         deposit_retained: financialSummary.depositRetained,
         balance: financialSummary.balance,
+        inspection_notes: repairDescription || null,
         status: "closed",
         closed_at: new Date().toISOString(),
       });
