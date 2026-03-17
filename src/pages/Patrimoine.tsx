@@ -626,6 +626,15 @@ export default function Patrimoine() {
           )}
         </DialogContent>
       </Dialog>
+
+      {profile && (
+        <PatrimoineExcelImport
+          open={showImport}
+          onOpenChange={setShowImport}
+          organizationId={profile.organization_id}
+          onSuccess={fetchData}
+        />
+      )}
     </AppLayout>
   );
 }
