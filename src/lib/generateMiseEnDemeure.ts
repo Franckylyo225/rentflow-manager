@@ -140,7 +140,7 @@ export function generateMiseEnDemeure(data: MiseEnDemeureData) {
   doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(150);
-  doc.text("Document généré automatiquement — RentFlow", pageWidth / 2, 285, { align: "center" });
+  doc.text("Document généré automatiquement — SCI Binieba", pageWidth / 2, 285, { align: "center" });
 
   doc.save(`mise-en-demeure-${data.tenantName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
 }

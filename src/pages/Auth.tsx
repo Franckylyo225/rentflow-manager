@@ -148,7 +148,7 @@ export default function AuthPage() {
         className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-background relative"
       >
         <div className="absolute top-8 left-6 sm:left-12 lg:left-16 xl:left-24 flex items-center gap-3">
-          <img src="/logo-horizontal.png" alt="Rentflow" className="h-10" />
+          <img src="/logo-horizontal.png" alt="SCI Binieba" className="h-10" />
         </div>
 
         <AnimatePresence mode="wait">
@@ -367,7 +367,7 @@ export default function AuthPage() {
         </AnimatePresence>
 
         <p className="absolute bottom-6 left-6 sm:left-12 lg:left-16 xl:left-24 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Rentflow. Développé avec ❤️ à Abidjan. Tous droits réservés.
+          © {new Date().getFullYear()} SCI Binieba. Développé avec ❤️ à Abidjan. Tous droits réservés.
         </p>
       </motion.div>
     </div>

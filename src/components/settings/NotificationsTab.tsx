@@ -27,7 +27,7 @@ export function NotificationsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testPhone, setTestPhone] = useState("");
-  const [testMessage, setTestMessage] = useState("Bonjour, ceci est un SMS de test envoyé depuis Rentflow.");
+  const [testMessage, setTestMessage] = useState("Bonjour, ceci est un SMS de test envoyé depuis SCI Binieba.");
   const [sendingTest, setSendingTest] = useState(false);
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
 
@@ -75,7 +75,7 @@ export function NotificationsTab() {
         body: {
           to: testPhone.trim(),
           message: testMessage.trim(),
-          senderName: "Rentflow",
+          senderName: "SCI Binieba",
           organizationId: profile?.organization_id,
           recipientName: "",
           templateKey: null,
