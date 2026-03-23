@@ -1,0 +1,1 @@
+ALTER TABLE public.organizations ADD COLUMN sms_sender_name TEXT DEFAULT 'SCI Binieba';

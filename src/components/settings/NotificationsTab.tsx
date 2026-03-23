@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { SmsHistoryTable } from "./SmsHistoryTable";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: string; bg: string }> = {
   before_5: { icon: Clock, label: "J-5", color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
@@ -23,6 +24,8 @@ const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: 
 export function NotificationsTab() {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { settings: orgSettings } = useOrganizationSettings();
+  const senderName = orgSettings?.sms_sender_name || "SCI Binieba";
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,7 +78,7 @@ export function NotificationsTab() {
         body: {
           to: testPhone.trim(),
           message: testMessage.trim(),
-          senderName: "SCI Binieba",
+          senderName,
           organizationId: profile?.organization_id,
           recipientName: "",
           templateKey: null,

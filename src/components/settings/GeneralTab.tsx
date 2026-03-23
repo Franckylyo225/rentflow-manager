@@ -35,6 +35,7 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
     legal_address: settings.legal_address || "",
     logo_url: settings.logo_url || "",
     salaries_enabled: settings.salaries_enabled ?? true,
+    sms_sender_name: settings.sms_sender_name || "SCI Binieba",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -68,6 +69,7 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
       legal_id: form.legal_id || null,
       legal_address: form.legal_address || null,
       salaries_enabled: form.salaries_enabled,
+      sms_sender_name: form.sms_sender_name || "SCI Binieba",
     } as any);
     setSaving(false);
   };
@@ -129,6 +131,11 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
             <div className="space-y-2">
               <Label>Adresse</Label>
               <Input value={form.address} onChange={e => set("address", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Nom d'expéditeur SMS</Label>
+              <Input value={form.sms_sender_name} onChange={e => set("sms_sender_name", e.target.value)} placeholder="Ex: SCI Binieba" maxLength={11} />
+              <p className="text-xs text-muted-foreground">Nom affiché comme expéditeur des SMS (max 11 caractères)</p>
             </div>
           </div>
         </CardContent>

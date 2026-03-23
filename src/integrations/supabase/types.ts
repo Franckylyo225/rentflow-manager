@@ -608,6 +608,7 @@ export type Database = {
           phone: string | null
           rent_due_day: number
           salaries_enabled: boolean
+          sms_sender_name: string | null
           timezone: string
           updated_at: string
         }
@@ -634,6 +635,7 @@ export type Database = {
           phone?: string | null
           rent_due_day?: number
           salaries_enabled?: boolean
+          sms_sender_name?: string | null
           timezone?: string
           updated_at?: string
         }
@@ -660,6 +662,7 @@ export type Database = {
           phone?: string | null
           rent_due_day?: number
           salaries_enabled?: boolean
+          sms_sender_name?: string | null
           timezone?: string
           updated_at?: string
         }
