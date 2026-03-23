@@ -80,6 +80,7 @@ export function NotificationsTab() {
           to: testPhone.trim(),
           message: testMessage.trim(),
           senderName,
+          senderNumber,
           organizationId: profile?.organization_id,
           recipientName: "",
           templateKey: null,
