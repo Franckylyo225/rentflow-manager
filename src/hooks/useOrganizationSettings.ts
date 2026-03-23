@@ -26,6 +26,7 @@ export interface OrganizationSettings {
   rent_due_day: number;
   salaries_enabled: boolean;
   sms_sender_name: string;
+  sms_sender_number: string | null;
 }
 
 export function useOrganizationSettings() {

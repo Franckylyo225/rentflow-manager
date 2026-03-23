@@ -1,0 +1,1 @@
+ALTER TABLE public.organizations ADD COLUMN sms_sender_number TEXT DEFAULT NULL;
