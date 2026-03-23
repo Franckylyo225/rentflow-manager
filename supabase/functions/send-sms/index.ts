@@ -76,7 +76,7 @@ serve(async (req) => {
     const ORANGE_CLIENT_SECRET = Deno.env.get("ORANGE_CLIENT_SECRET");
     if (!ORANGE_CLIENT_SECRET) throw new Error("ORANGE_CLIENT_SECRET is not configured");
 
-    const { to, message, senderName, organizationId, recipientName, templateKey } = await req.json();
+    const { to, message, senderName, senderNumber, organizationId, recipientName, templateKey } = await req.json();
 
     if (!to || !message) {
       return new Response(
@@ -87,14 +87,18 @@ serve(async (req) => {
 
     const recipientPhone = formatPhoneNumber(to);
     const recipientAddress = `tel:${recipientPhone}`;
-    const countrySenderNumber = getSenderNumberFromRecipient(recipientPhone);
-    const senderAddress = `tel:+${countrySenderNumber}`;
+    
+    // Use configured sender number if provided, otherwise auto-detect from recipient country
+    const effectiveSenderNumber = senderNumber
+      ? senderNumber.replace(/[\s\-\.()]/g, "").replace(/^\+/, "")
+      : getSenderNumberFromRecipient(recipientPhone);
+    const senderAddress = `tel:+${effectiveSenderNumber}`;
 
     console.log(`Sending SMS: senderAddress=${senderAddress} to=${recipientAddress}`);
 
     const accessToken = await getOrangeAccessToken(ORANGE_CLIENT_ID, ORANGE_CLIENT_SECRET);
 
-    const encodedSender = `tel%3A%2B${countrySenderNumber}`;
+    const encodedSender = `tel%3A%2B${effectiveSenderNumber}`;
     const smsUrl = `${ORANGE_SMS_URL}/${encodedSender}/requests`;
 
     const smsPayload = {
