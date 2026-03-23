@@ -89,16 +89,23 @@ serve(async (req) => {
     const recipientAddress = `tel:${recipientPhone}`;
     
     // Use configured sender number if provided, otherwise auto-detect from recipient country
-    const effectiveSenderNumber = senderNumber
-      ? senderNumber.replace(/[\s\-\.()]/g, "").replace(/^\+/, "")
+    const rawSenderNumber = senderNumber
+      ? senderNumber.replace(/[\s\-\.()]/g, "")
       : getSenderNumberFromRecipient(recipientPhone);
-    const senderAddress = `tel:+${effectiveSenderNumber}`;
+    
+    // Detect if it's a short code (no + prefix and <= 6 digits) vs international number
+    const cleanedNumber = rawSenderNumber.replace(/^\+/, "");
+    const isShortCode = cleanedNumber.length <= 6;
+    const effectiveSenderNumber = isShortCode ? cleanedNumber : cleanedNumber;
+    const senderAddress = isShortCode ? `tel:${effectiveSenderNumber}` : `tel:+${effectiveSenderNumber}`;
 
-    console.log(`Sending SMS: senderAddress=${senderAddress} to=${recipientAddress}`);
+    console.log(`Sending SMS: senderAddress=${senderAddress} to=${recipientAddress} (shortCode=${isShortCode})`);
 
     const accessToken = await getOrangeAccessToken(ORANGE_CLIENT_ID, ORANGE_CLIENT_SECRET);
 
-    const encodedSender = `tel%3A%2B${effectiveSenderNumber}`;
+    const encodedSender = isShortCode
+      ? `tel%3A${effectiveSenderNumber}`
+      : `tel%3A%2B${effectiveSenderNumber}`;
     const smsUrl = `${ORANGE_SMS_URL}/${encodedSender}/requests`;
 
     const smsPayload = {
