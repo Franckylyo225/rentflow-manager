@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.monsms-balance]
 verify_jwt = false
+
+[functions.process-rent-reminders]
+verify_jwt = false
