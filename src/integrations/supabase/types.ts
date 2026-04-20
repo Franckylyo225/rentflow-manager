@@ -604,6 +604,9 @@ export type Database = {
           legal_id: string | null
           legal_name: string | null
           logo_url: string | null
+          monsms_api_key: string | null
+          monsms_company_id: string | null
+          monsms_sender_id: string | null
           name: string
           phone: string | null
           rent_due_day: number
@@ -632,6 +635,9 @@ export type Database = {
           legal_id?: string | null
           legal_name?: string | null
           logo_url?: string | null
+          monsms_api_key?: string | null
+          monsms_company_id?: string | null
+          monsms_sender_id?: string | null
           name: string
           phone?: string | null
           rent_due_day?: number
@@ -660,6 +666,9 @@ export type Database = {
           legal_id?: string | null
           legal_name?: string | null
           logo_url?: string | null
+          monsms_api_key?: string | null
+          monsms_company_id?: string | null
+          monsms_sender_id?: string | null
           name?: string
           phone?: string | null
           rent_due_day?: number

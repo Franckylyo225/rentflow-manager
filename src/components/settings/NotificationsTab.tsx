@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { SmsHistoryTable } from "./SmsHistoryTable";
 import { SmsBalanceCard } from "./SmsBalanceCard";
+import { MonSmsCredentialsCard } from "./MonSmsCredentialsCard";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: string; bg: string }> = {
@@ -26,7 +27,7 @@ export function NotificationsTab() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { settings: orgSettings } = useOrganizationSettings();
-  const senderName = orgSettings?.sms_sender_name || "SCI Binieba";
+  const senderName = orgSettings?.monsms_sender_id || orgSettings?.sms_sender_name || "SCI Binieba";
   const senderNumber = orgSettings?.sms_sender_number || null;
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,9 @@ export function NotificationsTab() {
 
   return (
     <div className="space-y-6">
+      {/* MonSMS Credentials */}
+      <MonSmsCredentialsCard />
+
       {/* MonSMS Balance */}
       <SmsBalanceCard />
 

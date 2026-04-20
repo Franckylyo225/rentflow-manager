@@ -23,11 +23,6 @@ serve(async (req) => {
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const MONSMS_API_KEY = Deno.env.get("MONSMS_API_KEY");
-    if (!MONSMS_API_KEY) throw new Error("MONSMS_API_KEY is not configured");
-    const MONSMS_COMPANY_ID = Deno.env.get("MONSMS_COMPANY_ID");
-    if (!MONSMS_COMPANY_ID) throw new Error("MONSMS_COMPANY_ID is not configured");
-
     const { to, message, organizationId, recipientName, templateKey, senderName } = await req.json();
 
     if (!to || !message) {
@@ -37,19 +32,50 @@ serve(async (req) => {
       );
     }
 
+    // Resolve credentials: organization first, then global secrets
+    let apiKey: string | null = null;
+    let companyId: string | null = null;
+    let orgSenderId: string | null = null;
+    let orgFallbackName: string | null = null;
+
+    if (organizationId) {
+      const { data: org } = await supabaseAdmin
+        .from("organizations")
+        .select("monsms_api_key, monsms_company_id, monsms_sender_id, sms_sender_name")
+        .eq("id", organizationId)
+        .maybeSingle();
+      if (org) {
+        apiKey = org.monsms_api_key || null;
+        companyId = org.monsms_company_id || null;
+        orgSenderId = org.monsms_sender_id || null;
+        orgFallbackName = org.sms_sender_name || null;
+      }
+    }
+
+    if (!apiKey) apiKey = Deno.env.get("MONSMS_API_KEY") || null;
+    if (!companyId) companyId = Deno.env.get("MONSMS_COMPANY_ID") || null;
+
+    if (!apiKey) throw new Error("MonSMS API Key manquante (configurez-la dans Paramètres > Notifications)");
+    if (!companyId) throw new Error("MonSMS Company ID manquant (configurez-le dans Paramètres > Notifications)");
+
     const recipientPhone = formatPhoneNumber(to);
-    const resolvedSenderId = (senderName && String(senderName).trim()) || Deno.env.get("MONSMS_SENDER_ID") || "MonSMS";
+    const resolvedSenderId =
+      (senderName && String(senderName).trim()) ||
+      orgSenderId ||
+      orgFallbackName ||
+      Deno.env.get("MONSMS_SENDER_ID") ||
+      "MonSMS";
 
     const payload = {
-      apiKey: MONSMS_API_KEY,
-      companyId: MONSMS_COMPANY_ID,
+      apiKey,
+      companyId,
       senderId: resolvedSenderId,
       contacts: [{ phone: recipientPhone }],
       text: message,
       type: "SMS",
     };
 
-    console.log(`Sending SMS via MonSMS Pro to=${recipientPhone}`);
+    console.log(`Sending SMS via MonSMS Pro to=${recipientPhone} senderId=${resolvedSenderId}`);
 
     const smsResponse = await fetch(MONSMS_URL, {
       method: "POST",
@@ -70,7 +96,7 @@ serve(async (req) => {
         recipient_phone: recipientPhone,
         recipient_name: recipientName || "",
         message: message,
-        sender_name: "MonSMS Pro",
+        sender_name: resolvedSenderId,
         status: isSuccess ? "sent" : "failed",
         error_message: isSuccess ? null : JSON.stringify(smsData?.error ?? smsData),
         orange_message_id: messageId,
