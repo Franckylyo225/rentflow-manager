@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,16 +12,46 @@ serve(async (req) => {
   }
 
   try {
-    const MONSMS_API_KEY = Deno.env.get("MONSMS_API_KEY");
-    const MONSMS_COMPANY_ID = Deno.env.get("MONSMS_COMPANY_ID");
-    if (!MONSMS_API_KEY || !MONSMS_COMPANY_ID) {
+    let organizationId: string | null = null;
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        organizationId = body?.organizationId ?? null;
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    let apiKey: string | null = null;
+    let companyId: string | null = null;
+
+    if (organizationId) {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: org } = await supabaseAdmin
+        .from("organizations")
+        .select("monsms_api_key, monsms_company_id")
+        .eq("id", organizationId)
+        .maybeSingle();
+      if (org) {
+        apiKey = org.monsms_api_key || null;
+        companyId = org.monsms_company_id || null;
+      }
+    }
+
+    if (!apiKey) apiKey = Deno.env.get("MONSMS_API_KEY") || null;
+    if (!companyId) companyId = Deno.env.get("MONSMS_COMPANY_ID") || null;
+
+    if (!apiKey || !companyId) {
       throw new Error("MonSMS credentials not configured");
     }
 
     const res = await fetch("https://rest.monsms.pro/v1/transaction/stats", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey: MONSMS_API_KEY, companyId: MONSMS_COMPANY_ID }),
+      body: JSON.stringify({ apiKey, companyId }),
     });
 
     const data = await res.json();
