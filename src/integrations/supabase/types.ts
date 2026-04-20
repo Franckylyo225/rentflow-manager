@@ -1027,6 +1027,7 @@ export type Database = {
           organization_id: string
           recipient_name: string | null
           recipient_phone: string
+          rent_payment_id: string | null
           sender_name: string | null
           status: string
           template_key: string | null
@@ -1040,6 +1041,7 @@ export type Database = {
           organization_id: string
           recipient_name?: string | null
           recipient_phone: string
+          rent_payment_id?: string | null
           sender_name?: string | null
           status?: string
           template_key?: string | null
@@ -1053,6 +1055,7 @@ export type Database = {
           organization_id?: string
           recipient_name?: string | null
           recipient_phone?: string
+          rent_payment_id?: string | null
           sender_name?: string | null
           status?: string
           template_key?: string | null
