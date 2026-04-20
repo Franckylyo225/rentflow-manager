@@ -6,7 +6,6 @@ import { Wallet, RefreshCw, Loader2, AlertTriangle, TrendingDown } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useProfile } from "@/hooks/useProfile";
 
 interface BalanceData {
   creditAvailable: number;
@@ -15,7 +14,6 @@ interface BalanceData {
 }
 
 export function SmsBalanceCard() {
-  const { profile } = useProfile();
   const [data, setData] = useState<BalanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +22,7 @@ export function SmsBalanceCard() {
     setLoading(true);
     setError(null);
     try {
-      const { data: res, error: invokeError } = await supabase.functions.invoke("monsms-balance", {
-        body: { organizationId: profile?.organization_id },
-      });
+      const { data: res, error: invokeError } = await supabase.functions.invoke("monsms-balance", { body: {} });
       if (invokeError) throw invokeError;
       if (!res?.success) throw new Error(res?.error || "Erreur inconnue");
       setData({
@@ -42,9 +38,8 @@ export function SmsBalanceCard() {
   };
 
   useEffect(() => {
-    if (profile?.organization_id !== undefined) fetchBalance();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.organization_id]);
+    fetchBalance();
+  }, []);
 
   const isLow = data && data.creditAvailable < 50;
   const isCritical = data && data.creditAvailable < 10;

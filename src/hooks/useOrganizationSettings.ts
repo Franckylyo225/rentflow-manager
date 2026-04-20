@@ -27,9 +27,6 @@ export interface OrganizationSettings {
   salaries_enabled: boolean;
   sms_sender_name: string;
   sms_sender_number: string | null;
-  monsms_company_id: string | null;
-  monsms_api_key: string | null;
-  monsms_sender_id: string | null;
 }
 
 export function useOrganizationSettings() {
