@@ -23,12 +23,11 @@ function diffDays(a: Date, b: Date): number {
   return Math.round(ms / (1000 * 60 * 60 * 24));
 }
 
-// Maps day-offset (today vs due_date) to a template_key
-// Negative = before due date, positive = after due date
+// Returns template_key for J-5, jour J (J=0), J+5
 function pickTemplateKey(daysFromDue: number): string | null {
   if (daysFromDue === -5) return "before_5";
-  if (daysFromDue === 1) return "after_1";
-  if (daysFromDue === 7) return "after_7";
+  if (daysFromDue === 0) return "after_1"; // jour J (clé conservée pour compat)
+  if (daysFromDue === 5) return "after_7"; // J+5 (clé conservée pour compat)
   return null;
 }
 
