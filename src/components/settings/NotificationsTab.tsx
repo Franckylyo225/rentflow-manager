@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { SmsHistoryTable } from "./SmsHistoryTable";
+import { SmsBalanceCard } from "./SmsBalanceCard";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: string; bg: string }> = {
@@ -109,6 +110,9 @@ export function NotificationsTab() {
 
   return (
     <div className="space-y-6">
+      {/* MonSMS Balance */}
+      <SmsBalanceCard />
+
       {/* Header with stats */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
