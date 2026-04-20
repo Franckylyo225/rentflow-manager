@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.create-user]
 verify_jwt = false
+
+[functions.generate-monthly-rents]
+verify_jwt = false
