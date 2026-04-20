@@ -78,8 +78,15 @@ export function useOrganizationSettings() {
       toast.error("Erreur upload logo : " + error.message);
       return null;
     }
-    const { data: urlData } = supabase.storage.from("logos").getPublicUrl(path);
-    return urlData.publicUrl;
+    // Bucket privé : URL signée longue durée (1 an)
+    const { data: signed, error: signedErr } = await supabase.storage
+      .from("logos")
+      .createSignedUrl(path, 60 * 60 * 24 * 365);
+    if (signedErr || !signed?.signedUrl) {
+      toast.error("Erreur génération URL logo");
+      return null;
+    }
+    return signed.signedUrl;
   };
 
   return { settings, loading, updateSettings, uploadLogo, refetch: fetchSettings };
