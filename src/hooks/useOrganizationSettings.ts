@@ -27,6 +27,8 @@ export interface OrganizationSettings {
   salaries_enabled: boolean;
   sms_sender_name: string;
   sms_sender_number: string | null;
+  auto_sms_enabled: boolean;
+  auto_sms_hour: number;
 }
 
 export function useOrganizationSettings() {
