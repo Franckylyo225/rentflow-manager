@@ -113,16 +113,13 @@ Deno.serve(async (req) => {
         const tenant = p.tenants;
         if (!tenant?.phone) continue;
 
-        // Skip if already sent today for this template + tenant
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        // Skip if already sent for this payment + template (one-time per échéance)
         const { data: alreadySent } = await supabase
           .from("sms_history")
           .select("id")
-          .eq("organization_id", org.id)
-          .eq("recipient_phone", formatPhoneNumber(tenant.phone))
+          .eq("rent_payment_id", p.id)
           .eq("template_key", key)
-          .gte("created_at", startOfDay.toISOString())
+          .eq("status", "sent")
           .limit(1);
         if (alreadySent && alreadySent.length > 0) continue;
 
@@ -161,6 +158,7 @@ Deno.serve(async (req) => {
             error_message: ok ? null : JSON.stringify(d?.error ?? d),
             orange_message_id: d?.data?.id || d?.data?.campaignId || null,
             template_key: key,
+            rent_payment_id: p.id,
           });
 
           if (ok) totalSent++;
@@ -176,6 +174,7 @@ Deno.serve(async (req) => {
             status: "failed",
             error_message: e.message,
             template_key: key,
+            rent_payment_id: p.id,
           });
         }
       }
