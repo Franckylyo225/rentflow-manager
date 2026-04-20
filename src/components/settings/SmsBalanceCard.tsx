@@ -6,6 +6,7 @@ import { Wallet, RefreshCw, Loader2, AlertTriangle, TrendingDown } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useProfile } from "@/hooks/useProfile";
 
 interface BalanceData {
   creditAvailable: number;
