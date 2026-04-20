@@ -18,8 +18,8 @@ import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: string; bg: string }> = {
   before_5: { icon: Clock, label: "J-5", color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
-  after_1: { icon: AlertTriangle, label: "J+1", color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
-  after_7: { icon: AlertTriangle, label: "J+7", color: "text-destructive", bg: "bg-destructive/10" },
+  after_1: { icon: AlertTriangle, label: "Jour J", color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
+  after_7: { icon: AlertTriangle, label: "J+5", color: "text-destructive", bg: "bg-destructive/10" },
 };
 
 export function NotificationsTab() {
