@@ -111,6 +111,9 @@ export function NotificationsTab() {
 
   return (
     <div className="space-y-6">
+      {/* MonSMS Credentials */}
+      <MonSmsCredentialsCard />
+
       {/* MonSMS Balance */}
       <SmsBalanceCard />
 
