@@ -25,7 +25,7 @@ const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: 
 export function NotificationsTab() {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { settings: orgSettings } = useOrganizationSettings();
+  const { settings: orgSettings, updateSettings } = useOrganizationSettings();
   const senderName = orgSettings?.sms_sender_name || "SCI Binieba";
   const senderNumber = orgSettings?.sms_sender_number || null;
   const [templates, setTemplates] = useState<any[]>([]);
@@ -35,6 +35,17 @@ export function NotificationsTab() {
   const [testMessage, setTestMessage] = useState("Bonjour, ceci est un SMS de test envoyé depuis SCI Binieba.");
   const [sendingTest, setSendingTest] = useState(false);
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
+  const [autoEnabled, setAutoEnabled] = useState(false);
+  const [autoHour, setAutoHour] = useState(8);
+  const [savingAuto, setSavingAuto] = useState(false);
+  const [runningNow, setRunningNow] = useState(false);
+
+  useEffect(() => {
+    if (orgSettings) {
+      setAutoEnabled(orgSettings.auto_sms_enabled ?? false);
+      setAutoHour(orgSettings.auto_sms_hour ?? 8);
+    }
+  }, [orgSettings]);
 
   useEffect(() => {
     if (!user) return;
@@ -107,6 +118,31 @@ export function NotificationsTab() {
 
   const enabledSmsCount = templates.filter(t => t.sms_enabled).length;
   const enabledEmailCount = templates.filter(t => t.email_enabled).length;
+
+  const handleSaveAuto = async () => {
+    setSavingAuto(true);
+    await updateSettings({ auto_sms_enabled: autoEnabled, auto_sms_hour: autoHour } as any);
+    setSavingAuto(false);
+  };
+
+  const handleRunNow = async () => {
+    setRunningNow(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-rent-reminders", {
+        body: { force: true, organizationId: profile?.organization_id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Traitement terminé : ${data.sent} envoyé(s), ${data.failed} échec(s)`);
+      } else {
+        toast.error("Erreur : " + (data?.error || "Échec"));
+      }
+    } catch (err: any) {
+      toast.error("Erreur : " + err.message);
+    } finally {
+      setRunningNow(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
