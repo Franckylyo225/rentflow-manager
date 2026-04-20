@@ -588,6 +588,8 @@ export type Database = {
         Row: {
           accepted_payment_methods: string[]
           address: string | null
+          auto_sms_enabled: boolean
+          auto_sms_hour: number
           created_at: string
           currency: string
           date_format: string
@@ -619,6 +621,8 @@ export type Database = {
         Insert: {
           accepted_payment_methods?: string[]
           address?: string | null
+          auto_sms_enabled?: boolean
+          auto_sms_hour?: number
           created_at?: string
           currency?: string
           date_format?: string
@@ -650,6 +654,8 @@ export type Database = {
         Update: {
           accepted_payment_methods?: string[]
           address?: string | null
+          auto_sms_enabled?: boolean
+          auto_sms_hour?: number
           created_at?: string
           currency?: string
           date_format?: string

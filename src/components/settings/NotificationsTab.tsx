@@ -25,7 +25,7 @@ const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: 
 export function NotificationsTab() {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { settings: orgSettings } = useOrganizationSettings();
+  const { settings: orgSettings, updateSettings } = useOrganizationSettings();
   const senderName = orgSettings?.sms_sender_name || "SCI Binieba";
   const senderNumber = orgSettings?.sms_sender_number || null;
   const [templates, setTemplates] = useState<any[]>([]);
@@ -35,6 +35,17 @@ export function NotificationsTab() {
   const [testMessage, setTestMessage] = useState("Bonjour, ceci est un SMS de test envoyé depuis SCI Binieba.");
   const [sendingTest, setSendingTest] = useState(false);
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
+  const [autoEnabled, setAutoEnabled] = useState(false);
+  const [autoHour, setAutoHour] = useState(8);
+  const [savingAuto, setSavingAuto] = useState(false);
+  const [runningNow, setRunningNow] = useState(false);
+
+  useEffect(() => {
+    if (orgSettings) {
+      setAutoEnabled(orgSettings.auto_sms_enabled ?? false);
+      setAutoHour(orgSettings.auto_sms_hour ?? 8);
+    }
+  }, [orgSettings]);
 
   useEffect(() => {
     if (!user) return;
@@ -108,10 +119,81 @@ export function NotificationsTab() {
   const enabledSmsCount = templates.filter(t => t.sms_enabled).length;
   const enabledEmailCount = templates.filter(t => t.email_enabled).length;
 
+  const handleSaveAuto = async () => {
+    setSavingAuto(true);
+    await updateSettings({ auto_sms_enabled: autoEnabled, auto_sms_hour: autoHour } as any);
+    setSavingAuto(false);
+  };
+
+  const handleRunNow = async () => {
+    setRunningNow(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-rent-reminders", {
+        body: { force: true, organizationId: profile?.organization_id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Traitement terminé : ${data.sent} envoyé(s), ${data.failed} échec(s)`);
+      } else {
+        toast.error("Erreur : " + (data?.error || "Échec"));
+      }
+    } catch (err: any) {
+      toast.error("Erreur : " + err.message);
+    } finally {
+      setRunningNow(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* MonSMS Balance */}
       <SmsBalanceCard />
+
+      {/* Auto-send configuration */}
+      <Card className="border-border">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-base">Envoi automatique des relances</CardTitle>
+              <CardDescription>Les SMS sont envoyés chaque jour à l'heure choisie pour les échéances J-5, J+1 et J+7</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+            <Label className="text-sm font-medium">Activer l'envoi automatique quotidien</Label>
+            <Switch checked={autoEnabled} onCheckedChange={setAutoEnabled} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="auto-hour" className="text-sm font-medium">Heure d'envoi (UTC)</Label>
+              <select
+                id="auto-hour"
+                disabled={!autoEnabled}
+                value={autoHour}
+                onChange={(e) => setAutoHour(parseInt(e.target.value))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              >
+                {Array.from({ length: 24 }).map((_, h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, "0")}h00</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">L'horloge serveur est en UTC. Abidjan = UTC+0.</p>
+            </div>
+            <div className="flex items-end gap-2">
+              <Button size="sm" className="gap-2" onClick={handleSaveAuto} disabled={savingAuto}>
+                {savingAuto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Sauvegarder
+              </Button>
+              <Button size="sm" variant="outline" className="gap-2" onClick={handleRunNow} disabled={runningNow}>
+                {runningNow ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Lancer maintenant
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Header with stats */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
