@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { SmsHistoryTable } from "./SmsHistoryTable";
 import { SmsBalanceCard } from "./SmsBalanceCard";
+import { MonSmsCredentialsCard } from "./MonSmsCredentialsCard";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: string; bg: string }> = {
