@@ -176,6 +176,26 @@ export default function FinancialReports() {
           <StatCard title="Marge" value={`${marge}%`} icon={Percent} variant={marge >= 50 ? "success" : marge >= 20 ? "warning" : "destructive"} />
         </div>
 
+        {caVentes > 0 && (
+          <Card className="border-blue-500/20 bg-blue-500/5">
+            <CardContent className="pt-4 pb-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Dont ventes de patrimoine</p>
+                  <p className="text-base font-semibold text-card-foreground">{caVentes.toLocaleString()} FCFA</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Loyers</p>
+                <p className="text-sm font-medium text-card-foreground">{caLoyers.toLocaleString()} FCFA</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* CA vs Dépenses */}
