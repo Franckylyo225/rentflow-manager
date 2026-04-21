@@ -99,7 +99,7 @@ export function RecordSaleDialog({ open, onOpenChange, asset, onSuccess }: Recor
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Enregistrer la vente</DialogTitle>
+          <DialogTitle>Vendre le bien</DialogTitle>
           <DialogDescription>
             Le montant net sera crédité au chiffre d'affaires du mois de la vente.
           </DialogDescription>
@@ -183,7 +183,7 @@ export function RecordSaleDialog({ open, onOpenChange, asset, onSuccess }: Recor
           <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Enregistrer la vente
+            Vendre le bien
           </Button>
         </DialogFooter>
       </DialogContent>
