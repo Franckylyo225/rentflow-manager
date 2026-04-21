@@ -29,6 +29,7 @@ interface TotpFactor {
 }
 
 export function SecurityTab() {
+  const { profile } = useProfile();
   const [factors, setFactors] = useState<TotpFactor[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -41,10 +42,47 @@ export function SecurityTab() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [factorToDelete, setFactorToDelete] = useState<string | null>(null);
 
+  // SMS 2FA state
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [smsPhone, setSmsPhone] = useState("");
+  const [savingSms, setSavingSms] = useState(false);
+
   // Password change state
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setSmsEnabled(!!profile.sms_2fa_enabled);
+      setSmsPhone(profile.sms_2fa_phone || "");
+    }
+  }, [profile]);
+
+  const saveSms2fa = async (enabled: boolean) => {
+    if (!profile) return;
+    if (enabled && !/^\+?\d{8,15}$/.test(smsPhone.replace(/\s/g, ""))) {
+      toast.error("Veuillez entrer un numéro de téléphone valide (ex: +22507XXXXXXXX)");
+      return;
+    }
+    setSavingSms(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          sms_2fa_enabled: enabled,
+          sms_2fa_phone: enabled ? smsPhone.replace(/\s/g, "") : profile.sms_2fa_phone,
+        })
+        .eq("user_id", profile.user_id);
+      if (error) throw error;
+      setSmsEnabled(enabled);
+      toast.success(enabled ? "2FA SMS activée" : "2FA SMS désactivée");
+    } catch (e: any) {
+      toast.error("Erreur : " + e.message);
+    } finally {
+      setSavingSms(false);
+    }
+  };
 
   const loadFactors = async () => {
     setLoading(true);
