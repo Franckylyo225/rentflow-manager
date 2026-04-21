@@ -413,6 +413,65 @@ export default function Patrimoine() {
             <PatrimoineMap assets={filtered} onAssetClick={(id) => navigate(`/patrimoine/${id}`)} />
           </TabsContent>
 
+          <TabsContent value="vendus" className="space-y-4 mt-4">
+            <Card className="border-blue-500/20 bg-blue-500/5">
+              <CardContent className="pt-5 pb-4 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Tag className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total des ventes (net)</p>
+                    <p className="text-xl font-semibold text-card-foreground">{totalSalesValue.toLocaleString()} FCFA</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{soldAssets.length} bien{soldAssets.length > 1 ? "s" : ""} vendu{soldAssets.length > 1 ? "s" : ""}</p>
+              </CardContent>
+            </Card>
+
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">Aucun bien vendu pour le moment.</div>
+            ) : (
+              <Card className="border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Bien</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Acquéreur</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Date</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Prix</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Net crédité</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map(asset => (
+                          <tr key={asset.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/patrimoine/${asset.id}`)}>
+                            <td className="py-3 px-4">
+                              <p className="font-medium text-card-foreground">{asset.title}</p>
+                              <p className="text-xs text-muted-foreground">{asset.locality || "—"}</p>
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.buyer_name || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">
+                              {asset.sale_date ? new Date(asset.sale_date).toLocaleDateString("fr-FR") : "—"}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium text-card-foreground">{(asset.sale_price || 0).toLocaleString()} FCFA</td>
+                            <td className="py-3 px-4 text-right text-emerald-600 font-medium hidden lg:table-cell">
+                              {((asset.sale_price || 0) - (asset.sale_commission || 0)).toLocaleString()} FCFA
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="titulaires" className="space-y-4 mt-4">
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
               <div className="relative flex-1 max-w-sm">
