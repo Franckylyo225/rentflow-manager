@@ -23,11 +23,11 @@ function diffDays(a: Date, b: Date): number {
   return Math.round(ms / (1000 * 60 * 60 * 24));
 }
 
-// Returns template_key for J-5, jour J (J=0), J+5
+// J-5 (avant échéance), J+1 (lendemain), J+7 (une semaine après)
 function pickTemplateKey(daysFromDue: number): string | null {
   if (daysFromDue === -5) return "before_5";
-  if (daysFromDue === 0) return "after_1"; // jour J (clé conservée pour compat)
-  if (daysFromDue === 5) return "after_7"; // J+5 (clé conservée pour compat)
+  if (daysFromDue === 1) return "after_1";
+  if (daysFromDue === 7) return "after_7";
   return null;
 }
 
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     // Find orgs whose configured hour matches current UTC hour
     let orgsQuery = supabase
       .from("organizations")
-      .select("id, auto_sms_enabled, auto_sms_hour");
+      .select("id, auto_sms_enabled, auto_sms_hour, sms_sender_name");
     if (onlyOrgId) orgsQuery = orgsQuery.eq("id", onlyOrgId);
 
     const { data: orgs, error: orgsErr } = await orgsQuery;
@@ -131,9 +131,11 @@ Deno.serve(async (req) => {
         });
 
         const recipientPhone = formatPhoneNumber(tenant.phone);
+        const senderName = (org.sms_sender_name && String(org.sms_sender_name).trim()) || "SCI BINIEBA";
         const payload = {
           apiKey: MONSMS_API_KEY,
           companyId: MONSMS_COMPANY_ID,
+          senderId: senderName,
           contacts: [{ phone: recipientPhone }],
           text: message,
           type: "SMS",
@@ -153,7 +155,7 @@ Deno.serve(async (req) => {
             recipient_phone: recipientPhone,
             recipient_name: tenant.full_name,
             message,
-            sender_name: "MonSMS Pro",
+            sender_name: senderName,
             status: ok ? "sent" : "failed",
             error_message: ok ? null : JSON.stringify(d?.error ?? d),
             orange_message_id: d?.data?.id || d?.data?.campaignId || null,
@@ -170,7 +172,7 @@ Deno.serve(async (req) => {
             recipient_phone: recipientPhone,
             recipient_name: tenant.full_name,
             message,
-            sender_name: "MonSMS Pro",
+            sender_name: senderName,
             status: "failed",
             error_message: e.message,
             template_key: key,
