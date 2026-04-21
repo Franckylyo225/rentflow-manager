@@ -21,6 +21,7 @@ import Notifications from "./pages/Notifications";
 import Patrimoine from "./pages/Patrimoine";
 import PatrimoineDetail from "./pages/PatrimoineDetail";
 import MfaVerify from "./pages/MfaVerify";
+import SmsMfaVerify from "./pages/SmsMfaVerify";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/mfa-verify" element={<MfaVerify />} />
+              <Route path="/sms-mfa-verify" element={<SmsMfaVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
