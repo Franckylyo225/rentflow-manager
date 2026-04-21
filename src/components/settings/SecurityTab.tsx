@@ -333,6 +333,66 @@ export function SecurityTab() {
         </Card>
       )}
 
+      {/* SMS 2FA */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Vérification par SMS</CardTitle>
+                <CardDescription>
+                  Recevez un code à 6 chiffres par SMS à chaque connexion
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={smsEnabled ? "default" : "secondary"} className="gap-1.5">
+                {smsEnabled ? (
+                  <><CheckCircle2 className="h-3 w-3" /> Activée</>
+                ) : (
+                  <><AlertTriangle className="h-3 w-3" /> Désactivée</>
+                )}
+              </Badge>
+              <Switch
+                checked={smsEnabled}
+                disabled={savingSms}
+                onCheckedChange={(v) => saveSms2fa(v)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="sms-2fa-phone">Numéro de téléphone</Label>
+            <Input
+              id="sms-2fa-phone"
+              type="tel"
+              placeholder="+22507XXXXXXXX"
+              value={smsPhone}
+              onChange={(e) => setSmsPhone(e.target.value)}
+              disabled={savingSms}
+            />
+            <p className="text-xs text-muted-foreground">
+              Format international avec indicatif pays (ex: +22507XXXXXXXX)
+            </p>
+          </div>
+          {smsEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => saveSms2fa(true)}
+              disabled={savingSms || !smsPhone}
+            >
+              {savingSms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Mettre à jour le numéro
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Password change */}
       <Card>
         <CardHeader>
