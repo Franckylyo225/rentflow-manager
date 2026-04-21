@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    sessionStorage.removeItem("sms_2fa_verified");
     await supabase.auth.signOut();
   };
 
