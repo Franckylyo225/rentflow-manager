@@ -52,6 +52,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (needsMfa) return <Navigate to="/mfa-verify" replace />;
 
+  // SMS 2FA : if enabled on profile and not yet verified for this session, redirect
+  if (profile?.sms_2fa_enabled && profile?.sms_2fa_phone) {
+    const verified = sessionStorage.getItem("sms_2fa_verified") === "true";
+    if (!verified) return <Navigate to="/sms-mfa-verify" replace />;
+  }
+
   // Show pending approval screen
   if (profile && !profile.is_approved) {
     return (
