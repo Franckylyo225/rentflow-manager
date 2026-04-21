@@ -216,7 +216,7 @@ export default function PatrimoineDetail() {
           </div>
           {asset.status !== "sold" && (
             <Button className="gap-2" onClick={() => setShowSaleDialog(true)}>
-              <Tag className="h-4 w-4" /> Enregistrer la vente
+              <Tag className="h-4 w-4" /> Vendre le bien
             </Button>
           )}
         </div>
