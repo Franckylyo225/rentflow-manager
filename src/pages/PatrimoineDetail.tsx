@@ -101,6 +101,17 @@ export default function PatrimoineDetail() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Load signed URL for sale deed if asset is sold
+  useEffect(() => {
+    if (asset?.sale_deed_url) {
+      supabase.storage.from("patrimony-sales").createSignedUrl(asset.sale_deed_url, 3600).then(({ data }) => {
+        if (data?.signedUrl) setSaleDeedUrl(data.signedUrl);
+      });
+    } else {
+      setSaleDeedUrl(null);
+    }
+  }, [asset?.sale_deed_url]);
+
   const handleAddContact = async () => {
     if (!contactForm.full_name || !id) return;
     setSaving(true);
@@ -192,13 +203,72 @@ export default function PatrimoineDetail() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/patrimoine")}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground">{asset.title}</h1>
               <Badge variant="outline">{typeLabel}</Badge>
+              {asset.status === "sold" && (
+                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Vendu
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{asset.locality}{asset.subdivision_name ? ` · ${asset.subdivision_name}` : ""}</p>
           </div>
+          {asset.status !== "sold" && (
+            <Button className="gap-2" onClick={() => setShowSaleDialog(true)}>
+              <Tag className="h-4 w-4" /> Enregistrer la vente
+            </Button>
+          )}
         </div>
+
+        {/* Sale info banner */}
+        {asset.status === "sold" && (
+          <Card className="border-blue-500/20 bg-blue-500/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Tag className="h-4 w-4 text-blue-600" />
+                Bien vendu — crédité au CA du {asset.sale_date ? new Date(asset.sale_date).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }) : "—"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Prix de vente</p>
+                <p className="font-semibold text-card-foreground">{(asset.sale_price || 0).toLocaleString()} FCFA</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Commission</p>
+                <p className="font-medium text-card-foreground">{(asset.sale_commission || 0).toLocaleString()} FCFA</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Net crédité</p>
+                <p className="font-semibold text-emerald-600">{((asset.sale_price || 0) - (asset.sale_commission || 0)).toLocaleString()} FCFA</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Mode de paiement</p>
+                <p className="font-medium text-card-foreground">{asset.sale_payment_method || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Acquéreur</p>
+                <p className="font-medium text-card-foreground">{asset.buyer_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Notaire</p>
+                <p className="font-medium text-card-foreground">{asset.notary_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Date de vente</p>
+                <p className="font-medium text-card-foreground">{asset.sale_date ? new Date(asset.sale_date).toLocaleDateString("fr-FR") : "—"}</p>
+              </div>
+              {saleDeedUrl && (
+                <div className="flex items-end">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open(saleDeedUrl, "_blank")}>
+                    <FileText className="h-3.5 w-3.5" /> Acte de vente
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Info cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
