@@ -181,10 +181,56 @@ export default function Tenants() {
       insertData.contact_person = form.contact_person;
       insertData.rccm = form.rccm;
     }
-    const { error: tenantError } = await supabase.from("tenants").insert(insertData);
-    if (tenantError) { toast.error("Erreur : " + tenantError.message); setSaving(false); return; }
+    const { data: insertedTenant, error: tenantError } = await supabase
+      .from("tenants")
+      .insert(insertData)
+      .select("id")
+      .single();
+    if (tenantError || !insertedTenant) { toast.error("Erreur : " + (tenantError?.message ?? "ajout impossible")); setSaving(false); return; }
     await supabase.from("units").update({ status: "occupied" as const }).eq("id", form.unit_id);
-    toast.success("Locataire ajouté et unité mise à jour");
+
+    // Créer immédiatement la première échéance du mois courant
+    // (les loyers commencent à compter à partir de la date d'ajout, pas de lease_start)
+    try {
+      // Récupère le jour d'échéance configuré dans l'organisation via la propriété
+      const { data: propRow } = await supabase
+        .from("properties")
+        .select("organizations:organization_id(rent_due_day)")
+        .eq("id", unit.property_id)
+        .maybeSingle();
+      const rentDueDay = (propRow as any)?.organizations?.rent_due_day || 5;
+
+      const today = new Date();
+      const year = today.getFullYear();
+      const monthNum = today.getMonth() + 1;
+      const month = `${year}-${String(monthNum).padStart(2, "0")}`;
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      const safeDay = Math.min(rentDueDay, lastDay);
+      const dueDate = `${year}-${String(monthNum).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+
+      // Idempotent : ne pas écraser si une ligne existe déjà
+      const { data: existing } = await supabase
+        .from("rent_payments")
+        .select("id")
+        .eq("tenant_id", insertedTenant.id)
+        .eq("month", month)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabase.from("rent_payments").insert({
+          tenant_id: insertedTenant.id,
+          amount: unit.rent,
+          paid_amount: 0,
+          due_date: dueDate,
+          month,
+          status: "pending" as const,
+        });
+      }
+    } catch (e) {
+      console.error("Création de la première échéance échouée:", e);
+    }
+
+    toast.success("Locataire ajouté et première échéance créée");
     setShowAdd(false);
     setForm({ unit_id: "", full_name: "", phone: "", email: "", id_number: "", lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "", tenant_type: "individual", company_name: "", contact_person: "", rccm: "" });
     setSelectedProperty("");
