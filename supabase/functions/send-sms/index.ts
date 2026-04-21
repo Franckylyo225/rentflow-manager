@@ -28,7 +28,8 @@ serve(async (req) => {
     const MONSMS_COMPANY_ID = Deno.env.get("MONSMS_COMPANY_ID");
     if (!MONSMS_COMPANY_ID) throw new Error("MONSMS_COMPANY_ID is not configured");
 
-    const { to, message, organizationId, recipientName, templateKey } = await req.json();
+    const { to, message, organizationId, recipientName, templateKey, senderName } = await req.json();
+    const finalSenderName = (senderName && String(senderName).trim()) || "SCI BINIEBA";
 
     if (!to || !message) {
       return new Response(
@@ -42,6 +43,7 @@ serve(async (req) => {
     const payload = {
       apiKey: MONSMS_API_KEY,
       companyId: MONSMS_COMPANY_ID,
+      senderId: finalSenderName,
       contacts: [{ phone: recipientPhone }],
       text: message,
       type: "SMS",
@@ -68,7 +70,7 @@ serve(async (req) => {
         recipient_phone: recipientPhone,
         recipient_name: recipientName || "",
         message: message,
-        sender_name: "MonSMS Pro",
+        sender_name: finalSenderName,
         status: isSuccess ? "sent" : "failed",
         error_message: isSuccess ? null : JSON.stringify(smsData?.error ?? smsData),
         orange_message_id: messageId,
