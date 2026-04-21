@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet, Tag } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -74,12 +74,18 @@ export default function Patrimoine() {
   const hasAcd = (a: any) => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd");
 
   const filtered = assets.filter(a => {
+    // Tab-based scope: actifs hides sold, vendus shows only sold
+    if (activeTab === "actifs" && a.status === "sold") return false;
+    if (activeTab === "vendus" && a.status !== "sold") return false;
     if (typeFilter !== "all" && a.asset_type !== typeFilter) return false;
     if (statusFilter === "complet" && !hasAcd(a)) return false;
     if (statusFilter === "en_cours" && hasAcd(a)) return false;
     if (search && !a.title.toLowerCase().includes(search.toLowerCase()) && !a.locality.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const soldAssets = assets.filter(a => a.status === "sold");
+  const totalSalesValue = soldAssets.reduce((s, a) => s + ((a.sale_price || 0) - (a.sale_commission || 0)), 0);
 
   const parseMapLinkLocal = (link: string): { lat: number | null; lng: number | null } => {
     if (!link) return { lat: null, lng: null };
@@ -316,8 +322,9 @@ export default function Patrimoine() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
            <TabsList>
-            <TabsTrigger value="actifs">Actifs</TabsTrigger>
+            <TabsTrigger value="actifs">Actifs ({assets.length - soldAssets.length})</TabsTrigger>
             <TabsTrigger value="carte" className="gap-1.5"><Map className="h-3.5 w-3.5" /> Carte</TabsTrigger>
+            <TabsTrigger value="vendus" className="gap-1.5"><Tag className="h-3.5 w-3.5" /> Vendus ({soldAssets.length})</TabsTrigger>
             <TabsTrigger value="titulaires">Titulaires</TabsTrigger>
           </TabsList>
 
@@ -404,6 +411,65 @@ export default function Patrimoine() {
 
           <TabsContent value="carte" className="mt-4">
             <PatrimoineMap assets={filtered} onAssetClick={(id) => navigate(`/patrimoine/${id}`)} />
+          </TabsContent>
+
+          <TabsContent value="vendus" className="space-y-4 mt-4">
+            <Card className="border-blue-500/20 bg-blue-500/5">
+              <CardContent className="pt-5 pb-4 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Tag className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total des ventes (net)</p>
+                    <p className="text-xl font-semibold text-card-foreground">{totalSalesValue.toLocaleString()} FCFA</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{soldAssets.length} bien{soldAssets.length > 1 ? "s" : ""} vendu{soldAssets.length > 1 ? "s" : ""}</p>
+              </CardContent>
+            </Card>
+
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">Aucun bien vendu pour le moment.</div>
+            ) : (
+              <Card className="border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Bien</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Acquéreur</th>
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Date</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Prix</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Net crédité</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map(asset => (
+                          <tr key={asset.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/patrimoine/${asset.id}`)}>
+                            <td className="py-3 px-4">
+                              <p className="font-medium text-card-foreground">{asset.title}</p>
+                              <p className="text-xs text-muted-foreground">{asset.locality || "—"}</p>
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.buyer_name || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">
+                              {asset.sale_date ? new Date(asset.sale_date).toLocaleDateString("fr-FR") : "—"}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium text-card-foreground">{(asset.sale_price || 0).toLocaleString()} FCFA</td>
+                            <td className="py-3 px-4 text-right text-emerald-600 font-medium hidden lg:table-cell">
+                              {((asset.sale_price || 0) - (asset.sale_commission || 0)).toLocaleString()} FCFA
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="titulaires" className="space-y-4 mt-4">

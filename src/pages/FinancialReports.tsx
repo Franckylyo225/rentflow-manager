@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useExpenses, useExpenseCategories } from "@/hooks/useExpenses";
 import { useRentPayments, useProperties, useCities } from "@/hooks/useData";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Wallet, Percent, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Percent, Loader2, Tag } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -19,14 +21,35 @@ const CATEGORY_COLORS = [
 ];
 
 export default function FinancialReports() {
+  const { user } = useAuth();
   const { data: expenses, loading: expLoading } = useExpenses();
   const { data: categories } = useExpenseCategories();
   const { data: payments, loading: payLoading } = useRentPayments();
   const { data: properties } = useProperties();
   const { data: cities } = useCities();
   const [periodFilter, setPeriodFilter] = useState("all");
+  const [sales, setSales] = useState<any[]>([]);
+  const [salesLoading, setSalesLoading] = useState(true);
 
-  const loading = expLoading || payLoading;
+  useEffect(() => {
+    if (!user) return;
+    setSalesLoading(true);
+    supabase
+      .from("patrimony_assets")
+      .select("id, title, sale_price, sale_commission, sale_date, buyer_name")
+      .eq("status", "sold")
+      .not("sale_date", "is", null)
+      .then(({ data }) => {
+        setSales(data || []);
+        setSalesLoading(false);
+      });
+  }, [user]);
+
+  const loading = expLoading || payLoading || salesLoading;
+
+  // Net sale revenue = price - commission
+  const saleNet = (s: any) => (s.sale_price || 0) - (s.sale_commission || 0);
+  const saleMonth = (s: any) => (s.sale_date || "").slice(0, 7);
 
   // Filter by period
   const filteredPayments = useMemo(() => {
@@ -39,29 +62,44 @@ export default function FinancialReports() {
     return expenses.filter(e => e.expense_date.slice(0, 7) === periodFilter);
   }, [expenses, periodFilter]);
 
+  const filteredSales = useMemo(() => {
+    if (periodFilter === "all") return sales;
+    return sales.filter(s => saleMonth(s) === periodFilter);
+  }, [sales, periodFilter]);
+
   const months = useMemo(() => {
     const set = new Set<string>();
     payments.forEach(p => set.add(p.month));
     expenses.forEach(e => set.add(e.expense_date.slice(0, 7)));
+    sales.forEach(s => { const m = saleMonth(s); if (m) set.add(m); });
     return [...set].sort().reverse();
-  }, [payments, expenses]);
+  }, [payments, expenses, sales]);
 
   // KPIs
-  const ca = useMemo(() => filteredPayments.reduce((s, p) => s + p.paid_amount, 0), [filteredPayments]);
+  const caLoyers = useMemo(() => filteredPayments.reduce((s, p) => s + p.paid_amount, 0), [filteredPayments]);
+  const caVentes = useMemo(() => filteredSales.reduce((s, x) => s + saleNet(x), 0), [filteredSales]);
+  const ca = caLoyers + caVentes;
   const totalExpenses = useMemo(() => filteredExpenses.reduce((s, e) => s + e.amount, 0), [filteredExpenses]);
   const benefice = ca - totalExpenses;
   const marge = ca > 0 ? Math.round((benefice / ca) * 100) : 0;
 
-  // CA vs Dépenses par mois
+  // CA vs Dépenses par mois (CA = loyers + ventes nettes)
   const monthlyComparison = useMemo(() => {
-    const byMonth: Record<string, { month: string; ca: number; depenses: number }> = {};
+    const byMonth: Record<string, { month: string; ca: number; depenses: number; ventes: number }> = {};
     payments.forEach(p => {
-      if (!byMonth[p.month]) byMonth[p.month] = { month: p.month, ca: 0, depenses: 0 };
+      if (!byMonth[p.month]) byMonth[p.month] = { month: p.month, ca: 0, depenses: 0, ventes: 0 };
       byMonth[p.month].ca += p.paid_amount;
+    });
+    sales.forEach(s => {
+      const m = saleMonth(s);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { month: m, ca: 0, depenses: 0, ventes: 0 };
+      byMonth[m].ca += saleNet(s);
+      byMonth[m].ventes += saleNet(s);
     });
     expenses.forEach(e => {
       const m = e.expense_date.slice(0, 7);
-      if (!byMonth[m]) byMonth[m] = { month: m, ca: 0, depenses: 0 };
+      if (!byMonth[m]) byMonth[m] = { month: m, ca: 0, depenses: 0, ventes: 0 };
       byMonth[m].depenses += e.amount;
     });
     return Object.values(byMonth)
@@ -71,7 +109,7 @@ export default function FinancialReports() {
         label: new Date(d.month + "-01").toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
         benefice: d.ca - d.depenses,
       }));
-  }, [payments, expenses]);
+  }, [payments, expenses, sales]);
 
   // Dépenses par catégorie
   const categoryData = useMemo(() => {
@@ -137,6 +175,26 @@ export default function FinancialReports() {
           <StatCard title="Bénéfice net" value={`${(benefice / 1000000).toFixed(1)}M FCFA`} icon={Wallet} variant={benefice >= 0 ? "success" : "destructive"} />
           <StatCard title="Marge" value={`${marge}%`} icon={Percent} variant={marge >= 50 ? "success" : marge >= 20 ? "warning" : "destructive"} />
         </div>
+
+        {caVentes > 0 && (
+          <Card className="border-blue-500/20 bg-blue-500/5">
+            <CardContent className="pt-4 pb-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Dont ventes de patrimoine</p>
+                  <p className="text-base font-semibold text-card-foreground">{caVentes.toLocaleString()} FCFA</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Loyers</p>
+                <p className="text-sm font-medium text-card-foreground">{caLoyers.toLocaleString()} FCFA</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
