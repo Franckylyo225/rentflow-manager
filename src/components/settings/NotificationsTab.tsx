@@ -26,7 +26,7 @@ export function NotificationsTab() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { settings: orgSettings, updateSettings } = useOrganizationSettings();
-  const senderName = orgSettings?.sms_sender_name || "SCI Binieba";
+  const senderName = orgSettings?.sms_sender_name || "SCI BINIEBA";
   const senderNumber = orgSettings?.sms_sender_number || null;
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
