@@ -62,29 +62,44 @@ export default function FinancialReports() {
     return expenses.filter(e => e.expense_date.slice(0, 7) === periodFilter);
   }, [expenses, periodFilter]);
 
+  const filteredSales = useMemo(() => {
+    if (periodFilter === "all") return sales;
+    return sales.filter(s => saleMonth(s) === periodFilter);
+  }, [sales, periodFilter]);
+
   const months = useMemo(() => {
     const set = new Set<string>();
     payments.forEach(p => set.add(p.month));
     expenses.forEach(e => set.add(e.expense_date.slice(0, 7)));
+    sales.forEach(s => { const m = saleMonth(s); if (m) set.add(m); });
     return [...set].sort().reverse();
-  }, [payments, expenses]);
+  }, [payments, expenses, sales]);
 
   // KPIs
-  const ca = useMemo(() => filteredPayments.reduce((s, p) => s + p.paid_amount, 0), [filteredPayments]);
+  const caLoyers = useMemo(() => filteredPayments.reduce((s, p) => s + p.paid_amount, 0), [filteredPayments]);
+  const caVentes = useMemo(() => filteredSales.reduce((s, x) => s + saleNet(x), 0), [filteredSales]);
+  const ca = caLoyers + caVentes;
   const totalExpenses = useMemo(() => filteredExpenses.reduce((s, e) => s + e.amount, 0), [filteredExpenses]);
   const benefice = ca - totalExpenses;
   const marge = ca > 0 ? Math.round((benefice / ca) * 100) : 0;
 
-  // CA vs Dépenses par mois
+  // CA vs Dépenses par mois (CA = loyers + ventes nettes)
   const monthlyComparison = useMemo(() => {
-    const byMonth: Record<string, { month: string; ca: number; depenses: number }> = {};
+    const byMonth: Record<string, { month: string; ca: number; depenses: number; ventes: number }> = {};
     payments.forEach(p => {
-      if (!byMonth[p.month]) byMonth[p.month] = { month: p.month, ca: 0, depenses: 0 };
+      if (!byMonth[p.month]) byMonth[p.month] = { month: p.month, ca: 0, depenses: 0, ventes: 0 };
       byMonth[p.month].ca += p.paid_amount;
+    });
+    sales.forEach(s => {
+      const m = saleMonth(s);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { month: m, ca: 0, depenses: 0, ventes: 0 };
+      byMonth[m].ca += saleNet(s);
+      byMonth[m].ventes += saleNet(s);
     });
     expenses.forEach(e => {
       const m = e.expense_date.slice(0, 7);
-      if (!byMonth[m]) byMonth[m] = { month: m, ca: 0, depenses: 0 };
+      if (!byMonth[m]) byMonth[m] = { month: m, ca: 0, depenses: 0, ventes: 0 };
       byMonth[m].depenses += e.amount;
     });
     return Object.values(byMonth)
@@ -94,7 +109,7 @@ export default function FinancialReports() {
         label: new Date(d.month + "-01").toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
         benefice: d.ca - d.depenses,
       }));
-  }, [payments, expenses]);
+  }, [payments, expenses, sales]);
 
   // Dépenses par catégorie
   const categoryData = useMemo(() => {
