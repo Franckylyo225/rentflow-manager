@@ -43,6 +43,7 @@ serve(async (req) => {
     const payload = {
       apiKey: MONSMS_API_KEY,
       companyId: MONSMS_COMPANY_ID,
+      senderId: finalSenderName,
       contacts: [{ phone: recipientPhone }],
       text: message,
       type: "SMS",
