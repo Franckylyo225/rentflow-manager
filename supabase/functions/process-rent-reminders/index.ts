@@ -164,6 +164,7 @@ Deno.serve(async (req) => {
             orange_message_id: d?.data?.id || d?.data?.campaignId || null,
             template_key: key,
             rent_payment_id: p.id,
+            event_key: ok ? eventKey : null,
           });
 
           if (ok) totalSent++;
@@ -180,6 +181,7 @@ Deno.serve(async (req) => {
             error_message: e.message,
             template_key: key,
             rent_payment_id: p.id,
+            event_key: null,
           });
         }
       }
