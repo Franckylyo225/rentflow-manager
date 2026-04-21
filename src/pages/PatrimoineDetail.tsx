@@ -10,11 +10,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin, Image, File, FileSpreadsheet, FileType } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin, Image, File, FileSpreadsheet, FileType, Tag, CheckCircle2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { RecordSaleDialog } from "@/components/patrimoine/RecordSaleDialog";
 
 const DOC_TYPES = [
   { value: "acd", label: "ACD" },
@@ -81,6 +82,8 @@ export default function PatrimoineDetail() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState("");
   const [showMapDialog, setShowMapDialog] = useState(false);
+  const [showSaleDialog, setShowSaleDialog] = useState(false);
+  const [saleDeedUrl, setSaleDeedUrl] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
