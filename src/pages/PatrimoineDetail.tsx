@@ -564,6 +564,14 @@ export default function PatrimoineDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Record sale */}
+      <RecordSaleDialog
+        open={showSaleDialog}
+        onOpenChange={setShowSaleDialog}
+        asset={asset ? { id: asset.id, title: asset.title, organization_id: asset.organization_id } : null}
+        onSuccess={fetchData}
+      />
     </AppLayout>
   );
 }
