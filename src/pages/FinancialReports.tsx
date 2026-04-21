@@ -21,14 +21,35 @@ const CATEGORY_COLORS = [
 ];
 
 export default function FinancialReports() {
+  const { user } = useAuth();
   const { data: expenses, loading: expLoading } = useExpenses();
   const { data: categories } = useExpenseCategories();
   const { data: payments, loading: payLoading } = useRentPayments();
   const { data: properties } = useProperties();
   const { data: cities } = useCities();
   const [periodFilter, setPeriodFilter] = useState("all");
+  const [sales, setSales] = useState<any[]>([]);
+  const [salesLoading, setSalesLoading] = useState(true);
 
-  const loading = expLoading || payLoading;
+  useEffect(() => {
+    if (!user) return;
+    setSalesLoading(true);
+    supabase
+      .from("patrimony_assets")
+      .select("id, title, sale_price, sale_commission, sale_date, buyer_name")
+      .eq("status", "sold")
+      .not("sale_date", "is", null)
+      .then(({ data }) => {
+        setSales(data || []);
+        setSalesLoading(false);
+      });
+  }, [user]);
+
+  const loading = expLoading || payLoading || salesLoading;
+
+  // Net sale revenue = price - commission
+  const saleNet = (s: any) => (s.sale_price || 0) - (s.sale_commission || 0);
+  const saleMonth = (s: any) => (s.sale_date || "").slice(0, 7);
 
   // Filter by period
   const filteredPayments = useMemo(() => {
