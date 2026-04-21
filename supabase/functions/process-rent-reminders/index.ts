@@ -113,12 +113,15 @@ Deno.serve(async (req) => {
         const tenant = p.tenants;
         if (!tenant?.phone) continue;
 
-        // Skip if already sent for this payment + template (one-time per échéance)
+        // Clé d'événement unique : paiement + template + jour relatif
+        // Garantit qu'un même rappel ne peut être envoyé qu'une seule fois,
+        // même si le cron est rerun ou si la fonction est rappelée manuellement.
+        const eventKey = `${p.id}:${key}:${daysFromDue}`;
+
         const { data: alreadySent } = await supabase
           .from("sms_history")
           .select("id")
-          .eq("rent_payment_id", p.id)
-          .eq("template_key", key)
+          .eq("event_key", eventKey)
           .eq("status", "sent")
           .limit(1);
         if (alreadySent && alreadySent.length > 0) continue;
