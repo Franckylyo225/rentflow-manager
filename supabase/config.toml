@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.process-rent-reminders]
 verify_jwt = false
+
+[functions.send-sms-2fa-code]
+verify_jwt = false
+
+[functions.verify-sms-2fa-code]
+verify_jwt = false

@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Smartphone, Trash2, Loader2, CheckCircle2, AlertTriangle, KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Shield, Smartphone, Trash2, Loader2, CheckCircle2, AlertTriangle, KeyRound, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { useProfile } from "@/hooks/useProfile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +29,7 @@ interface TotpFactor {
 }
 
 export function SecurityTab() {
+  const { profile } = useProfile();
   const [factors, setFactors] = useState<TotpFactor[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -39,10 +42,47 @@ export function SecurityTab() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [factorToDelete, setFactorToDelete] = useState<string | null>(null);
 
+  // SMS 2FA state
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [smsPhone, setSmsPhone] = useState("");
+  const [savingSms, setSavingSms] = useState(false);
+
   // Password change state
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setSmsEnabled(!!profile.sms_2fa_enabled);
+      setSmsPhone(profile.sms_2fa_phone || "");
+    }
+  }, [profile]);
+
+  const saveSms2fa = async (enabled: boolean) => {
+    if (!profile) return;
+    if (enabled && !/^\+?\d{8,15}$/.test(smsPhone.replace(/\s/g, ""))) {
+      toast.error("Veuillez entrer un numéro de téléphone valide (ex: +22507XXXXXXXX)");
+      return;
+    }
+    setSavingSms(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          sms_2fa_enabled: enabled,
+          sms_2fa_phone: enabled ? smsPhone.replace(/\s/g, "") : profile.sms_2fa_phone,
+        })
+        .eq("user_id", profile.user_id);
+      if (error) throw error;
+      setSmsEnabled(enabled);
+      toast.success(enabled ? "2FA SMS activée" : "2FA SMS désactivée");
+    } catch (e: any) {
+      toast.error("Erreur : " + e.message);
+    } finally {
+      setSavingSms(false);
+    }
+  };
 
   const loadFactors = async () => {
     setLoading(true);
@@ -292,6 +332,66 @@ export function SecurityTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* SMS 2FA */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Vérification par SMS</CardTitle>
+                <CardDescription>
+                  Recevez un code à 6 chiffres par SMS à chaque connexion
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={smsEnabled ? "default" : "secondary"} className="gap-1.5">
+                {smsEnabled ? (
+                  <><CheckCircle2 className="h-3 w-3" /> Activée</>
+                ) : (
+                  <><AlertTriangle className="h-3 w-3" /> Désactivée</>
+                )}
+              </Badge>
+              <Switch
+                checked={smsEnabled}
+                disabled={savingSms}
+                onCheckedChange={(v) => saveSms2fa(v)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="sms-2fa-phone">Numéro de téléphone</Label>
+            <Input
+              id="sms-2fa-phone"
+              type="tel"
+              placeholder="+22507XXXXXXXX"
+              value={smsPhone}
+              onChange={(e) => setSmsPhone(e.target.value)}
+              disabled={savingSms}
+            />
+            <p className="text-xs text-muted-foreground">
+              Format international avec indicatif pays (ex: +22507XXXXXXXX)
+            </p>
+          </div>
+          {smsEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => saveSms2fa(true)}
+              disabled={savingSms || !smsPhone}
+            >
+              {savingSms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Mettre à jour le numéro
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Password change */}
       <Card>

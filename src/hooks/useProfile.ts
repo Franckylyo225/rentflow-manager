@@ -10,6 +10,8 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   is_approved: boolean;
+  sms_2fa_enabled?: boolean;
+  sms_2fa_phone?: string | null;
 }
 
 export interface UserRole {

@@ -908,6 +908,8 @@ export type Database = {
           is_approved: boolean
           organization_id: string
           phone: string | null
+          sms_2fa_enabled: boolean
+          sms_2fa_phone: string | null
           updated_at: string
           user_id: string
         }
@@ -919,6 +921,8 @@ export type Database = {
           is_approved?: boolean
           organization_id: string
           phone?: string | null
+          sms_2fa_enabled?: boolean
+          sms_2fa_phone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -930,6 +934,8 @@ export type Database = {
           is_approved?: boolean
           organization_id?: string
           phone?: string | null
+          sms_2fa_enabled?: boolean
+          sms_2fa_phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1037,6 +1043,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sms_2fa_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       sms_history: {
         Row: {
