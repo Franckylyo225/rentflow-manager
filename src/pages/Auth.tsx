@@ -14,6 +14,7 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("invite");
 
+  const allowSignUp = !!inviteToken; // Inscription publique désactivée — uniquement via invitation
   const [isSignUp, setIsSignUp] = useState(!!inviteToken);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -337,30 +338,32 @@ export default function AuthPage() {
             </Button>
           </form>
 
-          {/* Separator */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground">ou</span>
-            </div>
-          </div>
-
-          {/* Toggle */}
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              {isSignUp ? (
-                <>Déjà un compte ? <span className="font-semibold text-primary">Se connecter</span></>
-              ) : (
-                <>Pas encore de compte ? <span className="font-semibold text-primary">S'inscrire</span></>
-              )}
-            </button>
-          </div>
+          {/* Toggle (uniquement si invitation valide) */}
+          {allowSignUp && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-3 text-muted-foreground">ou</span>
+                </div>
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {isSignUp ? (
+                    <>Déjà un compte ? <span className="font-semibold text-primary">Se connecter</span></>
+                  ) : (
+                    <>Pas encore de compte ? <span className="font-semibold text-primary">S'inscrire</span></>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
             </>
           )}
           </motion.div>
