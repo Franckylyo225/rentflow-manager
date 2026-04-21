@@ -689,6 +689,7 @@ export type Database = {
       patrimony_assets: {
         Row: {
           asset_type: string
+          buyer_name: string | null
           created_at: string
           description: string | null
           handling_firm: string | null
@@ -699,8 +700,14 @@ export type Database = {
           locality: string
           longitude: number | null
           map_link: string | null
+          notary_name: string | null
           organization_id: string
           receipt_order_number: string | null
+          sale_commission: number | null
+          sale_date: string | null
+          sale_deed_url: string | null
+          sale_payment_method: string | null
+          sale_price: number | null
           status: string
           subdivision_name: string
           title: string
@@ -709,6 +716,7 @@ export type Database = {
         }
         Insert: {
           asset_type?: string
+          buyer_name?: string | null
           created_at?: string
           description?: string | null
           handling_firm?: string | null
@@ -719,8 +727,14 @@ export type Database = {
           locality?: string
           longitude?: number | null
           map_link?: string | null
+          notary_name?: string | null
           organization_id: string
           receipt_order_number?: string | null
+          sale_commission?: number | null
+          sale_date?: string | null
+          sale_deed_url?: string | null
+          sale_payment_method?: string | null
+          sale_price?: number | null
           status?: string
           subdivision_name?: string
           title: string
@@ -729,6 +743,7 @@ export type Database = {
         }
         Update: {
           asset_type?: string
+          buyer_name?: string | null
           created_at?: string
           description?: string | null
           handling_firm?: string | null
@@ -739,8 +754,14 @@ export type Database = {
           locality?: string
           longitude?: number | null
           map_link?: string | null
+          notary_name?: string | null
           organization_id?: string
           receipt_order_number?: string | null
+          sale_commission?: number | null
+          sale_date?: string | null
+          sale_deed_url?: string | null
+          sale_payment_method?: string | null
+          sale_price?: number | null
           status?: string
           subdivision_name?: string
           title?: string
