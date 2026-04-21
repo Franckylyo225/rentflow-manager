@@ -5,6 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Génère les échéances de loyer pour un mois donné (par défaut le mois courant).
+ *
+ * Règles métier :
+ * - Les échéances sont comptées à partir de la DATE D'AJOUT du locataire (`tenants.created_at`),
+ *   et NON à partir de `lease_start`. L'entreprise existe déjà avant l'arrivée sur la plateforme,
+ *   on ne génère donc jamais d'échéance rétroactive antérieure à la création du tenant.
+ * - Pour le mois d'ajout : génération d'un mois plein à la date d'échéance configurée
+ *   (`organizations.rent_due_day`). Pas de prorata.
+ * - Idempotent : ne crée pas de doublon si la ligne existe déjà pour (tenant_id, month).
+ */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,35 +27,36 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Allow targeting a specific month via body, default to current month
     let targetMonth: string | null = null;
+    let backfill = false;
     try {
       const body = await req.json();
       if (body?.month) targetMonth = body.month;
+      if (body?.backfill === true) backfill = true;
     } catch (_) {
-      // no body
+      // pas de body
     }
 
     const now = new Date();
     const month = targetMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-    console.log(`[generate-monthly-rents] Generating for month: ${month}`);
+    console.log(`[generate-monthly-rents] month=${month} backfill=${backfill}`);
 
-    // Get all active tenants with their organization
+    // Récupérer les locataires actifs avec created_at + organization
     const { data: tenants, error: tenantsError } = await supabase
       .from("tenants")
-      .select("id, rent, units!inner(property_id, properties!inner(organization_id))")
+      .select("id, rent, created_at, units!inner(property_id, properties!inner(organization_id))")
       .eq("is_active", true);
 
     if (tenantsError) throw tenantsError;
     if (!tenants || tenants.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: "No active tenants", created: 0 }),
+        JSON.stringify({ success: true, message: "Aucun locataire actif", created: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Group tenants by org to fetch the rent_due_day per org
+    // Jour d'échéance par organisation
     const orgIds = [...new Set(tenants.map((t: any) => t.units.properties.organization_id))];
     const { data: orgs } = await supabase
       .from("organizations")
@@ -54,37 +66,81 @@ Deno.serve(async (req) => {
     const orgDueDay = new Map<string, number>();
     orgs?.forEach((o: any) => orgDueDay.set(o.id, o.rent_due_day || 5));
 
-    // Check which tenants already have a payment for this month
-    const tenantIds = tenants.map((t: any) => t.id);
+    // ---- Construction de la liste (tenant, month) à traiter ----
+    // En mode normal : seulement le `month` ciblé.
+    // En mode backfill : tous les mois entre created_at du tenant et le mois courant.
+    type Job = { tenant: any; month: string };
+    const jobs: Job[] = [];
+
+    const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    for (const t of tenants as any[]) {
+      const createdAt = new Date(t.created_at);
+      const createdYM = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
+
+      if (backfill) {
+        // Itère depuis le mois d'ajout jusqu'au mois courant (inclus)
+        let cursor = new Date(createdAt.getFullYear(), createdAt.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth(), 1);
+        while (cursor <= end) {
+          const ym = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+          jobs.push({ tenant: t, month: ym });
+          cursor.setMonth(cursor.getMonth() + 1);
+        }
+      } else {
+        // Mode normal : on ne génère que pour `month`, et seulement si
+        // le mois ciblé est >= mois d'ajout du locataire.
+        if (month >= createdYM) {
+          jobs.push({ tenant: t, month });
+        } else {
+          console.log(`[skip] tenant=${t.id} ajouté ${createdYM}, on ne génère pas pour ${month}`);
+        }
+      }
+    }
+
+    if (jobs.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, message: "Rien à générer", created: 0, month }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Vérifier les paiements existants (pour idempotence)
+    const tenantIds = [...new Set(jobs.map(j => j.tenant.id))];
+    const months = [...new Set(jobs.map(j => j.month))];
     const { data: existing } = await supabase
       .from("rent_payments")
-      .select("tenant_id")
-      .eq("month", month)
-      .in("tenant_id", tenantIds);
+      .select("tenant_id, month")
+      .in("tenant_id", tenantIds)
+      .in("month", months);
 
-    const existingSet = new Set(existing?.map((e: any) => e.tenant_id) || []);
+    const existingSet = new Set((existing || []).map((e: any) => `${e.tenant_id}:${e.month}`));
 
-    // Build payments to insert
-    const [year, monthNum] = month.split("-").map(Number);
-    const toInsert = tenants
-      .filter((t: any) => !existingSet.has(t.id))
-      .map((t: any) => {
-        const orgId = t.units.properties.organization_id;
+    // Construire les payments à insérer
+    const toInsert = jobs
+      .filter(j => !existingSet.has(`${j.tenant.id}:${j.month}`))
+      .map(j => {
+        const orgId = j.tenant.units.properties.organization_id;
         const dueDay = orgDueDay.get(orgId) || 5;
-        const dueDate = `${year}-${String(monthNum).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`;
+        const [year, monthNum] = j.month.split("-").map(Number);
+        // Sécurise le jour (ex. 31 sur février) en clampant au dernier jour du mois
+        const lastDay = new Date(year, monthNum, 0).getDate();
+        const safeDay = Math.min(dueDay, lastDay);
+        const dueDate = `${year}-${String(monthNum).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+
         return {
-          tenant_id: t.id,
-          amount: t.rent,
+          tenant_id: j.tenant.id,
+          amount: j.tenant.rent,
           paid_amount: 0,
           due_date: dueDate,
-          month,
+          month: j.month,
           status: "pending" as const,
         };
       });
 
     if (toInsert.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: "All payments already exist", created: 0, month }),
+        JSON.stringify({ success: true, message: "Toutes les échéances existent déjà", created: 0, month, skipped: jobs.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -92,10 +148,16 @@ Deno.serve(async (req) => {
     const { error: insertError } = await supabase.from("rent_payments").insert(toInsert);
     if (insertError) throw insertError;
 
-    console.log(`[generate-monthly-rents] Created ${toInsert.length} payments for ${month}`);
+    console.log(`[generate-monthly-rents] Créées ${toInsert.length} échéances (skipped=${jobs.length - toInsert.length})`);
 
     return new Response(
-      JSON.stringify({ success: true, created: toInsert.length, month, skipped: existingSet.size }),
+      JSON.stringify({
+        success: true,
+        created: toInsert.length,
+        skipped: jobs.length - toInsert.length,
+        month,
+        backfill,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {
