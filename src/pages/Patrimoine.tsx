@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet, Tag } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -74,12 +74,18 @@ export default function Patrimoine() {
   const hasAcd = (a: any) => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd");
 
   const filtered = assets.filter(a => {
+    // Tab-based scope: actifs hides sold, vendus shows only sold
+    if (activeTab === "actifs" && a.status === "sold") return false;
+    if (activeTab === "vendus" && a.status !== "sold") return false;
     if (typeFilter !== "all" && a.asset_type !== typeFilter) return false;
     if (statusFilter === "complet" && !hasAcd(a)) return false;
     if (statusFilter === "en_cours" && hasAcd(a)) return false;
     if (search && !a.title.toLowerCase().includes(search.toLowerCase()) && !a.locality.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const soldAssets = assets.filter(a => a.status === "sold");
+  const totalSalesValue = soldAssets.reduce((s, a) => s + ((a.sale_price || 0) - (a.sale_commission || 0)), 0);
 
   const parseMapLinkLocal = (link: string): { lat: number | null; lng: number | null } => {
     if (!link) return { lat: null, lng: null };
