@@ -1021,6 +1021,7 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          event_key: string | null
           id: string
           message: string
           orange_message_id: string | null
@@ -1035,6 +1036,7 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          event_key?: string | null
           id?: string
           message: string
           orange_message_id?: string | null
@@ -1049,6 +1051,7 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          event_key?: string | null
           id?: string
           message?: string
           orange_message_id?: string | null
