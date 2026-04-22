@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.delete-unit]
 verify_jwt = false
+
+[functions.delete-tenant]
+verify_jwt = false
