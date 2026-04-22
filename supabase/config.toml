@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.verify-sms-2fa-code]
 verify_jwt = false
+
+[functions.delete-unit]
+verify_jwt = false
