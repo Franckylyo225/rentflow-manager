@@ -108,15 +108,22 @@ export default function PropertyDetail() {
   const handleDeleteUnit = async () => {
     if (!deletingUnit) return;
     setSaving(true);
-    const { error } = await supabase.from("units").delete().eq("id", deletingUnit.id);
-    setSaving(false);
-    if (error) {
-      toast.error("Erreur : " + error.message + ". Supprimez d'abord les locataires associés.");
-    } else {
-      toast.success("Unité supprimée");
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-unit", {
+        body: { unitId: deletingUnit.id },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Unité supprimée avec son historique lié");
       setShowDeleteUnit(false);
       setDeletingUnit(null);
       refetchUnits();
+    } catch (err: any) {
+      toast.error("Erreur : " + (err.message || "Suppression impossible"));
+    } finally {
+      setSaving(false);
     }
   };
 
