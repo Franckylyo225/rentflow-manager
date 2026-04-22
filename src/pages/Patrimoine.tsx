@@ -71,7 +71,7 @@ export default function Patrimoine() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const hasAcd = (a: any) => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd");
+  const hasAcd = (a: any) => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd" || d.document_type === "cmpf");
 
   const filtered = assets.filter(a => {
     // Tab-based scope: actifs hides sold, vendus shows only sold
@@ -308,7 +308,7 @@ export default function Patrimoine() {
 
         {/* Stats */}
         {(() => {
-          const completCount = assets.filter(a => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd")).length;
+          const completCount = assets.filter(a => (a.patrimony_documents || []).some((d: any) => d.document_type === "acd" || d.document_type === "cmpf")).length;
           const enCoursCount = assets.length - completCount;
           return (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -19,7 +19,7 @@ import { RecordSaleDialog } from "@/components/patrimoine/RecordSaleDialog";
 
 const DOC_TYPES = [
   { value: "acd", label: "ACD" },
-  { value: "cnpf", label: "CNPF" },
+  { value: "cmpf", label: "CMPF" },
   { value: "extrait_topographique", label: "Extrait Topographique" },
   { value: "titre_foncier", label: "Titre Foncier" },
   { value: "permis_construire", label: "Permis de Construire" },
@@ -369,7 +369,7 @@ export default function PatrimoineDetail() {
                   const isPdf = /\.pdf$/i.test(doc.file_url) || /\.pdf$/i.test(doc.name);
                   const typeColor = {
                     acd: "bg-emerald-500/10 text-emerald-600",
-                    cnpf: "bg-blue-500/10 text-blue-600",
+                    cmpf: "bg-blue-500/10 text-blue-600",
                     extrait_topographique: "bg-amber-500/10 text-amber-600",
                     titre_foncier: "bg-purple-500/10 text-purple-600",
                     permis_construire: "bg-cyan-500/10 text-cyan-600",
