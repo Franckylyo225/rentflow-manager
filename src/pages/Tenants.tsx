@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Search, Loader2, ShieldAlert, UserX, Building2 } from "lucide-react";
+import { Plus, Search, Loader2, ShieldAlert, UserX, Building2, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computeTenantRiskScore, riskStyles, riskProgressColors, type TenantRiskScore } from "@/lib/riskScoring";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 
 const REASON_LABELS: Record<string, string> = {
   normal: "Fin normale",
@@ -48,6 +53,10 @@ export default function Tenants() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { role } = useProfile();
+  const isAdmin = role?.role === "admin";
+  const [deletingFormer, setDeletingFormer] = useState<any>(null);
+  const [deletingFormerLoading, setDeletingFormerLoading] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
@@ -96,6 +105,25 @@ export default function Tenants() {
   useEffect(() => { if (activeTab === "former") fetchFormerTenants(); }, [activeTab, user]);
 
   const refetch = () => { fetchActiveTenants(); };
+
+  const handleDeleteFormer = async () => {
+    if (!deletingFormer) return;
+    setDeletingFormerLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-tenant", {
+        body: { tenantId: deletingFormer.id },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Ancien locataire supprimé");
+      setDeletingFormer(null);
+      fetchFormerTenants();
+    } catch (err: any) {
+      toast.error("Erreur : " + (err.message || "Suppression impossible"));
+    } finally {
+      setDeletingFormerLoading(false);
+    }
+  };
 
   const { data: properties } = useProperties();
   const { data: allUnits } = useUnits();
@@ -398,6 +426,7 @@ export default function Tenants() {
                             <th className="text-center py-3 px-4 text-muted-foreground font-medium">Motif</th>
                             <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Date clôture</th>
                             <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Solde</th>
+                            {isAdmin && <th className="text-center py-3 px-4 text-muted-foreground font-medium w-16">Actions</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -438,6 +467,18 @@ export default function Tenants() {
                                     <span className="text-muted-foreground">—</span>
                                   )}
                                 </td>
+                                {isAdmin && (
+                                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                      onClick={() => setDeletingFormer(tenant)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
@@ -559,6 +600,28 @@ export default function Tenants() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingFormer} onOpenChange={(o) => !o && setDeletingFormer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet ancien locataire ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le locataire « {deletingFormer?.full_name} » et tout son historique (paiements, quittances, fin de bail, tâches d'escalade) seront définitivement supprimés. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFormer}
+              disabled={deletingFormerLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingFormerLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
