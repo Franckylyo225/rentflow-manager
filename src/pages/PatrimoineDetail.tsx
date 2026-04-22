@@ -19,7 +19,7 @@ import { RecordSaleDialog } from "@/components/patrimoine/RecordSaleDialog";
 
 const DOC_TYPES = [
   { value: "acd", label: "ACD" },
-  { value: "cnpf", label: "CNPF" },
+  { value: "cmpf", label: "CMPF" },
   { value: "extrait_topographique", label: "Extrait Topographique" },
   { value: "titre_foncier", label: "Titre Foncier" },
   { value: "permis_construire", label: "Permis de Construire" },
