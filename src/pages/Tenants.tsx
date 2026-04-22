@@ -600,6 +600,28 @@ export default function Tenants() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingFormer} onOpenChange={(o) => !o && setDeletingFormer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet ancien locataire ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le locataire « {deletingFormer?.full_name} » et tout son historique (paiements, quittances, fin de bail, tâches d'escalade) seront définitivement supprimés. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFormer}
+              disabled={deletingFormerLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingFormerLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
