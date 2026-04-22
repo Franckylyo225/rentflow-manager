@@ -121,15 +121,80 @@ export default function Properties() {
   const handleDelete = async () => {
     if (!deletingProperty) return;
     setSaving(true);
-    const { error } = await supabase.from("properties").delete().eq("id", deletingProperty.id);
-    setSaving(false);
-    if (error) {
-      toast.error("Erreur : " + error.message + ". Supprimez d'abord les unités et locataires associés.");
-    } else {
-      toast.success("Bien supprimé");
+    try {
+      // 1. Récupérer toutes les unités du bien
+      const { data: propUnits, error: unitsErr } = await supabase
+        .from("units")
+        .select("id, status")
+        .eq("property_id", deletingProperty.id);
+      if (unitsErr) throw unitsErr;
+
+      // 2. Bloquer si une unité est occupée
+      const occupied = (propUnits || []).filter(u => u.status === "occupied");
+      if (occupied.length > 0) {
+        throw new Error(`${occupied.length} unité(s) encore occupée(s). Clôturez les baux avant de supprimer le bien.`);
+      }
+
+      const unitIds = (propUnits || []).map(u => u.id);
+
+      if (unitIds.length > 0) {
+        // 3. Récupérer tous les locataires (actifs ou anciens) liés à ces unités
+        const { data: tenantsData, error: tErr } = await supabase
+          .from("tenants")
+          .select("id")
+          .in("unit_id", unitIds);
+        if (tErr) throw tErr;
+        const tenantIds = (tenantsData || []).map(t => t.id);
+
+        if (tenantIds.length > 0) {
+          // 4. Récupérer les paiements de loyer
+          const { data: payments, error: pErr } = await supabase
+            .from("rent_payments")
+            .select("id")
+            .in("tenant_id", tenantIds);
+          if (pErr) throw pErr;
+          const paymentIds = (payments || []).map(p => p.id);
+
+          if (paymentIds.length > 0) {
+            // 5. Supprimer escalation_tasks et payment_records liés aux paiements
+            const { error: escErr } = await supabase.from("escalation_tasks").delete().in("rent_payment_id", paymentIds);
+            if (escErr) throw escErr;
+            const { error: prErr } = await supabase.from("payment_records").delete().in("rent_payment_id", paymentIds);
+            if (prErr) throw prErr;
+            // Détacher les SMS history (pas de DELETE autorisé) — on met à null
+            await supabase.from("sms_history").update({ rent_payment_id: null } as any).in("rent_payment_id", paymentIds);
+          }
+
+          // 6. Supprimer les paiements
+          const { error: rpErr } = await supabase.from("rent_payments").delete().in("tenant_id", tenantIds);
+          if (rpErr) throw rpErr;
+
+          // 7. Supprimer les fins de bail
+          const { error: btErr } = await supabase.from("bail_terminations").delete().in("tenant_id", tenantIds);
+          if (btErr) throw btErr;
+
+          // 8. Supprimer les locataires
+          const { error: tDelErr } = await supabase.from("tenants").delete().in("id", tenantIds);
+          if (tDelErr) throw tDelErr;
+        }
+
+        // 9. Supprimer les unités
+        const { error: uDelErr } = await supabase.from("units").delete().in("id", unitIds);
+        if (uDelErr) throw uDelErr;
+      }
+
+      // 10. Supprimer le bien
+      const { error: propErr } = await supabase.from("properties").delete().eq("id", deletingProperty.id);
+      if (propErr) throw propErr;
+
+      toast.success("Bien supprimé avec toutes ses données associées");
       setShowDelete(false);
       setDeletingProperty(null);
       refetch();
+    } catch (err: any) {
+      toast.error("Erreur : " + (err.message || "Suppression impossible"));
+    } finally {
+      setSaving(false);
     }
   };
 
