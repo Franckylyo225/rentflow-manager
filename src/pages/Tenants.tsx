@@ -426,6 +426,7 @@ export default function Tenants() {
                             <th className="text-center py-3 px-4 text-muted-foreground font-medium">Motif</th>
                             <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Date clôture</th>
                             <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden lg:table-cell">Solde</th>
+                            {isAdmin && <th className="text-center py-3 px-4 text-muted-foreground font-medium w-16">Actions</th>}
                           </tr>
                         </thead>
                         <tbody>
