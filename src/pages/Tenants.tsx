@@ -467,6 +467,18 @@ export default function Tenants() {
                                     <span className="text-muted-foreground">—</span>
                                   )}
                                 </td>
+                                {isAdmin && (
+                                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                      onClick={() => setDeletingFormer(tenant)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
