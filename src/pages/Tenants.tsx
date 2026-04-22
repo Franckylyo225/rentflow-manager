@@ -106,6 +106,25 @@ export default function Tenants() {
 
   const refetch = () => { fetchActiveTenants(); };
 
+  const handleDeleteFormer = async () => {
+    if (!deletingFormer) return;
+    setDeletingFormerLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-tenant", {
+        body: { tenantId: deletingFormer.id },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Ancien locataire supprimé");
+      setDeletingFormer(null);
+      fetchFormerTenants();
+    } catch (err: any) {
+      toast.error("Erreur : " + (err.message || "Suppression impossible"));
+    } finally {
+      setDeletingFormerLoading(false);
+    }
+  };
+
   const { data: properties } = useProperties();
   const { data: allUnits } = useUnits();
   const { data: allPayments } = useRentPayments();
