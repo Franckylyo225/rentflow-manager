@@ -217,10 +217,11 @@ export default function Tenants() {
     if (tenantError || !insertedTenant) { toast.error("Erreur : " + (tenantError?.message ?? "ajout impossible")); setSaving(false); return; }
     await supabase.from("units").update({ status: "occupied" as const }).eq("id", form.unit_id);
 
-    // Créer immédiatement la première échéance du mois courant
-    // (les loyers commencent à compter à partir de la date d'ajout, pas de lease_start)
+    // Génère toutes les échéances depuis le début du bail jusqu'au mois courant.
+    // Les anciennes échéances sont créées en "pending" et l'utilisateur pourra
+    // les marquer comme payées manuellement (historisation rétroactive).
+    let createdCount = 0;
     try {
-      // Récupère le jour d'échéance configuré dans l'organisation via la propriété
       const { data: propRow } = await supabase
         .from("properties")
         .select("organizations:organization_id(rent_due_day)")
@@ -228,37 +229,56 @@ export default function Tenants() {
         .maybeSingle();
       const rentDueDay = (propRow as any)?.organizations?.rent_due_day || 5;
 
+      const leaseStart = new Date(form.lease_start);
       const today = new Date();
-      const year = today.getFullYear();
-      const monthNum = today.getMonth() + 1;
-      const month = `${year}-${String(monthNum).padStart(2, "0")}`;
-      const lastDay = new Date(year, monthNum, 0).getDate();
-      const safeDay = Math.min(rentDueDay, lastDay);
-      const dueDate = `${year}-${String(monthNum).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+      // Itère du mois de lease_start jusqu'au mois courant inclus
+      const cursor = new Date(leaseStart.getFullYear(), leaseStart.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth(), 1);
 
-      // Idempotent : ne pas écraser si une ligne existe déjà
+      const months: { month: string; due_date: string }[] = [];
+      while (cursor <= end) {
+        const y = cursor.getFullYear();
+        const m = cursor.getMonth() + 1;
+        const monthKey = `${y}-${String(m).padStart(2, "0")}`;
+        const lastDay = new Date(y, m, 0).getDate();
+        const safeDay = Math.min(rentDueDay, lastDay);
+        const dueDate = `${y}-${String(m).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+        months.push({ month: monthKey, due_date: dueDate });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+
+      // Idempotence : exclut les mois déjà présents pour ce locataire
       const { data: existing } = await supabase
         .from("rent_payments")
-        .select("id")
-        .eq("tenant_id", insertedTenant.id)
-        .eq("month", month)
-        .maybeSingle();
+        .select("month")
+        .eq("tenant_id", insertedTenant.id);
+      const existingSet = new Set((existing || []).map((e: any) => e.month));
 
-      if (!existing) {
-        await supabase.from("rent_payments").insert({
+      const toInsert = months
+        .filter(m => !existingSet.has(m.month))
+        .map(m => ({
           tenant_id: insertedTenant.id,
           amount: unit.rent,
           paid_amount: 0,
-          due_date: dueDate,
-          month,
+          due_date: m.due_date,
+          month: m.month,
           status: "pending" as const,
-        });
+        }));
+
+      if (toInsert.length > 0) {
+        const { error: insErr } = await supabase.from("rent_payments").insert(toInsert);
+        if (insErr) throw insErr;
+        createdCount = toInsert.length;
       }
     } catch (e) {
-      console.error("Création de la première échéance échouée:", e);
+      console.error("Génération des échéances rétroactives échouée:", e);
     }
 
-    toast.success("Locataire ajouté et première échéance créée");
+    toast.success(
+      createdCount > 0
+        ? `Locataire ajouté · ${createdCount} échéance${createdCount > 1 ? "s" : ""} générée${createdCount > 1 ? "s" : ""} (à marquer payées si réglées)`
+        : "Locataire ajouté"
+    );
     setShowAdd(false);
     setForm({ unit_id: "", full_name: "", phone: "", email: "", id_number: "", lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "", tenant_type: "individual", company_name: "", contact_person: "", rccm: "" });
     setSelectedProperty("");
