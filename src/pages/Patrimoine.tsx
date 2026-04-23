@@ -287,6 +287,19 @@ export default function Patrimoine() {
         </div>
       </div>
       <div className="space-y-2">
+        <Label>Ville</Label>
+        <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
+          <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
+          <SelectContent>
+            {cities.map(c => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}{c.countries?.name ? ` (${c.countries.name})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
         <Label>Titre / Nom de l'actif</Label>
         <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Terrain Cocody Danga" />
       </div>
