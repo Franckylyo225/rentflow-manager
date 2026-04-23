@@ -2,7 +2,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil, CalendarClock } from "lucide-react";
+import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 import { PaymentStatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
@@ -24,6 +26,8 @@ export default function TenantDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [showAdvance, setShowAdvance] = useState(false);
+  const { settings: orgSettings } = useOrganizationSettings();
 
   const fetchData = () => {
     if (!id) return;
@@ -193,8 +197,13 @@ export default function TenantDetail() {
 
         {payments.length > 0 && (
           <Card className="border-border">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base">Historique des paiements</CardTitle>
+              {tenant.is_active && (
+                <Button variant="outline" size="sm" onClick={() => setShowAdvance(true)}>
+                  <CalendarClock className="h-4 w-4 mr-2" /> Paiement anticipé
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -213,7 +222,14 @@ export default function TenantDetail() {
                         <td className="py-3 px-4 text-card-foreground">{new Date(p.due_date).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</td>
                         <td className="py-3 px-4 text-right font-medium text-card-foreground">{p.amount.toLocaleString()} FCFA</td>
                         <td className="py-3 px-4 text-right text-muted-foreground hidden sm:table-cell">{p.paid_amount.toLocaleString()} FCFA</td>
-                        <td className="py-3 px-4 text-center"><PaymentStatusBadge status={p.status} /></td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <PaymentStatusBadge status={p.status} />
+                            {p.status === "paid" && new Date(p.due_date) > new Date() && (
+                              <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">Payé d'avance</Badge>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
