@@ -84,18 +84,21 @@ export default function PatrimoineDetail() {
   const [showMapDialog, setShowMapDialog] = useState(false);
   const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [saleDeedUrl, setSaleDeedUrl] = useState<string | null>(null);
+  const [linkedProperty, setLinkedProperty] = useState<{ id: string; name: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [assetRes, contactsRes, docsRes] = await Promise.all([
+    const [assetRes, contactsRes, docsRes, linkedRes] = await Promise.all([
       supabase.from("patrimony_assets").select("*, asset_holders(full_name, phone, email)").eq("id", id).single(),
       supabase.from("patrimony_contacts").select("*").eq("asset_id", id).order("created_at"),
       supabase.from("patrimony_documents").select("*").eq("asset_id", id).order("uploaded_at", { ascending: false }),
+      supabase.from("properties").select("id, name").eq("patrimony_asset_id", id).maybeSingle(),
     ]);
     setAsset(assetRes.data);
     setContacts(contactsRes.data || []);
     setDocuments(docsRes.data || []);
+    setLinkedProperty(linkedRes.data || null);
     setLoading(false);
   }, [id]);
 
