@@ -249,7 +249,10 @@ export default function PatrimoineDetail() {
             </Button>
           )}
           {asset.status !== "sold" && (
-            <Button className="gap-2" onClick={() => setShowSaleDialog(true)}>
+            <Button className="gap-2" onClick={() => {
+              if (activeTenants.length > 0) setShowLeasesBlocker(true);
+              else setShowSaleDialog(true);
+            }}>
               <Tag className="h-4 w-4" /> Vendre le bien
             </Button>
           )}
