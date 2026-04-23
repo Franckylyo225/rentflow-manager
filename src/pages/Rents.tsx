@@ -195,9 +195,9 @@ export default function Rents() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total dû" value={`${(totalDue / 1000000).toFixed(1)}M FCFA`} icon={CreditCard} />
-          <StatCard title="Total encaissé" value={`${(totalPaid / 1000000).toFixed(1)}M FCFA`} icon={CheckCircle2} variant="success" />
-          <StatCard title="Impayés" value={`${(totalUnpaid / 1000000).toFixed(1)}M FCFA`} icon={AlertTriangle} variant="destructive" />
+          <StatCard title="Total dû" value={`${totalDue.toLocaleString("fr-FR")} FCFA`} icon={CreditCard} />
+          <StatCard title="Total encaissé" value={`${totalPaid.toLocaleString("fr-FR")} FCFA`} icon={CheckCircle2} variant="success" />
+          <StatCard title="Impayés" value={`${totalUnpaid.toLocaleString("fr-FR")} FCFA`} icon={AlertTriangle} variant="destructive" />
           <StatCard title="Critiques" value={criticalCount.toString()} icon={Clock} variant="warning" subtitle="impayés 30j+" />
         </div>
 
