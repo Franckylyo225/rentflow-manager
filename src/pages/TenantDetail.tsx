@@ -249,6 +249,15 @@ export default function TenantDetail() {
           />
         )}
 
+        <AdvancePaymentDialog
+          open={showAdvance}
+          onOpenChange={setShowAdvance}
+          tenant={tenant ? { id: tenant.id, full_name: tenant.full_name, rent: tenant.rent } : null}
+          rentDueDay={orgSettings?.rent_due_day ?? 5}
+          acceptedPaymentMethods={orgSettings?.accepted_payment_methods ?? ["Espèces", "Virement", "Mobile Money", "Chèque"]}
+          onComplete={fetchData}
+        />
+
         {/* Edit Dialog */}
         <Dialog open={showEdit} onOpenChange={setShowEdit}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
