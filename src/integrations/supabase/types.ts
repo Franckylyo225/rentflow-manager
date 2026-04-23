@@ -690,6 +690,7 @@ export type Database = {
         Row: {
           asset_type: string
           buyer_name: string | null
+          city_id: string | null
           created_at: string
           description: string | null
           handling_firm: string | null
@@ -717,6 +718,7 @@ export type Database = {
         Insert: {
           asset_type?: string
           buyer_name?: string | null
+          city_id?: string | null
           created_at?: string
           description?: string | null
           handling_firm?: string | null
@@ -744,6 +746,7 @@ export type Database = {
         Update: {
           asset_type?: string
           buyer_name?: string | null
+          city_id?: string | null
           created_at?: string
           description?: string | null
           handling_firm?: string | null
@@ -769,6 +772,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "patrimony_assets_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patrimony_assets_holder_id_fkey"
             columns: ["holder_id"]
