@@ -121,12 +121,37 @@ export default function Patrimoine() {
     }
   };
 
+  const syncRentalProperty = async (assetId: string) => {
+    if (!profile) return;
+    if (form.for_rent) {
+      if (!form.rental_city_id) {
+        toast.warning("Bien locatif non créé : sélectionnez une ville.");
+        return;
+      }
+      const address = `${form.locality}${form.subdivision_name ? " · " + form.subdivision_name : ""}`.trim();
+      const payload = {
+        organization_id: profile.organization_id,
+        patrimony_asset_id: assetId,
+        city_id: form.rental_city_id,
+        name: form.title,
+        type: form.rental_property_type,
+        address,
+        description: form.description || "",
+      };
+      const { error } = await supabase.from("properties").upsert(payload as any, { onConflict: "patrimony_asset_id" });
+      if (error) toast.error("Bien locatif : " + error.message);
+    } else if (linkedPropertyId) {
+      // User unchecked but a linked property exists — do not auto-delete
+      toast.warning("Le bien locatif lié est conservé. Supprimez-le manuellement depuis la page Biens si nécessaire.");
+    }
+  };
+
   const handleSave = async () => {
     if (!form.title || !profile) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
-    const { title_creation_date, ...rest } = form;
-    const { error } = await supabase.from("patrimony_assets").insert({
+    const { title_creation_date, for_rent, rental_city_id, rental_property_type, ...rest } = form;
+    const { data: inserted, error } = await supabase.from("patrimony_assets").insert({
       ...rest,
       holder_id: rest.holder_id || null,
       organization_id: profile.organization_id,
@@ -134,17 +159,18 @@ export default function Patrimoine() {
       latitude: lat,
       longitude: lng,
       title_creation_date: title_creation_date || null,
-    });
+    }).select("id").single();
+    if (error) { setSaving(false); toast.error("Erreur : " + error.message); return; }
+    if (inserted) await syncRentalProperty(inserted.id);
     setSaving(false);
-    if (error) { toast.error("Erreur : " + error.message); }
-    else { toast.success("Actif créé"); setShowAdd(false); resetForm(); fetchData(); }
+    toast.success("Actif créé"); setShowAdd(false); resetForm(); fetchData();
   };
 
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
-    const { title_creation_date: tcd, ...editRest } = form;
+    const { title_creation_date: tcd, for_rent: _fr, rental_city_id: _rc, rental_property_type: _rt, ...editRest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
       ...editRest,
       holder_id: editRest.holder_id || null,
@@ -153,9 +179,10 @@ export default function Patrimoine() {
       longitude: lng,
       title_creation_date: tcd || null,
     }).eq("id", editingAsset.id);
+    if (error) { setSaving(false); toast.error("Erreur : " + error.message); return; }
+    await syncRentalProperty(editingAsset.id);
     setSaving(false);
-    if (error) { toast.error("Erreur : " + error.message); }
-    else { toast.success("Actif modifié"); setShowEdit(false); setEditingAsset(null); fetchData(); }
+    toast.success("Actif modifié"); setShowEdit(false); setEditingAsset(null); fetchData();
   };
 
   const handleDelete = async () => {
