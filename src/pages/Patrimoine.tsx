@@ -172,6 +172,10 @@ export default function Patrimoine() {
 
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
+    if (form.for_rent && !form.city_id) {
+      toast.error("Sélectionnez une ville avant de mettre cet actif en location.");
+      return;
+    }
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
     const { title_creation_date: tcd, for_rent: _fr, rental_property_type: _rt, ...editRest } = form;
