@@ -85,6 +85,8 @@ export default function PatrimoineDetail() {
   const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [saleDeedUrl, setSaleDeedUrl] = useState<string | null>(null);
   const [linkedProperty, setLinkedProperty] = useState<{ id: string; name: string } | null>(null);
+  const [activeTenants, setActiveTenants] = useState<Array<{ id: string; full_name: string; unit_name: string }>>([]);
+  const [showLeasesBlocker, setShowLeasesBlocker] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -99,6 +101,25 @@ export default function PatrimoineDetail() {
     setContacts(contactsRes.data || []);
     setDocuments(docsRes.data || []);
     setLinkedProperty(linkedRes.data || null);
+
+    // If linked to a rental property, fetch active tenants on its units
+    if (linkedRes.data?.id) {
+      const { data: tenantsData } = await supabase
+        .from("tenants")
+        .select("id, full_name, units!inner(name, property_id)")
+        .eq("is_active", true)
+        .eq("units.property_id", linkedRes.data.id);
+      setActiveTenants(
+        (tenantsData || []).map((t: any) => ({
+          id: t.id,
+          full_name: t.full_name,
+          unit_name: t.units?.name || "—",
+        }))
+      );
+    } else {
+      setActiveTenants([]);
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -228,7 +249,10 @@ export default function PatrimoineDetail() {
             </Button>
           )}
           {asset.status !== "sold" && (
-            <Button className="gap-2" onClick={() => setShowSaleDialog(true)}>
+            <Button className="gap-2" onClick={() => {
+              if (activeTenants.length > 0) setShowLeasesBlocker(true);
+              else setShowSaleDialog(true);
+            }}>
               <Tag className="h-4 w-4" /> Vendre le bien
             </Button>
           )}
@@ -575,6 +599,47 @@ export default function PatrimoineDetail() {
               <img src={previewUrl} alt={previewName} className="max-w-full h-auto mx-auto rounded" />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Active leases blocker before sale */}
+      <Dialog open={showLeasesBlocker} onOpenChange={setShowLeasesBlocker}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Home className="h-4 w-4 text-amber-600" />
+              Baux en cours sur ce bien
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ce bien est actuellement loué. Avant de pouvoir le vendre, vous devez clôturer les baux en cours sur chaque unité concernée.
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {activeTenants.map((t) => (
+                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-card-foreground truncate">{t.full_name}</p>
+                    <p className="text-xs text-muted-foreground">Unité : {t.unit_name}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 shrink-0"
+                    onClick={() => navigate(`/tenants/${t.id}`)}
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Clôturer
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Une fois tous les baux clôturés, revenez ici pour finaliser la vente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLeasesBlocker(false)}>Fermer</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
