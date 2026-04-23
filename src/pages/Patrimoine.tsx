@@ -12,7 +12,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet, Tag } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet, Tag, Home } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useCities } from "@/hooks/useData";
 import { useState, useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
