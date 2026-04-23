@@ -355,8 +355,9 @@ function InviteLinkCard({ orgId }: { orgId?: string }) {
 
   useEffect(() => {
     if (!orgId) return;
-    supabase.from("organizations").select("invite_token").eq("id", orgId).single().then(({ data }) => {
-      if (data) setInviteToken((data as any).invite_token);
+    (supabase.rpc as any)("get_org_sensitive_settings").then(({ data }: any) => {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row?.invite_token) setInviteToken(row.invite_token);
       setLoading(false);
     });
   }, [orgId]);
