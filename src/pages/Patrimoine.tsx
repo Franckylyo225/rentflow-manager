@@ -148,6 +148,10 @@ export default function Patrimoine() {
 
   const handleSave = async () => {
     if (!form.title || !profile) return;
+    if (form.for_rent && !form.city_id) {
+      toast.error("Sélectionnez une ville avant de mettre cet actif en location.");
+      return;
+    }
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
     const { title_creation_date, for_rent, rental_property_type, ...rest } = form;
@@ -168,6 +172,10 @@ export default function Patrimoine() {
 
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
+    if (form.for_rent && !form.city_id) {
+      toast.error("Sélectionnez une ville avant de mettre cet actif en location.");
+      return;
+    }
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
     const { title_creation_date: tcd, for_rent: _fr, rental_property_type: _rt, ...editRest } = form;
@@ -287,7 +295,7 @@ export default function Patrimoine() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Ville</Label>
+        <Label>Ville {form.for_rent && <span className="text-destructive">*</span>}</Label>
         <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
           <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
           <SelectContent>
@@ -641,7 +649,7 @@ export default function Patrimoine() {
           {assetFormDialog()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving || !form.title}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
+            <Button onClick={handleSave} disabled={saving || !form.title || (form.for_rent && !form.city_id)}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -653,7 +661,7 @@ export default function Patrimoine() {
           {assetFormDialog()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
-            <Button onClick={handleEdit} disabled={saving || !form.title}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
+            <Button onClick={handleEdit} disabled={saving || !form.title || (form.for_rent && !form.city_id)}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
