@@ -316,7 +316,7 @@ export default function Rents() {
                                       setAdvanceTenant({
                                         id: payment.tenant_id,
                                         full_name: payment.tenants.full_name,
-                                        rent: payment.tenants.rent || payment.amount,
+                                        rent: payment.amount,
                                       });
                                       setShowAdvance(true);
                                     }}
