@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -38,6 +40,8 @@ export default function Rents() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showQuittance, setShowQuittance] = useState(false);
   const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
+  const [showAdvance, setShowAdvance] = useState(false);
+  const [advanceTenant, setAdvanceTenant] = useState<{ id: string; full_name: string; rent: number } | null>(null);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
@@ -278,7 +282,14 @@ export default function Rents() {
                             <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{payment.tenants?.units?.properties?.name}</td>
                             <td className="py-3 px-4 text-right font-medium text-card-foreground">{payment.amount.toLocaleString()} FCFA</td>
                             <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{new Date(payment.due_date).toLocaleDateString("fr-FR")}</td>
-                            <td className="py-3 px-4 text-center"><PaymentStatusBadge status={payment.status} /></td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                <PaymentStatusBadge status={payment.status} />
+                                {payment.status === "paid" && new Date(payment.due_date) > new Date() && (
+                                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">Payé d'avance</Badge>
+                                )}
+                              </div>
+                            </td>
                             <td className="py-3 px-4 text-center">
                               <EscalationBadge level={payment.escalation.level} label={payment.escalation.label} />
                               {payment.escalation.daysLate > 0 && (
@@ -295,6 +306,23 @@ export default function Rents() {
                                 )}
                                 {payment.status !== "paid" && (
                                   <Button variant="outline" size="sm" onClick={() => openPayment(payment)}>Payer</Button>
+                                )}
+                                {payment.tenants && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Paiement anticipé multi-mois"
+                                    onClick={() => {
+                                      setAdvanceTenant({
+                                        id: payment.tenant_id,
+                                        full_name: payment.tenants.full_name,
+                                        rent: payment.tenants.rent || payment.amount,
+                                      });
+                                      setShowAdvance(true);
+                                    }}
+                                  >
+                                    <CalendarClock className="h-4 w-4" />
+                                  </Button>
                                 )}
                                 {payment.escalation.level !== "none" && (
                                   <Button variant="ghost" size="sm" onClick={() => openTasks(payment)} title="Gérer les tâches">
@@ -481,6 +509,15 @@ export default function Rents() {
       </Dialog>
 
       <QuittanceDialog open={showQuittance} onOpenChange={setShowQuittance} data={quittanceData} />
+
+      <AdvancePaymentDialog
+        open={showAdvance}
+        onOpenChange={setShowAdvance}
+        tenant={advanceTenant}
+        rentDueDay={orgSettings?.rent_due_day ?? 5}
+        acceptedPaymentMethods={orgSettings?.accepted_payment_methods ?? paymentMethods}
+        onComplete={() => refetch()}
+      />
     </AppLayout>
   );
 }
