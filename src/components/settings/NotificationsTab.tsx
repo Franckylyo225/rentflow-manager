@@ -91,9 +91,6 @@ export function NotificationsTab() {
         body: {
           to: testPhone.trim(),
           message: testMessage.trim(),
-          senderName,
-          senderNumber,
-          organizationId: profile?.organization_id,
           recipientName: "",
           templateKey: null,
         },
