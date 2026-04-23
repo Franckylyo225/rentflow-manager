@@ -602,6 +602,47 @@ export default function PatrimoineDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Active leases blocker before sale */}
+      <Dialog open={showLeasesBlocker} onOpenChange={setShowLeasesBlocker}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Home className="h-4 w-4 text-amber-600" />
+              Baux en cours sur ce bien
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ce bien est actuellement loué. Avant de pouvoir le vendre, vous devez clôturer les baux en cours sur chaque unité concernée.
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {activeTenants.map((t) => (
+                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-card-foreground truncate">{t.full_name}</p>
+                    <p className="text-xs text-muted-foreground">Unité : {t.unit_name}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 shrink-0"
+                    onClick={() => navigate(`/tenants/${t.id}`)}
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Clôturer
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Une fois tous les baux clôturés, revenez ici pour finaliser la vente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLeasesBlocker(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Record sale */}
       <RecordSaleDialog
         open={showSaleDialog}
