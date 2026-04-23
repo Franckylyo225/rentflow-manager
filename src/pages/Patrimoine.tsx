@@ -326,6 +326,64 @@ export default function Patrimoine() {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Notes..." rows={2} />
       </div>
+
+      {/* Mise en location — visible uniquement pour maison ou autre */}
+      {(form.asset_type === "maison" || form.asset_type === "autre") && (
+        <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="for_rent"
+              checked={form.for_rent}
+              onCheckedChange={(v) => setForm(f => ({
+                ...f,
+                for_rent: !!v,
+                rental_property_type: f.rental_property_type || (f.asset_type === "maison" ? "villa" : "immeuble"),
+              }))}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <Label htmlFor="for_rent" className="cursor-pointer flex items-center gap-1.5">
+                <Home className="h-3.5 w-3.5" /> Mettre ce bien en location
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Crée un bien locatif lié dans le module Biens, prêt à recevoir des unités.
+              </p>
+            </div>
+          </div>
+          {form.for_rent && (
+            <div className="grid grid-cols-2 gap-3 pl-7">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ville</Label>
+                <Select value={form.rental_city_id} onValueChange={v => setForm(f => ({ ...f, rental_city_id: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
+                  <SelectContent>
+                    {cities.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}{c.countries?.name ? ` (${c.countries.name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Type de bien locatif</Label>
+                <Select value={form.rental_property_type} onValueChange={v => setForm(f => ({ ...f, rental_property_type: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="immeuble">Immeuble</SelectItem>
+                    <SelectItem value="villa">Villa</SelectItem>
+                    <SelectItem value="duplex">Duplex</SelectItem>
+                    <SelectItem value="studio">Studio</SelectItem>
+                    <SelectItem value="appartement">Appartement</SelectItem>
+                    <SelectItem value="bureau">Bureau / Commerce</SelectItem>
+                    <SelectItem value="autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
