@@ -207,17 +207,27 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "" });
+  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_city_id: "", rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
 
-  const openEdit = (asset: any, e: React.MouseEvent) => {
+  const openEdit = async (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingAsset(asset);
+    // Check if linked rental property exists
+    const { data: linked } = await supabase
+      .from("properties")
+      .select("id, city_id, type")
+      .eq("patrimony_asset_id", asset.id)
+      .maybeSingle();
+    setLinkedPropertyId(linked?.id || null);
     setForm({
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
       map_link: asset.map_link || "", receipt_order_number: asset.receipt_order_number || "",
       title_creation_date: asset.title_creation_date || "",
+      for_rent: !!linked,
+      rental_city_id: linked?.city_id || "",
+      rental_property_type: linked?.type || (asset.asset_type === "maison" ? "villa" : "immeuble"),
     });
     setShowEdit(true);
   };
