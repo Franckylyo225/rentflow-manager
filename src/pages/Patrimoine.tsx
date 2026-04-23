@@ -295,7 +295,7 @@ export default function Patrimoine() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Ville</Label>
+        <Label>Ville {form.for_rent && <span className="text-destructive">*</span>}</Label>
         <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
           <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
           <SelectContent>
