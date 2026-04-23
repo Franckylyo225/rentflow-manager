@@ -124,15 +124,15 @@ export default function Patrimoine() {
   const syncRentalProperty = async (assetId: string) => {
     if (!profile) return;
     if (form.for_rent) {
-      if (!form.rental_city_id) {
-        toast.warning("Bien locatif non créé : sélectionnez une ville.");
+      if (!form.city_id) {
+        toast.warning("Bien locatif non créé : sélectionnez une ville pour cet actif.");
         return;
       }
       const address = `${form.locality}${form.subdivision_name ? " · " + form.subdivision_name : ""}`.trim();
       const payload = {
         organization_id: profile.organization_id,
         patrimony_asset_id: assetId,
-        city_id: form.rental_city_id,
+        city_id: form.city_id,
         name: form.title,
         type: form.rental_property_type,
         address,
