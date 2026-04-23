@@ -214,9 +214,19 @@ export default function PatrimoineDetail() {
                   <CheckCircle2 className="h-3 w-3" /> Vendu
                 </Badge>
               )}
+              {linkedProperty && (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                  <Home className="h-3 w-3" /> En location
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{asset.locality}{asset.subdivision_name ? ` · ${asset.subdivision_name}` : ""}</p>
           </div>
+          {linkedProperty && (
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/properties/${linkedProperty.id}`)}>
+              <Home className="h-4 w-4" /> Gérer le bien locatif
+            </Button>
+          )}
           {asset.status !== "sold" && (
             <Button className="gap-2" onClick={() => setShowSaleDialog(true)}>
               <Tag className="h-4 w-4" /> Vendre le bien
