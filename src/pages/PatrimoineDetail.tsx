@@ -10,7 +10,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin, Image, File, FileSpreadsheet, FileType, Tag, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, Upload, FileText, UserPlus, Download, Eye, X, MapPin, Image, File, FileSpreadsheet, FileType, Tag, CheckCircle2, Home } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -84,18 +84,21 @@ export default function PatrimoineDetail() {
   const [showMapDialog, setShowMapDialog] = useState(false);
   const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [saleDeedUrl, setSaleDeedUrl] = useState<string | null>(null);
+  const [linkedProperty, setLinkedProperty] = useState<{ id: string; name: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [assetRes, contactsRes, docsRes] = await Promise.all([
+    const [assetRes, contactsRes, docsRes, linkedRes] = await Promise.all([
       supabase.from("patrimony_assets").select("*, asset_holders(full_name, phone, email)").eq("id", id).single(),
       supabase.from("patrimony_contacts").select("*").eq("asset_id", id).order("created_at"),
       supabase.from("patrimony_documents").select("*").eq("asset_id", id).order("uploaded_at", { ascending: false }),
+      supabase.from("properties").select("id, name").eq("patrimony_asset_id", id).maybeSingle(),
     ]);
     setAsset(assetRes.data);
     setContacts(contactsRes.data || []);
     setDocuments(docsRes.data || []);
+    setLinkedProperty(linkedRes.data || null);
     setLoading(false);
   }, [id]);
 
@@ -211,9 +214,19 @@ export default function PatrimoineDetail() {
                   <CheckCircle2 className="h-3 w-3" /> Vendu
                 </Badge>
               )}
+              {linkedProperty && (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                  <Home className="h-3 w-3" /> En location
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{asset.locality}{asset.subdivision_name ? ` · ${asset.subdivision_name}` : ""}</p>
           </div>
+          {linkedProperty && (
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/properties/${linkedProperty.id}`)}>
+              <Home className="h-4 w-4" /> Gérer le bien locatif
+            </Button>
+          )}
           {asset.status !== "sold" && (
             <Button className="gap-2" onClick={() => setShowSaleDialog(true)}>
               <Tag className="h-4 w-4" /> Vendre le bien

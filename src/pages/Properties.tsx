@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Globe } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Globe, Landmark } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -368,8 +369,28 @@ export default function Properties() {
                           onClick={() => navigate(`/properties/${property.id}`)}
                         >
                           <td className="py-3 px-4">
-                            <p className="font-medium text-card-foreground">{property.name}</p>
-                            <p className="text-xs text-muted-foreground">{property.address}</p>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <p className="font-medium text-card-foreground">{property.name}</p>
+                                <p className="text-xs text-muted-foreground">{property.address}</p>
+                              </div>
+                              {(property as any).patrimony_asset_id && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] gap-1 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 cursor-pointer"
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/patrimoine/${(property as any).patrimony_asset_id}`); }}
+                                      >
+                                        <Landmark className="h-2.5 w-2.5" /> Patrimoine
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Issu d'un actif du patrimoine — cliquer pour voir</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{property.cities?.name}</td>
                           <td className="py-3 px-4 text-center hidden md:table-cell">

@@ -12,7 +12,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet, Tag } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, MapPin, Landmark, Users, FolderCheck, FolderClock, UserCheck, Phone, Mail, MapPinned, Eye, Link, Map, FileSpreadsheet, Tag, Home } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useCities } from "@/hooks/useData";
 import { useState, useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -53,10 +55,12 @@ export default function Patrimoine() {
   const [deletingHolder, setDeletingHolder] = useState<any>(null);
   const [holderSearch, setHolderSearch] = useState("");
   const [viewingHolder, setViewingHolder] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "" });
+  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_city_id: "", rental_property_type: "immeuble" });
+  const [linkedPropertyId, setLinkedPropertyId] = useState<string | null>(null);
   const [holderForm, setHolderForm] = useState({ full_name: "", phone: "", email: "", address: "" });
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { data: cities } = useCities();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -117,12 +121,37 @@ export default function Patrimoine() {
     }
   };
 
+  const syncRentalProperty = async (assetId: string) => {
+    if (!profile) return;
+    if (form.for_rent) {
+      if (!form.rental_city_id) {
+        toast.warning("Bien locatif non créé : sélectionnez une ville.");
+        return;
+      }
+      const address = `${form.locality}${form.subdivision_name ? " · " + form.subdivision_name : ""}`.trim();
+      const payload = {
+        organization_id: profile.organization_id,
+        patrimony_asset_id: assetId,
+        city_id: form.rental_city_id,
+        name: form.title,
+        type: form.rental_property_type,
+        address,
+        description: form.description || "",
+      };
+      const { error } = await supabase.from("properties").upsert(payload as any, { onConflict: "patrimony_asset_id" });
+      if (error) toast.error("Bien locatif : " + error.message);
+    } else if (linkedPropertyId) {
+      // User unchecked but a linked property exists — do not auto-delete
+      toast.warning("Le bien locatif lié est conservé. Supprimez-le manuellement depuis la page Biens si nécessaire.");
+    }
+  };
+
   const handleSave = async () => {
     if (!form.title || !profile) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
-    const { title_creation_date, ...rest } = form;
-    const { error } = await supabase.from("patrimony_assets").insert({
+    const { title_creation_date, for_rent, rental_city_id, rental_property_type, ...rest } = form;
+    const { data: inserted, error } = await supabase.from("patrimony_assets").insert({
       ...rest,
       holder_id: rest.holder_id || null,
       organization_id: profile.organization_id,
@@ -130,17 +159,18 @@ export default function Patrimoine() {
       latitude: lat,
       longitude: lng,
       title_creation_date: title_creation_date || null,
-    });
+    }).select("id").single();
+    if (error) { setSaving(false); toast.error("Erreur : " + error.message); return; }
+    if (inserted) await syncRentalProperty(inserted.id);
     setSaving(false);
-    if (error) { toast.error("Erreur : " + error.message); }
-    else { toast.success("Actif créé"); setShowAdd(false); resetForm(); fetchData(); }
+    toast.success("Actif créé"); setShowAdd(false); resetForm(); fetchData();
   };
 
   const handleEdit = async () => {
     if (!form.title || !editingAsset) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
-    const { title_creation_date: tcd, ...editRest } = form;
+    const { title_creation_date: tcd, for_rent: _fr, rental_city_id: _rc, rental_property_type: _rt, ...editRest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
       ...editRest,
       holder_id: editRest.holder_id || null,
@@ -149,9 +179,10 @@ export default function Patrimoine() {
       longitude: lng,
       title_creation_date: tcd || null,
     }).eq("id", editingAsset.id);
+    if (error) { setSaving(false); toast.error("Erreur : " + error.message); return; }
+    await syncRentalProperty(editingAsset.id);
     setSaving(false);
-    if (error) { toast.error("Erreur : " + error.message); }
-    else { toast.success("Actif modifié"); setShowEdit(false); setEditingAsset(null); fetchData(); }
+    toast.success("Actif modifié"); setShowEdit(false); setEditingAsset(null); fetchData();
   };
 
   const handleDelete = async () => {
@@ -203,17 +234,27 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "" });
+  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_city_id: "", rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
 
-  const openEdit = (asset: any, e: React.MouseEvent) => {
+  const openEdit = async (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingAsset(asset);
+    // Check if linked rental property exists
+    const { data: linked } = await supabase
+      .from("properties")
+      .select("id, city_id, type")
+      .eq("patrimony_asset_id", asset.id)
+      .maybeSingle();
+    setLinkedPropertyId(linked?.id || null);
     setForm({
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
       map_link: asset.map_link || "", receipt_order_number: asset.receipt_order_number || "",
       title_creation_date: asset.title_creation_date || "",
+      for_rent: !!linked,
+      rental_city_id: linked?.city_id || "",
+      rental_property_type: linked?.type || (asset.asset_type === "maison" ? "villa" : "immeuble"),
     });
     setShowEdit(true);
   };
@@ -285,6 +326,64 @@ export default function Patrimoine() {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Notes..." rows={2} />
       </div>
+
+      {/* Mise en location — visible uniquement pour maison ou autre */}
+      {(form.asset_type === "maison" || form.asset_type === "autre") && (
+        <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="for_rent"
+              checked={form.for_rent}
+              onCheckedChange={(v) => setForm(f => ({
+                ...f,
+                for_rent: !!v,
+                rental_property_type: f.rental_property_type || (f.asset_type === "maison" ? "villa" : "immeuble"),
+              }))}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <Label htmlFor="for_rent" className="cursor-pointer flex items-center gap-1.5">
+                <Home className="h-3.5 w-3.5" /> Mettre ce bien en location
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Crée un bien locatif lié dans le module Biens, prêt à recevoir des unités.
+              </p>
+            </div>
+          </div>
+          {form.for_rent && (
+            <div className="grid grid-cols-2 gap-3 pl-7">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ville</Label>
+                <Select value={form.rental_city_id} onValueChange={v => setForm(f => ({ ...f, rental_city_id: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
+                  <SelectContent>
+                    {cities.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}{c.countries?.name ? ` (${c.countries.name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Type de bien locatif</Label>
+                <Select value={form.rental_property_type} onValueChange={v => setForm(f => ({ ...f, rental_property_type: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="immeuble">Immeuble</SelectItem>
+                    <SelectItem value="villa">Villa</SelectItem>
+                    <SelectItem value="duplex">Duplex</SelectItem>
+                    <SelectItem value="studio">Studio</SelectItem>
+                    <SelectItem value="appartement">Appartement</SelectItem>
+                    <SelectItem value="bureau">Bureau / Commerce</SelectItem>
+                    <SelectItem value="autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
