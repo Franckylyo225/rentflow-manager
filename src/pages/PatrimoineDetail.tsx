@@ -85,6 +85,8 @@ export default function PatrimoineDetail() {
   const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [saleDeedUrl, setSaleDeedUrl] = useState<string | null>(null);
   const [linkedProperty, setLinkedProperty] = useState<{ id: string; name: string } | null>(null);
+  const [activeTenants, setActiveTenants] = useState<Array<{ id: string; full_name: string; unit_name: string }>>([]);
+  const [showLeasesBlocker, setShowLeasesBlocker] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -99,6 +101,25 @@ export default function PatrimoineDetail() {
     setContacts(contactsRes.data || []);
     setDocuments(docsRes.data || []);
     setLinkedProperty(linkedRes.data || null);
+
+    // If linked to a rental property, fetch active tenants on its units
+    if (linkedRes.data?.id) {
+      const { data: tenantsData } = await supabase
+        .from("tenants")
+        .select("id, full_name, units!inner(name, property_id)")
+        .eq("is_active", true)
+        .eq("units.property_id", linkedRes.data.id);
+      setActiveTenants(
+        (tenantsData || []).map((t: any) => ({
+          id: t.id,
+          full_name: t.full_name,
+          unit_name: t.units?.name || "—",
+        }))
+      );
+    } else {
+      setActiveTenants([]);
+    }
+
     setLoading(false);
   }, [id]);
 
