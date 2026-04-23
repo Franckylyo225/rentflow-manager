@@ -958,6 +958,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          patrimony_asset_id: string | null
           type: string
           updated_at: string
         }
@@ -969,6 +970,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          patrimony_asset_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -980,6 +982,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          patrimony_asset_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -996,6 +999,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_patrimony_asset_id_fkey"
+            columns: ["patrimony_asset_id"]
+            isOneToOne: true
+            referencedRelation: "patrimony_assets"
             referencedColumns: ["id"]
           },
         ]
