@@ -661,7 +661,7 @@ export default function Patrimoine() {
           {assetFormDialog()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
-            <Button onClick={handleEdit} disabled={saving || !form.title}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
+            <Button onClick={handleEdit} disabled={saving || !form.title || (form.for_rent && !form.city_id)}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
