@@ -150,7 +150,7 @@ export default function Patrimoine() {
     if (!form.title || !profile) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
-    const { title_creation_date, for_rent, rental_city_id, rental_property_type, ...rest } = form;
+    const { title_creation_date, for_rent, rental_property_type, ...rest } = form;
     const { data: inserted, error } = await supabase.from("patrimony_assets").insert({
       ...rest,
       holder_id: rest.holder_id || null,
@@ -170,7 +170,7 @@ export default function Patrimoine() {
     if (!form.title || !editingAsset) return;
     setSaving(true);
     const { lat, lng } = await resolveMapLink(form.map_link);
-    const { title_creation_date: tcd, for_rent: _fr, rental_city_id: _rc, rental_property_type: _rt, ...editRest } = form;
+    const { title_creation_date: tcd, for_rent: _fr, rental_property_type: _rt, ...editRest } = form;
     const { error } = await supabase.from("patrimony_assets").update({
       ...editRest,
       holder_id: editRest.holder_id || null,
@@ -234,7 +234,7 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_city_id: "", rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
+  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
 
   const openEdit = async (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -248,12 +248,12 @@ export default function Patrimoine() {
     setLinkedPropertyId(linked?.id || null);
     setForm({
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
+      city_id: asset.city_id || linked?.city_id || "",
       locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
       map_link: asset.map_link || "", receipt_order_number: asset.receipt_order_number || "",
       title_creation_date: asset.title_creation_date || "",
       for_rent: !!linked,
-      rental_city_id: linked?.city_id || "",
       rental_property_type: linked?.type || (asset.asset_type === "maison" ? "villa" : "immeuble"),
     });
     setShowEdit(true);
