@@ -1286,6 +1286,15 @@ export type Database = {
     }
     Functions: {
       can_manage_payments: { Args: { _user_id: string }; Returns: boolean }
+      get_org_sensitive_settings: {
+        Args: never
+        Returns: {
+          invite_token: string
+          monsms_api_key: string
+          monsms_company_id: string
+          monsms_sender_id: string
+        }[]
+      }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
