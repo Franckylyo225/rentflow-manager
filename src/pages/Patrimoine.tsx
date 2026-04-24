@@ -41,6 +41,8 @@ export default function Patrimoine() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("actifs");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
