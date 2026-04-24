@@ -152,24 +152,29 @@ export default function PatrimoineDetail() {
   };
 
   const handleUploadDoc = async () => {
-    if (!docFile || !docForm.name || !id) return;
+    if (docItems.length === 0 || !id) return;
+    if (docItems.some(d => !d.name.trim())) { toast.error("Chaque document doit avoir un nom"); return; }
     setUploading(true);
-    const fileExt = docFile.name.split(".").pop();
-    const filePath = `${id}/${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from("patrimony-docs").upload(filePath, docFile);
-    if (uploadError) { toast.error("Erreur upload : " + uploadError.message); setUploading(false); return; }
-
-    const { data: urlData } = supabase.storage.from("patrimony-docs").getPublicUrl(filePath);
-    const { error } = await supabase.from("patrimony_documents").insert({
-      asset_id: id,
-      name: docForm.name,
-      document_type: docForm.document_type,
-      file_url: filePath,
-      file_size: docFile.size,
-    });
+    let okCount = 0;
+    let errCount = 0;
+    for (const item of docItems) {
+      const fileExt = item.file.name.split(".").pop();
+      const filePath = `${id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from("patrimony-docs").upload(filePath, item.file);
+      if (uploadError) { errCount++; continue; }
+      const { error } = await supabase.from("patrimony_documents").insert({
+        asset_id: id,
+        name: item.name,
+        document_type: item.document_type,
+        file_url: filePath,
+        file_size: item.file.size,
+      });
+      if (error) { errCount++; } else { okCount++; }
+    }
     setUploading(false);
-    if (error) { toast.error("Erreur : " + error.message); }
-    else { toast.success("Document ajouté"); setShowAddDoc(false); setDocForm({ name: "", document_type: "autre" }); setDocFile(null); fetchData(); }
+    if (okCount > 0) toast.success(`${okCount} document${okCount > 1 ? "s" : ""} ajouté${okCount > 1 ? "s" : ""}`);
+    if (errCount > 0) toast.error(`${errCount} échec${errCount > 1 ? "s" : ""} d'envoi`);
+    if (okCount > 0) { setShowAddDoc(false); setDocItems([]); fetchData(); }
   };
 
   const handleDeleteDoc = async () => {
