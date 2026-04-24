@@ -492,7 +492,7 @@ export default function Patrimoine() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.map(asset => (
+                        {paginated.map(asset => (
                           <tr key={asset.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/patrimoine/${asset.id}`)}>
                             <td className="py-3 px-4">
                               <p className="font-medium text-card-foreground">{asset.title}</p>
@@ -521,6 +521,31 @@ export default function Patrimoine() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} sur {filtered.length}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Lignes</span>
+                        <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+                          <SelectTrigger className="h-8 w-[70px] text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[10, 25, 50, 100].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-xs text-muted-foreground px-2">Page {currentPage} / {totalPages}</span>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
