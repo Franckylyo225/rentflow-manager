@@ -533,32 +533,83 @@ export default function PatrimoineDetail() {
       </Dialog>
 
       {/* Add document */}
-      <Dialog open={showAddDoc} onOpenChange={setShowAddDoc}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Ajouter un document</DialogTitle></DialogHeader>
+      <Dialog open={showAddDoc} onOpenChange={(v) => { setShowAddDoc(v); if (!v) setDocItems([]); }}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ajouter des documents</DialogTitle>
+            <DialogDescription>Sélectionnez un ou plusieurs fichiers, puis renseignez le nom et le type de chacun.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Type de document</Label>
-              <Select value={docForm.document_type} onValueChange={v => setDocForm(f => ({ ...f, document_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DOC_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Fichiers</Label>
+              <Input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={e => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length === 0) return;
+                  setDocItems(prev => [
+                    ...prev,
+                    ...files.map(f => ({
+                      file: f,
+                      name: f.name.replace(/\.[^/.]+$/, ""),
+                      document_type: "autre",
+                    })),
+                  ]);
+                  e.target.value = "";
+                }}
+              />
+              <p className="text-xs text-muted-foreground">PDF, JPG, PNG, DOC, DOCX</p>
             </div>
-            <div className="space-y-2">
-              <Label>Nom du document</Label>
-              <Input value={docForm.name} onChange={e => setDocForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: ACD Terrain Cocody" />
-            </div>
-            <div className="space-y-2">
-              <Label>Fichier</Label>
-              <Input type="file" onChange={e => setDocFile(e.target.files?.[0] || null)} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
-            </div>
+
+            {docItems.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">{docItems.length} fichier{docItems.length > 1 ? "s" : ""} sélectionné{docItems.length > 1 ? "s" : ""}</p>
+                {docItems.map((item, idx) => (
+                  <div key={idx} className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground truncate">{item.file.name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => setDocItems(prev => prev.filter((_, i) => i !== idx))}
+                        disabled={uploading}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={item.name}
+                        onChange={e => setDocItems(prev => prev.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))}
+                        placeholder="Nom du document"
+                        className="h-8 text-xs"
+                      />
+                      <Select
+                        value={item.document_type}
+                        onValueChange={v => setDocItems(prev => prev.map((it, i) => i === idx ? { ...it, document_type: v } : it))}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {DOC_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDoc(false)}>Annuler</Button>
-            <Button onClick={handleUploadDoc} disabled={uploading || !docForm.name || !docFile}>
-              {uploading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Uploader
+            <Button variant="outline" onClick={() => setShowAddDoc(false)} disabled={uploading}>Annuler</Button>
+            <Button onClick={handleUploadDoc} disabled={uploading || docItems.length === 0}>
+              {uploading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Uploader {docItems.length > 0 && `(${docItems.length})`}
             </Button>
           </DialogFooter>
         </DialogContent>
