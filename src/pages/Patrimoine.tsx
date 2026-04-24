@@ -90,6 +90,12 @@ export default function Patrimoine() {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, typeFilter, statusFilter, activeTab, pageSize]);
+
   const soldAssets = assets.filter(a => a.status === "sold");
   const totalSalesValue = soldAssets.reduce((s, a) => s + ((a.sale_price || 0) - (a.sale_commission || 0)), 0);
 
