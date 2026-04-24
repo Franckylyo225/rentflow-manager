@@ -77,8 +77,7 @@ export default function PatrimoineDetail() {
   const [deletingContact, setDeletingContact] = useState<any>(null);
   const [deletingDoc, setDeletingDoc] = useState<any>(null);
   const [contactForm, setContactForm] = useState({ full_name: "", phone: "", role: "", email: "" });
-  const [docForm, setDocForm] = useState({ name: "", document_type: "autre" });
-  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docItems, setDocItems] = useState<Array<{ file: File; name: string; document_type: string }>>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState("");
   const [showMapDialog, setShowMapDialog] = useState(false);
