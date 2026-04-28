@@ -879,6 +879,7 @@ export type Database = {
           id: string
           method: string
           payment_date: string
+          proof_url: string | null
           rent_payment_id: string
         }
         Insert: {
@@ -888,6 +889,7 @@ export type Database = {
           id?: string
           method?: string
           payment_date?: string
+          proof_url?: string | null
           rent_payment_id: string
         }
         Update: {
@@ -897,6 +899,7 @@ export type Database = {
           id?: string
           method?: string
           payment_date?: string
+          proof_url?: string | null
           rent_payment_id?: string
         }
         Relationships: [
