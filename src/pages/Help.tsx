@@ -194,6 +194,7 @@ const SECTIONS: Section[] = [
 
 export default function Help() {
   const [search, setSearch] = useState("");
+  const [openSection, setOpenSection] = useState<string>("");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
