@@ -104,6 +104,7 @@ export default function Rents() {
   const openPayment = (payment: any) => {
     setSelectedPayment(payment);
     setPayForm({ amount: (payment.amount - payment.paid_amount).toString(), date: new Date().toISOString().split("T")[0], method: "", comment: "" });
+    setProofFile(null);
     setShowPayment(true);
   };
 
