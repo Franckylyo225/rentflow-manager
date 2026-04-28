@@ -135,7 +135,8 @@ export default function Tenants() {
     return map;
   }, [tenants, allPayments]);
 
-  const vacantUnits = allUnits.filter(u => u.status === "vacant");
+  const occupiedUnitIds = useMemo(() => new Set(tenants.map(t => t.unit_id)), [tenants]);
+  const vacantUnits = allUnits.filter(u => u.status === "vacant" && !occupiedUnitIds.has(u.id));
   const filteredVacantUnits = selectedProperty
     ? vacantUnits.filter(u => u.property_id === selectedProperty)
     : vacantUnits;
