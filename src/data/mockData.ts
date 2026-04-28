@@ -141,6 +141,7 @@ export const navItems = [
   { label: "Salaires", icon: Users2, path: "/employees" },
   { label: "Rapports", icon: BarChart3, path: "/financial-reports" },
   { label: "Notifications", icon: Bell, path: "/notifications" },
+  { label: "Centre d'aide", icon: HelpCircle, path: "/help" },
   { label: "Paramètres", icon: Settings, path: "/settings" },
 ];
 
