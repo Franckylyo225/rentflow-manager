@@ -28,7 +28,6 @@ const SECTIONS: Section[] = [
       { q: "Comment me connecter ?", a: "Accédez à la page de connexion, saisissez votre email et mot de passe. Si la double authentification (2FA) est activée, vous serez invité à saisir un code TOTP ou un code SMS avant d'accéder au tableau de bord." },
       { q: "Comment réinitialiser mon mot de passe ?", a: "Sur la page de connexion, cliquez sur « Mot de passe oublié ». Vous recevrez un email avec un lien sécurisé. Si la 2FA TOTP est activée, vous devrez confirmer un code avant de définir un nouveau mot de passe." },
       { q: "Comment être invité dans une organisation ?", a: "Un administrateur doit créer votre compte depuis Paramètres → Utilisateurs & Rôles. Vous recevrez vos identifiants et pourrez vous connecter immédiatement (votre compte doit être approuvé par un administrateur)." },
-      { q: "Que signifie « Lovable Cloud » ?", a: "C'est l'infrastructure backend qui héberge vos données (locataires, loyers, documents). Tout est sécurisé et isolé par organisation." },
     ],
   },
   {
