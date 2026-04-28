@@ -476,6 +476,34 @@ export default function Rents() {
               <Label>Commentaire</Label>
               <Textarea value={payForm.comment} onChange={e => setPayForm(f => ({ ...f, comment: e.target.value }))} placeholder="Note optionnelle..." rows={2} />
             </div>
+            <div className="space-y-2">
+              <Label>Preuve de paiement (optionnel)</Label>
+              {proofFile ? (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">{proofFile.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">({(proofFile.size / 1024).toFixed(0)} Ko)</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setProofFile(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label htmlFor="proof-upload" className="flex flex-col items-center justify-center gap-1 cursor-pointer rounded-md border-2 border-dashed border-border bg-muted/20 hover:bg-muted/40 px-3 py-4 text-center transition-colors">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-card-foreground">Importer un reçu</span>
+                  <span className="text-xs text-muted-foreground">Mobile Money, scan de chèque, photo, PDF — max 10 Mo</span>
+                  <input
+                    id="proof-upload"
+                    type="file"
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                    onChange={e => setProofFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPayment(false)}>Annuler</Button>
