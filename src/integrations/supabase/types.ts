@@ -1067,6 +1067,57 @@ export type Database = {
           },
         ]
       }
+      role_change_logs: {
+        Row: {
+          action: string
+          changed_by_email: string | null
+          changed_by_name: string | null
+          changed_by_user_id: string | null
+          created_at: string
+          id: string
+          new_custom_role_id: string | null
+          new_role: string | null
+          old_custom_role_id: string | null
+          old_role: string | null
+          organization_id: string | null
+          target_user_email: string | null
+          target_user_id: string
+          target_user_name: string | null
+        }
+        Insert: {
+          action: string
+          changed_by_email?: string | null
+          changed_by_name?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          new_custom_role_id?: string | null
+          new_role?: string | null
+          old_custom_role_id?: string | null
+          old_role?: string | null
+          organization_id?: string | null
+          target_user_email?: string | null
+          target_user_id: string
+          target_user_name?: string | null
+        }
+        Update: {
+          action?: string
+          changed_by_email?: string | null
+          changed_by_name?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          new_custom_role_id?: string | null
+          new_role?: string | null
+          old_custom_role_id?: string | null
+          old_role?: string | null
+          organization_id?: string | null
+          target_user_email?: string | null
+          target_user_id?: string
+          target_user_name?: string | null
+        }
+        Relationships: []
+      }
       sms_2fa_codes: {
         Row: {
           attempts: number
