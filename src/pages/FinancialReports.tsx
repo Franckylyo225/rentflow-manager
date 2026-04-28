@@ -52,29 +52,59 @@ export default function FinancialReports() {
   const saleNet = (s: any) => (s.sale_price || 0) - (s.sale_commission || 0);
   const saleMonth = (s: any) => (s.sale_date || "").slice(0, 7);
 
+  // Convert "YYYY-MM" to a period key based on type
+  const toPeriodKey = (ym: string): string => {
+    if (!ym) return "";
+    const [y, m] = ym.split("-");
+    if (periodType === "year") return y;
+    if (periodType === "quarter") {
+      const q = Math.floor((parseInt(m) - 1) / 3) + 1;
+      return `${y}-Q${q}`;
+    }
+    return ym; // month
+  };
+
+  const formatPeriodLabel = (key: string): string => {
+    if (periodType === "year") return key;
+    if (periodType === "quarter") {
+      const [y, q] = key.split("-Q");
+      return `${q}ᵉ trim. ${y}`;
+    }
+    return new Date(key + "-01").toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  };
+
   // Filter by period
-  const filteredPayments = useMemo(() => {
-    if (periodFilter === "all") return payments;
-    return payments.filter(p => p.month === periodFilter);
-  }, [payments, periodFilter]);
+  const matchesPeriod = (ym: string) => {
+    if (periodType === "all" || periodFilter === "all") return true;
+    return toPeriodKey(ym) === periodFilter;
+  };
 
-  const filteredExpenses = useMemo(() => {
-    if (periodFilter === "all") return expenses;
-    return expenses.filter(e => e.expense_date.slice(0, 7) === periodFilter);
-  }, [expenses, periodFilter]);
+  const filteredPayments = useMemo(
+    () => payments.filter(p => matchesPeriod(p.month)),
+    [payments, periodType, periodFilter]
+  );
 
-  const filteredSales = useMemo(() => {
-    if (periodFilter === "all") return sales;
-    return sales.filter(s => saleMonth(s) === periodFilter);
-  }, [sales, periodFilter]);
+  const filteredExpenses = useMemo(
+    () => expenses.filter(e => matchesPeriod(e.expense_date.slice(0, 7))),
+    [expenses, periodType, periodFilter]
+  );
 
-  const months = useMemo(() => {
+  const filteredSales = useMemo(
+    () => sales.filter(s => matchesPeriod(saleMonth(s))),
+    [sales, periodType, periodFilter]
+  );
+
+  const periodOptions = useMemo(() => {
+    if (periodType === "all") return [];
     const set = new Set<string>();
-    payments.forEach(p => set.add(p.month));
-    expenses.forEach(e => set.add(e.expense_date.slice(0, 7)));
-    sales.forEach(s => { const m = saleMonth(s); if (m) set.add(m); });
-    return [...set].sort().reverse();
-  }, [payments, expenses, sales]);
+    payments.forEach(p => { if (p.month) set.add(toPeriodKey(p.month)); });
+    expenses.forEach(e => { const m = e.expense_date.slice(0, 7); if (m) set.add(toPeriodKey(m)); });
+    sales.forEach(s => { const m = saleMonth(s); if (m) set.add(toPeriodKey(m)); });
+    return [...set].filter(Boolean).sort().reverse();
+  }, [payments, expenses, sales, periodType]);
+
+  // Reset period selection when type changes
+  useEffect(() => { setPeriodFilter("all"); }, [periodType]);
 
   // KPIs
   const caLoyers = useMemo(() => filteredPayments.reduce((s, p) => s + p.paid_amount, 0), [filteredPayments]);
