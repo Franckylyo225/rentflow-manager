@@ -186,17 +186,30 @@ export default function FinancialReports() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Rapports financiers</h1>
             <p className="text-muted-foreground text-sm mt-1">Performance financière globale</p>
           </div>
-          <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Période" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les périodes</SelectItem>
-              {months.map(m => (
-                <SelectItem key={m} value={m}>
-                  {new Date(m + "-01").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 flex-wrap">
+            <Select value={periodType} onValueChange={(v) => setPeriodType(v as any)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes périodes</SelectItem>
+                <SelectItem value="month">Par mois</SelectItem>
+                <SelectItem value="quarter">Par trimestre</SelectItem>
+                <SelectItem value="year">Par année</SelectItem>
+              </SelectContent>
+            </Select>
+            {periodType !== "all" && (
+              <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                <SelectTrigger className="w-48"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {periodType === "month" ? "Tous les mois" : periodType === "quarter" ? "Tous les trimestres" : "Toutes les années"}
+                  </SelectItem>
+                  {periodOptions.map(k => (
+                    <SelectItem key={k} value={k}>{formatPeriodLabel(k)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
 
         {/* KPI cards */}
