@@ -1,4 +1,4 @@
-import { Building2, Users, CreditCard, LayoutDashboard, Settings, Receipt, Users2, BarChart3, Bell, Landmark } from "lucide-react";
+import { Building2, Users, CreditCard, LayoutDashboard, Settings, Receipt, Users2, BarChart3, Bell, Landmark, HelpCircle } from "lucide-react";
 
 export interface City {
   id: string;
