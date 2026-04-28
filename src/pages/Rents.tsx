@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -42,6 +42,8 @@ export default function Rents() {
   const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
   const [showAdvance, setShowAdvance] = useState(false);
   const [advanceTenant, setAdvanceTenant] = useState<{ id: string; full_name: string; rent: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
