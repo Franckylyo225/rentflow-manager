@@ -88,6 +88,12 @@ export default function Rents() {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [statusFilter, cityFilter, escalationFilter, monthFilter, pageSize]);
+
   const totalDue = payments.reduce((s, r) => s + r.amount, 0);
   const totalPaid = payments.reduce((s, r) => s + r.paid_amount, 0);
   const totalUnpaid = totalDue - totalPaid;
@@ -275,7 +281,7 @@ export default function Rents() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.map(payment => (
+                        {paginated.map(payment => (
                           <tr key={payment.id} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${payment.escalation.level === "critical" ? "bg-destructive/5" : ""}`}>
                             <td className="py-3 px-4">
                               <p className="font-medium text-card-foreground">{payment.tenants?.full_name}</p>
