@@ -122,7 +122,8 @@ interface CityOption {
 export function UsersRolesTab() {
   const { user } = useAuth();
   const { profile, role: currentRole } = useProfile();
-  const isAdmin = currentRole?.role === "admin";
+  const isSuperAdmin = currentRole?.role === "super_admin";
+  const isAdmin = currentRole?.role === "admin" || isSuperAdmin;
 
   return (
     <Tabs defaultValue="members" className="space-y-4">
@@ -133,7 +134,7 @@ export function UsersRolesTab() {
       </TabsList>
 
       <TabsContent value="members">
-        <MembersSection isAdmin={isAdmin} currentUserId={user?.id} orgId={profile?.organization_id} />
+        <MembersSection isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} currentUserId={user?.id} orgId={profile?.organization_id} />
       </TabsContent>
       {isAdmin && (
         <TabsContent value="pending">
