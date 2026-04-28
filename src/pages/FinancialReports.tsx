@@ -27,6 +27,7 @@ export default function FinancialReports() {
   const { data: payments, loading: payLoading } = useRentPayments();
   const { data: properties } = useProperties();
   const { data: cities } = useCities();
+  const [periodType, setPeriodType] = useState<"all" | "month" | "quarter" | "year">("all");
   const [periodFilter, setPeriodFilter] = useState("all");
   const [sales, setSales] = useState<any[]>([]);
   const [salesLoading, setSalesLoading] = useState(true);
