@@ -23,6 +23,7 @@ import PatrimoineDetail from "./pages/PatrimoineDetail";
 import MfaVerify from "./pages/MfaVerify";
 import SmsMfaVerify from "./pages/SmsMfaVerify";
 import ResetPassword from "./pages/ResetPassword";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
