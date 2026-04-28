@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -42,6 +42,8 @@ export default function Rents() {
   const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
   const [showAdvance, setShowAdvance] = useState(false);
   const [advanceTenant, setAdvanceTenant] = useState<{ id: string; full_name: string; rent: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
@@ -85,6 +87,12 @@ export default function Rents() {
     }
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [statusFilter, cityFilter, escalationFilter, monthFilter, pageSize]);
 
   const totalDue = payments.reduce((s, r) => s + r.amount, 0);
   const totalPaid = payments.reduce((s, r) => s + r.paid_amount, 0);
@@ -273,7 +281,7 @@ export default function Rents() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.map(payment => (
+                        {paginated.map(payment => (
                           <tr key={payment.id} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${payment.escalation.level === "critical" ? "bg-destructive/5" : ""}`}>
                             <td className="py-3 px-4">
                               <p className="font-medium text-card-foreground">{payment.tenants?.full_name}</p>
@@ -338,6 +346,32 @@ export default function Rents() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {filtered.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+                <div className="text-xs text-muted-foreground">
+                  Affichage {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} sur {filtered.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
+                    <SelectTrigger className="w-28 h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 / page</SelectItem>
+                      <SelectItem value="25">25 / page</SelectItem>
+                      <SelectItem value="50">50 / page</SelectItem>
+                      <SelectItem value="100">100 / page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground min-w-[80px] text-center">Page {currentPage} / {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             )}
           </TabsContent>
 
