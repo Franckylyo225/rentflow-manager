@@ -37,6 +37,7 @@ export default function Rents() {
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [payForm, setPayForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0], method: "", comment: "" });
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [showQuittance, setShowQuittance] = useState(false);
   const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
