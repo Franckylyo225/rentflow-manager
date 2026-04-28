@@ -242,24 +242,34 @@ export default function Help() {
           </CardContent>
         </Card>
 
-        {/* Navigation rapide */}
+        {/* Navigation rapide / Collections */}
         {!search && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {SECTIONS.map((s) => (
-              <a
-                key={s.id}
-                href={`#${s.id}`}
-                className="group flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
-              >
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <s.icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{s.items.length} questions</p>
-                </div>
-              </a>
-            ))}
+            {SECTIONS.map((s) => {
+              const isActive = openSection === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setOpenSection(isActive ? "" : s.id)}
+                  className={`group flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    isActive
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center transition-colors ${
+                    isActive ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                  }`}>
+                    <s.icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{s.items.length} questions</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -272,35 +282,44 @@ export default function Help() {
               </CardContent>
             </Card>
           ) : (
-            filtered.map((s) => (
-              <Card key={s.id} id={s.id} className="scroll-mt-20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                      <s.icon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="text-base font-semibold">{s.title}</div>
-                      <div className="text-xs font-normal text-muted-foreground mt-0.5">{s.summary}</div>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Accordion type="multiple" className="w-full">
-                    {s.items.map((item, idx) => (
-                      <AccordionItem key={idx} value={`${s.id}-${idx}`}>
-                        <AccordionTrigger className="text-sm text-left hover:no-underline">
-                          {item.q}
-                        </AccordionTrigger>
-                        <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                          {item.a}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </CardContent>
-              </Card>
-            ))
+            filtered
+              .filter((s) => search || openSection === s.id)
+              .map((s) => (
+                <Card key={s.id} id={s.id} className="scroll-mt-20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <s.icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="text-base font-semibold">{s.title}</div>
+                        <div className="text-xs font-normal text-muted-foreground mt-0.5">{s.summary}</div>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Accordion type="multiple" className="w-full">
+                      {s.items.map((item, idx) => (
+                        <AccordionItem key={idx} value={`${s.id}-${idx}`}>
+                          <AccordionTrigger className="text-sm text-left hover:no-underline">
+                            {item.q}
+                          </AccordionTrigger>
+                          <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                            {item.a}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              ))
+          )}
+          {!search && !openSection && (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                Sélectionnez une catégorie ci-dessus pour afficher ses articles.
+              </CardContent>
+            </Card>
           )}
         </div>
 
