@@ -58,6 +58,32 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     if (!verified) return <Navigate to="/sms-mfa-verify" replace />;
   }
 
+  // Show deactivated account screen
+  if (profile && profile.is_active === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full text-center space-y-6"
+        >
+          <div className="mx-auto h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+            <Clock className="h-8 w-8 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Compte désactivé</h1>
+            <p className="text-muted-foreground">
+              Votre compte a été désactivé par un administrateur. Contactez votre super administrateur pour le réactiver.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => signOut()} className="gap-2">
+            <LogOut className="h-4 w-4" /> Se déconnecter
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
   // Show pending approval screen
   if (profile && !profile.is_approved) {
     return (

@@ -915,6 +915,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_active: boolean
           is_approved: boolean
           organization_id: string
           phone: string | null
@@ -928,6 +929,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean
           is_approved?: boolean
           organization_id: string
           phone?: string | null
@@ -941,6 +943,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean
           is_approved?: boolean
           organization_id?: string
           phone?: string | null
@@ -1325,6 +1328,7 @@ export type Database = {
       }
       is_gestionnaire_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_org_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "gestionnaire" | "comptable" | "super_admin"
