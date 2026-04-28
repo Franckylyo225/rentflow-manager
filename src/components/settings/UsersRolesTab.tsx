@@ -86,6 +86,7 @@ const PERMISSION_GROUPS = [
 const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap(g => g.permissions.map(p => p.key));
 
 const BASE_ROLE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
+  super_admin: { label: "Super Admin", icon: Crown, color: "text-purple-500" },
   admin: { label: "Admin", icon: Crown, color: "text-primary" },
   gestionnaire: { label: "Gestionnaire", icon: UserCog, color: "text-blue-500" },
   comptable: { label: "Comptable", icon: Calculator, color: "text-amber-500" },
@@ -106,10 +107,11 @@ interface OrgMember {
   user_id: string;
   full_name: string;
   email: string | null;
-  role: "admin" | "gestionnaire" | "comptable";
+  role: "admin" | "gestionnaire" | "comptable" | "super_admin";
   role_id: string;
   custom_role_id: string | null;
   city_ids: string[];
+  is_active: boolean;
 }
 
 interface CityOption {
