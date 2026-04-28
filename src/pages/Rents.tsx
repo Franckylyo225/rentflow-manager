@@ -323,7 +323,7 @@ export default function Rents() {
                                     onClick={() => {
                                       setAdvanceTenant({
                                         id: payment.tenant_id,
-                                        full_name: payment.tenants.full_name,
+                                        full_name: payment.tenants?.full_name ?? "",
                                         rent: payment.amount,
                                       });
                                       setShowAdvance(true);
