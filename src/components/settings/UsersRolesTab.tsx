@@ -131,6 +131,7 @@ export function UsersRolesTab() {
         <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Membres</TabsTrigger>
         {isAdmin && <TabsTrigger value="pending" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Demandes</TabsTrigger>}
         <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Rôles & Permissions</TabsTrigger>
+        {isSuperAdmin && <TabsTrigger value="logs" className="gap-1.5"><History className="h-3.5 w-3.5" /> Journal</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="members">
@@ -144,6 +145,11 @@ export function UsersRolesTab() {
       <TabsContent value="roles">
         <RolesSection isAdmin={isAdmin} orgId={profile?.organization_id} />
       </TabsContent>
+      {isSuperAdmin && (
+        <TabsContent value="logs">
+          <RoleChangeLogsTab />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
