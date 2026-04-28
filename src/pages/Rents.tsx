@@ -144,32 +144,59 @@ export default function Rents() {
   const handleRecordPayment = async () => {
     if (!selectedPayment || !payForm.amount || !payForm.method) return;
     setSaving(true);
-    const paidAmount = parseInt(payForm.amount);
-    const newPaidTotal = selectedPayment.paid_amount + paidAmount;
-    const remaining = selectedPayment.amount - newPaidTotal;
+    try {
+      const paidAmount = parseInt(payForm.amount);
+      const newPaidTotal = selectedPayment.paid_amount + paidAmount;
+      const remaining = selectedPayment.amount - newPaidTotal;
 
-    await supabase.from("payment_records").insert({
-      rent_payment_id: selectedPayment.id,
-      amount: paidAmount,
-      payment_date: payForm.date,
-      method: payForm.method,
-      comment: payForm.comment,
-    });
+      // Upload optional proof file
+      let proofUrl: string | null = null;
+      if (proofFile) {
+        if (proofFile.size > 10 * 1024 * 1024) {
+          toast.error("Fichier trop volumineux (max 10 Mo)");
+          setSaving(false);
+          return;
+        }
+        const orgId = profile?.organization_id;
+        const ext = proofFile.name.split(".").pop()?.toLowerCase() || "bin";
+        const path = `${orgId}/${selectedPayment.id}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("receipts").upload(path, proofFile, {
+          contentType: proofFile.type || undefined,
+          upsert: false,
+        });
+        if (upErr) throw upErr;
+        proofUrl = path;
+      }
 
-    let newStatus: "paid" | "partial" | "late" = "partial";
-    if (remaining <= 0) newStatus = "paid";
-    else if (new Date(selectedPayment.due_date) < new Date()) newStatus = "late";
+      const { error: insErr } = await supabase.from("payment_records").insert({
+        rent_payment_id: selectedPayment.id,
+        amount: paidAmount,
+        payment_date: payForm.date,
+        method: payForm.method,
+        comment: payForm.comment,
+        proof_url: proofUrl,
+      });
+      if (insErr) throw insErr;
 
-    await supabase.from("rent_payments").update({
-      paid_amount: newPaidTotal,
-      status: newStatus,
-    }).eq("id", selectedPayment.id);
+      let newStatus: "paid" | "partial" | "late" = "partial";
+      if (remaining <= 0) newStatus = "paid";
+      else if (new Date(selectedPayment.due_date) < new Date()) newStatus = "late";
 
-    toast.success("Paiement enregistré");
-    setShowPayment(false);
-    setSelectedPayment(null);
-    setSaving(false);
-    refetch();
+      await supabase.from("rent_payments").update({
+        paid_amount: newPaidTotal,
+        status: newStatus,
+      }).eq("id", selectedPayment.id);
+
+      toast.success("Paiement enregistré");
+      setShowPayment(false);
+      setSelectedPayment(null);
+      setProofFile(null);
+      refetch();
+    } catch (e: any) {
+      toast.error("Erreur : " + (e.message || "échec"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCreateTask = async (payment: any, title: string, description: string, level: number) => {
