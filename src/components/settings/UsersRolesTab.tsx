@@ -231,6 +231,28 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
     setEditMember(null);
   };
 
+  const handleToggleActive = async (member: OrgMember) => {
+    setUpdatingId(member.user_id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_active: !member.is_active } as any)
+      .eq("user_id", member.user_id);
+    if (error) toast.error("Erreur : " + error.message);
+    else { toast.success(member.is_active ? `${member.full_name} a été désactivé` : `${member.full_name} a été réactivé`); await fetch(); }
+    setUpdatingId(null);
+  };
+
+  const handleSetSuperAdmin = async (member: OrgMember) => {
+    setUpdatingId(member.user_id);
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ role: "super_admin" as any, custom_role_id: null })
+      .eq("id", member.role_id);
+    if (error) toast.error("Erreur : " + error.message);
+    else { toast.success(`${member.full_name} est maintenant Super Admin`); await fetch(); }
+    setUpdatingId(null);
+  };
+
   if (loading) {
     return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
