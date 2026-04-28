@@ -1,0 +1,1 @@
+ALTER TABLE public.payment_records ADD COLUMN IF NOT EXISTS proof_url TEXT;
