@@ -170,9 +170,9 @@ export default function FinancialReports() {
 
         {/* KPI cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Chiffre d'affaires" value={`${(ca / 1000000).toFixed(1)}M FCFA`} icon={TrendingUp} variant="success" />
-          <StatCard title="Dépenses" value={`${(totalExpenses / 1000000).toFixed(1)}M FCFA`} icon={TrendingDown} variant="destructive" />
-          <StatCard title="Bénéfice net" value={`${(benefice / 1000000).toFixed(1)}M FCFA`} icon={Wallet} variant={benefice >= 0 ? "success" : "destructive"} />
+          <StatCard title="Chiffre d'affaires" value={`${ca.toLocaleString("fr-FR")} FCFA`} icon={TrendingUp} variant="success" />
+          <StatCard title="Dépenses" value={`${totalExpenses.toLocaleString("fr-FR")} FCFA`} icon={TrendingDown} variant="destructive" />
+          <StatCard title="Bénéfice net" value={`${benefice.toLocaleString("fr-FR")} FCFA`} icon={Wallet} variant={benefice >= 0 ? "success" : "destructive"} />
           <StatCard title="Marge" value={`${marge}%`} icon={Percent} variant={marge >= 50 ? "success" : marge >= 20 ? "warning" : "destructive"} />
         </div>
 
