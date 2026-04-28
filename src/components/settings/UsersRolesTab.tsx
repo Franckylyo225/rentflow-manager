@@ -11,12 +11,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Users, Shield, Loader2, Crown, UserCog, Calculator, Plus, Trash2, Pencil, Save,
   Eye, Edit3, Gavel, Settings2, MapPin, LayoutDashboard, Home, UserCheck, Banknote, Receipt, BarChart3,
-  UserPlus, KeyRound, Link2, Copy, CheckCircle, XCircle, Clock
+  UserPlus, KeyRound, Link2, Copy, CheckCircle, XCircle, Clock, History as HistoryIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
+import { RoleChangeLogsTab } from "./RoleChangeLogsTab";
 
 /* ─── Permission definitions ─── */
 const PERMISSION_GROUPS = [
@@ -131,6 +132,7 @@ export function UsersRolesTab() {
         <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Membres</TabsTrigger>
         {isAdmin && <TabsTrigger value="pending" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Demandes</TabsTrigger>}
         <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Rôles & Permissions</TabsTrigger>
+        {isSuperAdmin && <TabsTrigger value="logs" className="gap-1.5"><HistoryIcon className="h-3.5 w-3.5" /> Journal</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="members">
@@ -144,6 +146,11 @@ export function UsersRolesTab() {
       <TabsContent value="roles">
         <RolesSection isAdmin={isAdmin} orgId={profile?.organization_id} />
       </TabsContent>
+      {isSuperAdmin && (
+        <TabsContent value="logs">
+          <RoleChangeLogsTab />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
