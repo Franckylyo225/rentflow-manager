@@ -287,15 +287,23 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
               const hasCityRestriction = member.city_ids?.length > 0;
 
               return (
-                <div key={member.user_id} className="flex items-center justify-between px-4 py-3.5 hover:bg-muted/30 transition-colors gap-3">
+                <div key={member.user_id} className={`flex items-center justify-between px-4 py-3.5 hover:bg-muted/30 transition-colors gap-3 ${!member.is_active ? "opacity-60" : ""}`}>
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
                       {member.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium text-card-foreground truncate">{member.full_name}</p>
                         {isSelf && <Badge variant="outline" className="text-xs py-0">Vous</Badge>}
+                        {member.role === "super_admin" && (
+                          <Badge className="text-xs py-0 bg-purple-500/15 text-purple-600 border-purple-500/30 gap-1">
+                            <Crown className="h-3 w-3" /> Super Admin
+                          </Badge>
+                        )}
+                        {!member.is_active && (
+                          <Badge variant="destructive" className="text-xs py-0">Désactivé</Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">{member.email || "—"}</p>
                     </div>
@@ -308,7 +316,7 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
                       </Badge>
                     )}
 
-                    {isAdmin && !isSelf ? (
+                    {isAdmin && !isSelf && member.role !== "super_admin" ? (
                       <>
                         <Select
                           value={member.custom_role_id || ""}
@@ -333,13 +341,30 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
                             ))}
                           </SelectContent>
                         </Select>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditMember(member)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditMember(member)} title="Restrictions par ville">
                           <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
+                        {isSuperAdmin && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSetSuperAdmin(member)} title="Promouvoir Super Admin" disabled={updatingId === member.user_id}>
+                            <Crown className="h-3.5 w-3.5 text-purple-500" />
+                          </Button>
+                        )}
+                        {(isSuperAdmin || isAdmin) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleToggleActive(member)}
+                            title={member.is_active ? "Désactiver" : "Réactiver"}
+                            disabled={updatingId === member.user_id}
+                          >
+                            {member.is_active ? <XCircle className="h-3.5 w-3.5 text-destructive" /> : <CheckCircle className="h-3.5 w-3.5 text-green-500" />}
+                          </Button>
+                        )}
                       </>
                     ) : (
                       <Badge variant="secondary" className="text-xs">
-                        {customRole?.name || member.role}
+                        {member.role === "super_admin" ? "Super Admin" : (customRole?.name || member.role)}
                       </Badge>
                     )}
                   </div>
