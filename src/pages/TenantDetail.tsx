@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil, CalendarClock } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil, CalendarClock, RefreshCw, AlertCircle } from "lucide-react";
 import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 import { PaymentStatusBadge } from "@/components/ui/status-badge";
@@ -27,6 +27,9 @@ export default function TenantDetail() {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [showAdvance, setShowAdvance] = useState(false);
+  const [showRenew, setShowRenew] = useState(false);
+  const [renewDuration, setRenewDuration] = useState("12");
+  const [renewing, setRenewing] = useState(false);
   const { settings: orgSettings } = useOrganizationSettings();
 
   const fetchData = () => {
@@ -112,6 +115,34 @@ export default function TenantDetail() {
 
   const leaseEnd = new Date(tenant.lease_start);
   leaseEnd.setMonth(leaseEnd.getMonth() + tenant.lease_duration);
+  const today = new Date();
+  const daysToEnd = Math.ceil((leaseEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const isExpiringSoon = tenant.is_active && daysToEnd > 0 && daysToEnd <= 60;
+  const isExpired = tenant.is_active && daysToEnd <= 0;
+  const canRenew = tenant.is_active && (isExpiringSoon || isExpired);
+
+  const handleRenew = async () => {
+    if (!id) return;
+    const months = parseInt(renewDuration) || 12;
+    if (months <= 0) {
+      toast.error("Durée invalide");
+      return;
+    }
+    setRenewing(true);
+    const newStart = leaseEnd.toISOString().split("T")[0];
+    const { error } = await supabase
+      .from("tenants")
+      .update({ lease_start: newStart, lease_duration: months })
+      .eq("id", id);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success(`Bail renouvelé pour ${months} mois — aucune caution facturée`);
+      setShowRenew(false);
+      fetchData();
+    }
+    setRenewing(false);
+  };
 
   return (
     <AppLayout>
@@ -133,6 +164,11 @@ export default function TenantDetail() {
             <Button variant="outline" size="sm" onClick={openEdit}>
               <Pencil className="h-4 w-4 mr-2" /> Modifier
             </Button>
+            {canRenew && (
+              <Button variant="default" size="sm" onClick={() => setShowRenew(true)}>
+                <RefreshCw className="h-4 w-4 mr-2" /> Renouveler le bail
+              </Button>
+            )}
             {tenant.is_active && (
               <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
                 <LogOut className="h-4 w-4 mr-2" /> Initier fin de bail
@@ -143,6 +179,25 @@ export default function TenantDetail() {
             )}
           </div>
         </div>
+
+        {(isExpiringSoon || isExpired) && (
+          <div className={`rounded-lg border p-4 flex items-start gap-3 ${isExpired ? "border-destructive/40 bg-destructive/10" : "border-orange-500/40 bg-orange-500/10"}`}>
+            <AlertCircle className={`h-5 w-5 shrink-0 mt-0.5 ${isExpired ? "text-destructive" : "text-orange-600 dark:text-orange-400"}`} />
+            <div className="flex-1">
+              <p className={`font-medium ${isExpired ? "text-destructive" : "text-orange-700 dark:text-orange-300"}`}>
+                {isExpired
+                  ? `Le bail est arrivé à échéance le ${leaseEnd.toLocaleDateString("fr-FR")}`
+                  : `Le bail arrive à échéance dans ${daysToEnd} jour${daysToEnd > 1 ? "s" : ""} (${leaseEnd.toLocaleDateString("fr-FR")})`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Renouvelez le bail pour le prolonger sans facturer de nouvelle caution.
+              </p>
+            </div>
+            <Button size="sm" variant={isExpired ? "destructive" : "default"} onClick={() => setShowRenew(true)}>
+              <RefreshCw className="h-4 w-4 mr-2" /> Renouveler
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border-border">
@@ -331,6 +386,54 @@ export default function TenantDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={showRenew} onOpenChange={setShowRenew}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-primary" /> Renouveler le bail
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fin du bail actuel</span>
+                  <span className="font-medium">{leaseEnd.toLocaleDateString("fr-FR")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nouveau début</span>
+                  <span className="font-medium">{leaseEnd.toLocaleDateString("fr-FR")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Caution</span>
+                  <span className="font-medium text-success">Aucune (déjà versée)</span>
+                </div>
+              </div>
+              <div>
+                <Label>Nouvelle durée (mois)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={renewDuration}
+                  onChange={e => setRenewDuration(e.target.value)}
+                  placeholder="12"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                La caution déjà versée ({tenant.deposit.toLocaleString()} FCFA) reste acquise. Aucune nouvelle caution ne sera facturée.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRenew(false)} disabled={renewing}>Annuler</Button>
+              <Button onClick={handleRenew} disabled={renewing}>
+                {renewing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                Confirmer le renouvellement
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </AppLayout>
   );
