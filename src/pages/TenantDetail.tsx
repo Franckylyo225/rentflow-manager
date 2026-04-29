@@ -164,6 +164,11 @@ export default function TenantDetail() {
             <Button variant="outline" size="sm" onClick={openEdit}>
               <Pencil className="h-4 w-4 mr-2" /> Modifier
             </Button>
+            {canRenew && (
+              <Button variant="default" size="sm" onClick={() => setShowRenew(true)}>
+                <RefreshCw className="h-4 w-4 mr-2" /> Renouveler le bail
+              </Button>
+            )}
             {tenant.is_active && (
               <Button variant="destructive" size="sm" onClick={() => setShowTermination(true)}>
                 <LogOut className="h-4 w-4 mr-2" /> Initier fin de bail
@@ -174,6 +179,25 @@ export default function TenantDetail() {
             )}
           </div>
         </div>
+
+        {(isExpiringSoon || isExpired) && (
+          <div className={`rounded-lg border p-4 flex items-start gap-3 ${isExpired ? "border-destructive/40 bg-destructive/10" : "border-orange-500/40 bg-orange-500/10"}`}>
+            <AlertCircle className={`h-5 w-5 shrink-0 mt-0.5 ${isExpired ? "text-destructive" : "text-orange-600 dark:text-orange-400"}`} />
+            <div className="flex-1">
+              <p className={`font-medium ${isExpired ? "text-destructive" : "text-orange-700 dark:text-orange-300"}`}>
+                {isExpired
+                  ? `Le bail est arrivé à échéance le ${leaseEnd.toLocaleDateString("fr-FR")}`
+                  : `Le bail arrive à échéance dans ${daysToEnd} jour${daysToEnd > 1 ? "s" : ""} (${leaseEnd.toLocaleDateString("fr-FR")})`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Renouvelez le bail pour le prolonger sans facturer de nouvelle caution.
+              </p>
+            </div>
+            <Button size="sm" variant={isExpired ? "destructive" : "default"} onClick={() => setShowRenew(true)}>
+              <RefreshCw className="h-4 w-4 mr-2" /> Renouveler
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border-border">
