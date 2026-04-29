@@ -139,18 +139,22 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           .select("title, land_title")
           .eq("organization_id", organizationId);
 
-        const existingTitles = new Set(
-          (existingAssets || []).map(a => (a.title || "").trim().toLowerCase()).filter(Boolean)
-        );
-        const existingLandTitles = new Set(
-          (existingAssets || []).map(a => (a.land_title || "").trim().toLowerCase()).filter(Boolean)
-        );
+        // Build maps from existing DB to retrieve original casing for display
+        const existingTitleMap = new Map<string, string>();
+        const existingLandMap = new Map<string, string>();
+        (existingAssets || []).forEach(a => {
+          const t = (a.title || "").trim();
+          const lt = (a.land_title || "").trim();
+          if (t) existingTitleMap.set(t.toLowerCase(), t);
+          if (lt) existingLandMap.set(lt.toLowerCase(), lt);
+        });
 
-        // Track duplicates within the file itself
-        const seenTitles = new Set<string>();
-        const seenLandTitles = new Set<string>();
+        // Track duplicates within the file (key -> first row number where seen)
+        const seenTitles = new Map<string, number>();
+        const seenLandTitles = new Map<string, number>();
 
-        const parsed: ParsedRow[] = json.map((row) => {
+        const parsed: ParsedRow[] = json.map((row, idx) => {
+          const rowNumber = idx + 1;
           const mapped: any = {
             title: "",
             asset_type: "terrain",
@@ -178,17 +182,21 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           const titleKey = mapped.title.toLowerCase();
           const landKey = (mapped.land_title || "").toLowerCase();
 
-          if (existingTitles.has(titleKey)) {
+          if (existingTitleMap.has(titleKey)) {
             mapped._error = "Doublon (existe déjà)";
-          } else if (landKey && existingLandTitles.has(landKey)) {
+            mapped._duplicate = { source: "db", field: "title", value: mapped.title, matchedWith: existingTitleMap.get(titleKey) };
+          } else if (landKey && existingLandMap.has(landKey)) {
             mapped._error = "Titre foncier déjà existant";
+            mapped._duplicate = { source: "db", field: "land_title", value: mapped.land_title, matchedWith: existingLandMap.get(landKey) };
           } else if (seenTitles.has(titleKey)) {
             mapped._error = "Doublon dans le fichier";
+            mapped._duplicate = { source: "file", field: "title", value: mapped.title, matchedWith: `Ligne ${seenTitles.get(titleKey)}` };
           } else if (landKey && seenLandTitles.has(landKey)) {
             mapped._error = "Titre foncier dupliqué dans le fichier";
+            mapped._duplicate = { source: "file", field: "land_title", value: mapped.land_title, matchedWith: `Ligne ${seenLandTitles.get(landKey)}` };
           } else {
-            seenTitles.add(titleKey);
-            if (landKey) seenLandTitles.add(landKey);
+            seenTitles.set(titleKey, rowNumber);
+            if (landKey) seenLandTitles.set(landKey, rowNumber);
           }
           return mapped as ParsedRow;
         });
