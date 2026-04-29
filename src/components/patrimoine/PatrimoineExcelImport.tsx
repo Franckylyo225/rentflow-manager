@@ -329,6 +329,55 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
               );
             })()}
 
+            {(() => {
+              const dups = rows
+                .map((r, i) => ({ row: r, index: i + 1 }))
+                .filter(x => x.row._duplicate);
+              if (dups.length === 0) return null;
+              const FIELD_LABELS: Record<string, string> = { title: "Titre", land_title: "Titre foncier" };
+              return (
+                <details className="border border-border rounded-lg bg-card group">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-card-foreground flex items-center gap-2 hover:bg-muted/40 rounded-lg">
+                    <Copy className="h-3.5 w-3.5 text-destructive" />
+                    Voir le détail des {dups.length} doublon{dups.length > 1 ? "s" : ""}
+                    <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Cliquez pour développer</span>
+                  </summary>
+                  <div className="border-t border-border max-h-[240px] overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-muted/50 border-b border-border">
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Ligne</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Champ</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Valeur</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Motif</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Correspondance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dups.map(({ row, index }) => {
+                          const d = row._duplicate!;
+                          return (
+                            <tr key={index} className="border-b border-border/50 last:border-0">
+                              <td className="py-1.5 px-3 text-muted-foreground">{index}</td>
+                              <td className="py-1.5 px-3 text-card-foreground">{FIELD_LABELS[d.field]}</td>
+                              <td className="py-1.5 px-3 font-medium text-card-foreground truncate max-w-[180px]" title={d.value}>{d.value}</td>
+                              <td className="py-1.5 px-3">
+                                <Badge variant={d.source === "db" ? "destructive" : "outline"} className="text-[10px]">
+                                  {d.source === "db" ? "Déjà en base" : "Répété dans le fichier"}
+                                </Badge>
+                              </td>
+                              <td className="py-1.5 px-3 text-muted-foreground truncate max-w-[200px]" title={d.matchedWith}>
+                                {d.source === "db" ? `≈ "${d.matchedWith}"` : d.matchedWith}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              );
+            })()}
             <div className="border border-border rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[300px]">
                 <table className="w-full text-xs">
