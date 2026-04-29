@@ -100,7 +100,7 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
     setFileName(file.name);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: "array" });
@@ -125,6 +125,23 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           return;
         }
 
+        // Fetch existing assets to check duplicates against DB
+        const { data: existingAssets } = await supabase
+          .from("patrimony_assets")
+          .select("title, land_title")
+          .eq("organization_id", organizationId);
+
+        const existingTitles = new Set(
+          (existingAssets || []).map(a => (a.title || "").trim().toLowerCase()).filter(Boolean)
+        );
+        const existingLandTitles = new Set(
+          (existingAssets || []).map(a => (a.land_title || "").trim().toLowerCase()).filter(Boolean)
+        );
+
+        // Track duplicates within the file itself
+        const seenTitles = new Set<string>();
+        const seenLandTitles = new Set<string>();
+
         const parsed: ParsedRow[] = json.map((row) => {
           const mapped: any = {
             title: "",
@@ -147,6 +164,23 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           }
           if (!mapped.title) {
             mapped._error = "Titre manquant";
+            return mapped as ParsedRow;
+          }
+
+          const titleKey = mapped.title.toLowerCase();
+          const landKey = (mapped.land_title || "").toLowerCase();
+
+          if (existingTitles.has(titleKey)) {
+            mapped._error = "Doublon (existe déjà)";
+          } else if (landKey && existingLandTitles.has(landKey)) {
+            mapped._error = "Titre foncier déjà existant";
+          } else if (seenTitles.has(titleKey)) {
+            mapped._error = "Doublon dans le fichier";
+          } else if (landKey && seenLandTitles.has(landKey)) {
+            mapped._error = "Titre foncier dupliqué dans le fichier";
+          } else {
+            seenTitles.add(titleKey);
+            if (landKey) seenLandTitles.add(landKey);
           }
           return mapped as ParsedRow;
         });
