@@ -122,11 +122,21 @@ export default function TenantDetail() {
       updateData.contact_person = null;
       updateData.rccm = null;
     }
+    const dateChanged = editForm.lease_start !== tenant.lease_start;
     const { error } = await supabase.from("tenants").update(updateData).eq("id", id);
     if (error) {
       toast.error("Erreur : " + error.message);
     } else {
-      toast.success("Locataire mis à jour");
+      let extraMsg = "";
+      if (dateChanged) {
+        try {
+          const created = await generateMissingSchedules(editForm.lease_start);
+          if (created > 0) extraMsg = ` · ${created} échéance${created > 1 ? "s" : ""} antérieure${created > 1 ? "s" : ""} générée${created > 1 ? "s" : ""}`;
+        } catch (e: any) {
+          toast.error("Échéances non générées : " + e.message);
+        }
+      }
+      toast.success("Locataire mis à jour" + extraMsg);
       setShowEdit(false);
       fetchData();
     }
