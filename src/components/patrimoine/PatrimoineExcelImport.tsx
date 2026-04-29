@@ -43,6 +43,13 @@ const COLUMN_MAP: Record<string, string> = {
 
 const VALID_TYPES = ["terrain", "maison", "titre", "autre"];
 
+interface DuplicateInfo {
+  source: "db" | "file";
+  field: "title" | "land_title";
+  value: string;
+  matchedWith?: string; // for file dups: row number; for db: existing title in DB
+}
+
 interface ParsedRow {
   title: string;
   asset_type: string;
@@ -54,6 +61,7 @@ interface ParsedRow {
   map_link: string;
   description: string;
   _error?: string;
+  _duplicate?: DuplicateInfo;
 }
 
 interface PatrimoineExcelImportProps {
@@ -131,18 +139,22 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           .select("title, land_title")
           .eq("organization_id", organizationId);
 
-        const existingTitles = new Set(
-          (existingAssets || []).map(a => (a.title || "").trim().toLowerCase()).filter(Boolean)
-        );
-        const existingLandTitles = new Set(
-          (existingAssets || []).map(a => (a.land_title || "").trim().toLowerCase()).filter(Boolean)
-        );
+        // Build maps from existing DB to retrieve original casing for display
+        const existingTitleMap = new Map<string, string>();
+        const existingLandMap = new Map<string, string>();
+        (existingAssets || []).forEach(a => {
+          const t = (a.title || "").trim();
+          const lt = (a.land_title || "").trim();
+          if (t) existingTitleMap.set(t.toLowerCase(), t);
+          if (lt) existingLandMap.set(lt.toLowerCase(), lt);
+        });
 
-        // Track duplicates within the file itself
-        const seenTitles = new Set<string>();
-        const seenLandTitles = new Set<string>();
+        // Track duplicates within the file (key -> first row number where seen)
+        const seenTitles = new Map<string, number>();
+        const seenLandTitles = new Map<string, number>();
 
-        const parsed: ParsedRow[] = json.map((row) => {
+        const parsed: ParsedRow[] = json.map((row, idx) => {
+          const rowNumber = idx + 1;
           const mapped: any = {
             title: "",
             asset_type: "terrain",
@@ -170,17 +182,21 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           const titleKey = mapped.title.toLowerCase();
           const landKey = (mapped.land_title || "").toLowerCase();
 
-          if (existingTitles.has(titleKey)) {
+          if (existingTitleMap.has(titleKey)) {
             mapped._error = "Doublon (existe déjà)";
-          } else if (landKey && existingLandTitles.has(landKey)) {
+            mapped._duplicate = { source: "db", field: "title", value: mapped.title, matchedWith: existingTitleMap.get(titleKey) };
+          } else if (landKey && existingLandMap.has(landKey)) {
             mapped._error = "Titre foncier déjà existant";
+            mapped._duplicate = { source: "db", field: "land_title", value: mapped.land_title, matchedWith: existingLandMap.get(landKey) };
           } else if (seenTitles.has(titleKey)) {
             mapped._error = "Doublon dans le fichier";
+            mapped._duplicate = { source: "file", field: "title", value: mapped.title, matchedWith: `Ligne ${seenTitles.get(titleKey)}` };
           } else if (landKey && seenLandTitles.has(landKey)) {
             mapped._error = "Titre foncier dupliqué dans le fichier";
+            mapped._duplicate = { source: "file", field: "land_title", value: mapped.land_title, matchedWith: `Ligne ${seenLandTitles.get(landKey)}` };
           } else {
-            seenTitles.add(titleKey);
-            if (landKey) seenLandTitles.add(landKey);
+            seenTitles.set(titleKey, rowNumber);
+            if (landKey) seenLandTitles.set(landKey, rowNumber);
           }
           return mapped as ParsedRow;
         });
@@ -313,6 +329,55 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
               );
             })()}
 
+            {(() => {
+              const dups = rows
+                .map((r, i) => ({ row: r, index: i + 1 }))
+                .filter(x => x.row._duplicate);
+              if (dups.length === 0) return null;
+              const FIELD_LABELS: Record<string, string> = { title: "Titre", land_title: "Titre foncier" };
+              return (
+                <details className="border border-border rounded-lg bg-card group">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-card-foreground flex items-center gap-2 hover:bg-muted/40 rounded-lg">
+                    <Copy className="h-3.5 w-3.5 text-destructive" />
+                    Voir le détail des {dups.length} doublon{dups.length > 1 ? "s" : ""}
+                    <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Cliquez pour développer</span>
+                  </summary>
+                  <div className="border-t border-border max-h-[240px] overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-muted/50 border-b border-border">
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Ligne</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Champ</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Valeur</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Motif</th>
+                          <th className="py-1.5 px-3 text-left text-muted-foreground font-medium">Correspondance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dups.map(({ row, index }) => {
+                          const d = row._duplicate!;
+                          return (
+                            <tr key={index} className="border-b border-border/50 last:border-0">
+                              <td className="py-1.5 px-3 text-muted-foreground">{index}</td>
+                              <td className="py-1.5 px-3 text-card-foreground">{FIELD_LABELS[d.field]}</td>
+                              <td className="py-1.5 px-3 font-medium text-card-foreground truncate max-w-[180px]" title={d.value}>{d.value}</td>
+                              <td className="py-1.5 px-3">
+                                <Badge variant={d.source === "db" ? "destructive" : "outline"} className="text-[10px]">
+                                  {d.source === "db" ? "Déjà en base" : "Répété dans le fichier"}
+                                </Badge>
+                              </td>
+                              <td className="py-1.5 px-3 text-muted-foreground truncate max-w-[200px]" title={d.matchedWith}>
+                                {d.source === "db" ? `≈ "${d.matchedWith}"` : d.matchedWith}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              );
+            })()}
             <div className="border border-border rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[300px]">
                 <table className="w-full text-xs">
