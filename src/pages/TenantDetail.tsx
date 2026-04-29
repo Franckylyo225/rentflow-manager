@@ -58,10 +58,46 @@ export default function TenantDetail() {
       company_name: tenant.company_name || "",
       contact_person: tenant.contact_person || "",
       rccm: tenant.rccm || "",
+      lease_start: tenant.lease_start || new Date().toISOString().split("T")[0],
       lease_duration: String(tenant.lease_duration || 12),
       deposit: String(tenant.deposit || 0),
     });
     setShowEdit(true);
+  };
+
+  const generateMissingSchedules = async (leaseStart: string) => {
+    if (!id || !tenant) return 0;
+    const rentDueDay = orgSettings?.rent_due_day ?? 5;
+    const start = new Date(leaseStart);
+    const today = new Date();
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth(), 1);
+    const months: { month: string; due_date: string }[] = [];
+    while (cursor <= end) {
+      const y = cursor.getFullYear();
+      const m = cursor.getMonth() + 1;
+      const monthKey = `${y}-${String(m).padStart(2, "0")}`;
+      const lastDay = new Date(y, m, 0).getDate();
+      const safeDay = Math.min(rentDueDay, lastDay);
+      months.push({ month: monthKey, due_date: `${y}-${String(m).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}` });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    const { data: existing } = await supabase.from("rent_payments").select("month").eq("tenant_id", id);
+    const existingSet = new Set((existing || []).map((e: any) => e.month));
+    const toInsert = months
+      .filter(m => !existingSet.has(m.month))
+      .map(m => ({
+        tenant_id: id,
+        amount: tenant.rent || 0,
+        paid_amount: 0,
+        due_date: m.due_date,
+        month: m.month,
+        status: "pending" as const,
+      }));
+    if (toInsert.length === 0) return 0;
+    const { error } = await supabase.from("rent_payments").insert(toInsert);
+    if (error) throw error;
+    return toInsert.length;
   };
 
   const handleEditSave = async () => {
@@ -73,6 +109,7 @@ export default function TenantDetail() {
       email: editForm.email,
       id_number: editForm.id_number,
       tenant_type: editForm.tenant_type,
+      lease_start: editForm.lease_start,
       lease_duration: parseInt(editForm.lease_duration) || 12,
       deposit: parseInt(editForm.deposit) || 0,
     };
