@@ -27,6 +27,9 @@ export default function TenantDetail() {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [showAdvance, setShowAdvance] = useState(false);
+  const [showRenew, setShowRenew] = useState(false);
+  const [renewDuration, setRenewDuration] = useState("12");
+  const [renewing, setRenewing] = useState(false);
   const { settings: orgSettings } = useOrganizationSettings();
 
   const fetchData = () => {
