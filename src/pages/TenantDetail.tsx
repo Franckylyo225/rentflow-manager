@@ -415,14 +415,24 @@ export default function TenantDetail() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <Label>Date de début du bail</Label>
+                  <Input type="date" value={editForm.lease_start} onChange={e => setEditForm((f: any) => ({ ...f, lease_start: e.target.value }))} />
+                </div>
+                <div>
                   <Label>Durée du bail (mois)</Label>
                   <Input type="number" value={editForm.lease_duration} onChange={e => setEditForm((f: any) => ({ ...f, lease_duration: e.target.value }))} />
                 </div>
-                <div>
-                  <Label>Caution (FCFA)</Label>
-                  <Input type="number" value={editForm.deposit} onChange={e => setEditForm((f: any) => ({ ...f, deposit: e.target.value }))} />
-                </div>
               </div>
+              <div>
+                <Label>Caution (FCFA)</Label>
+                <Input type="number" value={editForm.deposit} onChange={e => setEditForm((f: any) => ({ ...f, deposit: e.target.value }))} />
+              </div>
+              {editForm.lease_start !== tenant.lease_start && (
+                <div className="rounded-md bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>La date de début sera modifiée. Les échéances mensuelles manquantes (entre la nouvelle date et aujourd'hui) seront générées en statut « En attente » pour que vous puissiez marquer celles déjà payées.</span>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
