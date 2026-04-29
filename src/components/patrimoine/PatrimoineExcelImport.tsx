@@ -43,6 +43,13 @@ const COLUMN_MAP: Record<string, string> = {
 
 const VALID_TYPES = ["terrain", "maison", "titre", "autre"];
 
+interface DuplicateInfo {
+  source: "db" | "file";
+  field: "title" | "land_title";
+  value: string;
+  matchedWith?: string; // for file dups: row number; for db: existing title in DB
+}
+
 interface ParsedRow {
   title: string;
   asset_type: string;
@@ -54,6 +61,7 @@ interface ParsedRow {
   map_link: string;
   description: string;
   _error?: string;
+  _duplicate?: DuplicateInfo;
 }
 
 interface PatrimoineExcelImportProps {
