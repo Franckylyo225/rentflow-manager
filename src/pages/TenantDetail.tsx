@@ -115,6 +115,34 @@ export default function TenantDetail() {
 
   const leaseEnd = new Date(tenant.lease_start);
   leaseEnd.setMonth(leaseEnd.getMonth() + tenant.lease_duration);
+  const today = new Date();
+  const daysToEnd = Math.ceil((leaseEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const isExpiringSoon = tenant.is_active && daysToEnd > 0 && daysToEnd <= 60;
+  const isExpired = tenant.is_active && daysToEnd <= 0;
+  const canRenew = tenant.is_active && (isExpiringSoon || isExpired);
+
+  const handleRenew = async () => {
+    if (!id) return;
+    const months = parseInt(renewDuration) || 12;
+    if (months <= 0) {
+      toast.error("Durée invalide");
+      return;
+    }
+    setRenewing(true);
+    const newStart = leaseEnd.toISOString().split("T")[0];
+    const { error } = await supabase
+      .from("tenants")
+      .update({ lease_start: newStart, lease_duration: months })
+      .eq("id", id);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success(`Bail renouvelé pour ${months} mois — aucune caution facturée`);
+      setShowRenew(false);
+      fetchData();
+    }
+    setRenewing(false);
+  };
 
   return (
     <AppLayout>
