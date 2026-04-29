@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, Loader2, Check, AlertTriangle, Download } from "lucide-react";
+import { Upload, FileSpreadsheet, Loader2, Check, AlertTriangle, Download, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
@@ -100,7 +100,7 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
     setFileName(file.name);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: "array" });
@@ -125,6 +125,23 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           return;
         }
 
+        // Fetch existing assets to check duplicates against DB
+        const { data: existingAssets } = await supabase
+          .from("patrimony_assets")
+          .select("title, land_title")
+          .eq("organization_id", organizationId);
+
+        const existingTitles = new Set(
+          (existingAssets || []).map(a => (a.title || "").trim().toLowerCase()).filter(Boolean)
+        );
+        const existingLandTitles = new Set(
+          (existingAssets || []).map(a => (a.land_title || "").trim().toLowerCase()).filter(Boolean)
+        );
+
+        // Track duplicates within the file itself
+        const seenTitles = new Set<string>();
+        const seenLandTitles = new Set<string>();
+
         const parsed: ParsedRow[] = json.map((row) => {
           const mapped: any = {
             title: "",
@@ -147,6 +164,23 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           }
           if (!mapped.title) {
             mapped._error = "Titre manquant";
+            return mapped as ParsedRow;
+          }
+
+          const titleKey = mapped.title.toLowerCase();
+          const landKey = (mapped.land_title || "").toLowerCase();
+
+          if (existingTitles.has(titleKey)) {
+            mapped._error = "Doublon (existe déjà)";
+          } else if (landKey && existingLandTitles.has(landKey)) {
+            mapped._error = "Titre foncier déjà existant";
+          } else if (seenTitles.has(titleKey)) {
+            mapped._error = "Doublon dans le fichier";
+          } else if (landKey && seenLandTitles.has(landKey)) {
+            mapped._error = "Titre foncier dupliqué dans le fichier";
+          } else {
+            seenTitles.add(titleKey);
+            if (landKey) seenLandTitles.add(landKey);
           }
           return mapped as ParsedRow;
         });
@@ -258,15 +292,26 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
               <span className="text-muted-foreground">{rows.length} ligne{rows.length > 1 ? "s" : ""} détectée{rows.length > 1 ? "s" : ""}</span>
             </div>
 
-            {errorRows.length > 0 && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-destructive">{errorRows.length} ligne{errorRows.length > 1 ? "s" : ""} en erreur (ignorée{errorRows.length > 1 ? "s" : ""})</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">Les lignes sans titre seront ignorées à l'import.</p>
+            {errorRows.length > 0 && (() => {
+              const dupCount = errorRows.filter(r => r._error?.toLowerCase().includes("doublon") || r._error?.toLowerCase().includes("foncier")).length;
+              const otherCount = errorRows.length - dupCount;
+              return (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-destructive">{errorRows.length} ligne{errorRows.length > 1 ? "s" : ""} ignorée{errorRows.length > 1 ? "s" : ""}</p>
+                    {dupCount > 0 && (
+                      <p className="text-muted-foreground text-xs flex items-center gap-1.5">
+                        <Copy className="h-3 w-3" /> {dupCount} doublon{dupCount > 1 ? "s" : ""} détecté{dupCount > 1 ? "s" : ""} (déjà en base ou répété{dupCount > 1 ? "s" : ""} dans le fichier)
+                      </p>
+                    )}
+                    {otherCount > 0 && (
+                      <p className="text-muted-foreground text-xs">{otherCount} ligne{otherCount > 1 ? "s" : ""} sans titre</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="border border-border rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[300px]">
