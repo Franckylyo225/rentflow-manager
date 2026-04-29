@@ -292,15 +292,26 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
               <span className="text-muted-foreground">{rows.length} ligne{rows.length > 1 ? "s" : ""} détectée{rows.length > 1 ? "s" : ""}</span>
             </div>
 
-            {errorRows.length > 0 && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-destructive">{errorRows.length} ligne{errorRows.length > 1 ? "s" : ""} en erreur (ignorée{errorRows.length > 1 ? "s" : ""})</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">Les lignes sans titre seront ignorées à l'import.</p>
+            {errorRows.length > 0 && (() => {
+              const dupCount = errorRows.filter(r => r._error?.toLowerCase().includes("doublon") || r._error?.toLowerCase().includes("foncier")).length;
+              const otherCount = errorRows.length - dupCount;
+              return (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-destructive">{errorRows.length} ligne{errorRows.length > 1 ? "s" : ""} ignorée{errorRows.length > 1 ? "s" : ""}</p>
+                    {dupCount > 0 && (
+                      <p className="text-muted-foreground text-xs flex items-center gap-1.5">
+                        <Copy className="h-3 w-3" /> {dupCount} doublon{dupCount > 1 ? "s" : ""} détecté{dupCount > 1 ? "s" : ""} (déjà en base ou répété{dupCount > 1 ? "s" : ""} dans le fichier)
+                      </p>
+                    )}
+                    {otherCount > 0 && (
+                      <p className="text-muted-foreground text-xs">{otherCount} ligne{otherCount > 1 ? "s" : ""} sans titre</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="border border-border rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[300px]">
