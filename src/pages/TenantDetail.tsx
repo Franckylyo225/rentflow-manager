@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil, CalendarClock } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Home, Mail, Phone, User, Loader2, LogOut, Building2, FileText, Pencil, CalendarClock, RefreshCw, AlertCircle } from "lucide-react";
 import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 import { PaymentStatusBadge } from "@/components/ui/status-badge";
