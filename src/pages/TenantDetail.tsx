@@ -386,6 +386,54 @@ export default function TenantDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={showRenew} onOpenChange={setShowRenew}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-primary" /> Renouveler le bail
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fin du bail actuel</span>
+                  <span className="font-medium">{leaseEnd.toLocaleDateString("fr-FR")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nouveau début</span>
+                  <span className="font-medium">{leaseEnd.toLocaleDateString("fr-FR")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Caution</span>
+                  <span className="font-medium text-success">Aucune (déjà versée)</span>
+                </div>
+              </div>
+              <div>
+                <Label>Nouvelle durée (mois)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={renewDuration}
+                  onChange={e => setRenewDuration(e.target.value)}
+                  placeholder="12"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                La caution déjà versée ({tenant.deposit.toLocaleString()} FCFA) reste acquise. Aucune nouvelle caution ne sera facturée.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRenew(false)} disabled={renewing}>Annuler</Button>
+              <Button onClick={handleRenew} disabled={renewing}>
+                {renewing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                Confirmer le renouvellement
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </AppLayout>
   );
