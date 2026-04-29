@@ -1,74 +1,46 @@
-
-
-## Plan : Mettre un actif du patrimoine en location
+## Refonte du Paiement Anticipé — Sélection de mois & blocage des arriérés
 
 ### Objectif
-Ajouter une case à cocher "Mettre en location" dans les formulaires d'actifs du patrimoine (création + édition). Lorsqu'elle est cochée, un enregistrement correspondant est automatiquement créé dans la table **properties** (module Biens), prêt à recevoir des unités.
+Remplacer le choix "nombre de mois + mois de départ" par une **sélection visuelle des mois** que le locataire souhaite payer. Si des **impayés antérieurs** existent, l'utilisateur doit obligatoirement les régler **avant** de pouvoir cocher des échéances futures.
 
-### Comportement métier
+### Comportement UX
 
-- Case à cocher **"Mettre ce bien en location"** dans le formulaire d'actif.
-- Visible uniquement pour les types d'actif compatibles : `maison`, `autre` (un terrain nu n'est pas mis en location).
-- Si cochée :
-  - Champ supplémentaire requis : **Ville** (Select sur `cities` de l'organisation, avec bouton "Nouvelle ville" inline).
-  - Type de bien Properties pré-rempli selon `asset_type` (`maison` → `villa`, `autre` → `immeuble`, modifiable).
-- À la sauvegarde de l'actif :
-  - Création (ou mise à jour si déjà lié) d'un enregistrement `properties` avec `name = asset.title`, `address = locality + subdivision_name`, `description` reprise de l'actif.
-  - Lien stocké via une nouvelle colonne `properties.patrimony_asset_id` (FK vers `patrimony_assets.id`, nullable, unique).
-- Sur la page **PatrimoineDetail** : badge "En location" + bouton "Gérer le bien locatif" qui redirige vers `/properties/{id}` du bien lié.
-- Sur la page **Properties** : badge discret "Issu du patrimoine" sur les biens liés (info-bulle vers l'actif source).
-- Décocher la case sur un actif déjà lié : on **ne supprime pas** le bien locatif (peut contenir des unités/locataires) — un toast informe et propose d'aller le supprimer manuellement depuis la page Biens.
+1. **Au chargement** : la modale charge tous les `rent_payments` du locataire et calcule également les **12 prochains mois** (à venir) qui n'existent pas encore en base.
 
-### Modifications base de données
+2. **Affichage en deux sections** :
+   - **Arriérés à régler en priorité** (statuts `pending`, `partial`, `late` dont `due_date < aujourd'hui`)  
+     → Cases **pré-cochées et verrouillées** (impossible de décocher).
+     → Bandeau d'avertissement orange : "Vous devez régler N mois en retard avant tout paiement anticipé".
+   - **Échéances à venir** (mois en cours + futurs)  
+     → Cases **cochables** UNIQUEMENT si tous les arriérés sont sélectionnés (sinon désactivées avec tooltip explicatif).
+     → Sélection contiguë : si l'utilisateur coche le mois N+3, les mois N+1 et N+2 se cochent automatiquement (pas de "trous").
 
-```sql
-ALTER TABLE public.properties 
-  ADD COLUMN patrimony_asset_id uuid UNIQUE REFERENCES public.patrimony_assets(id) ON DELETE SET NULL;
+3. **Récapitulatif dynamique** sous la liste :
+   - Nombre total de mois sélectionnés
+   - Détail : "X mois d'arriérés + Y mois d'avance"
+   - Montant total dû (somme des montants de chaque échéance, en tenant compte des paiements partiels déjà effectués)
 
-CREATE INDEX idx_properties_patrimony_asset ON public.properties(patrimony_asset_id);
-```
+4. **Champ Montant** : pré-rempli avec le total, modifiable. Allocation séquentielle conservée (arriérés d'abord, puis futurs).
 
-Aucun changement RLS nécessaire (les policies existantes sur `properties` couvrent l'organisation).
-
-### UI
-
-**1. `src/pages/Patrimoine.tsx`** — `assetFormDialog`
-- Ajout après la section description :
-  - `<Checkbox>` "Mettre ce bien en location"
-  - Bloc conditionnel : Select Ville (+ bouton nouvelle ville réutilisant le pattern existant) + Select Type de bien locatif.
-- État form étendu : `for_rent: boolean`, `rental_city_id: string`, `rental_property_type: string`.
-- En édition : pré-charger l'état depuis un fetch préalable du `properties` lié (`.eq("patrimony_asset_id", asset.id)`).
-
-**2. Logique `handleSave` / `handleEdit`**
-- Après insert/update de l'actif, si `for_rent === true` :
-  - Vérifier existence d'un `properties` lié.
-  - Insert ou update avec `patrimony_asset_id`, `city_id`, `name`, `type`, `address`, `description`, `organization_id`.
-- Si `for_rent === false` et un bien était lié : toast d'avertissement (pas de suppression auto).
-
-**3. `src/pages/PatrimoineDetail.tsx`**
-- Fetch additionnel : `properties` lié via `patrimony_asset_id`.
-- Si présent : badge "En location" dans le header + bouton "Gérer le bien locatif" → `navigate('/properties/' + linkedProperty.id)`.
-
-**4. `src/pages/Properties.tsx`**
-- Affichage discret d'un badge "Patrimoine" sur les cartes/lignes des biens où `patrimony_asset_id` est défini.
+5. **Champs conservés** : date de paiement, méthode, commentaire, upload preuve (si déjà présent).
 
 ### Détails techniques
 
-- **Idempotence** : la contrainte UNIQUE sur `patrimony_asset_id` garantit qu'un actif ne peut être lié qu'à un seul bien locatif. Logique : `upsert` sur `patrimony_asset_id`.
-- **Données par défaut** : `address` = `${locality}${subdivision_name ? ' · ' + subdivision_name : ''}`, modifiable ensuite depuis Properties.
-- **Mapping type d'actif → type de bien** :
-  - `maison` → `villa`
-  - `terrain` → option masquée (pas de mise en location)
-  - `titre` → option masquée
-  - `autre` → `immeuble` (par défaut, modifiable)
-- **Hooks impactés** : `useProperties` continue de retourner tous les biens — pas de changement nécessaire car `patrimony_asset_id` est juste une colonne supplémentaire ; le type Database est régénéré automatiquement.
+- **Source des arriérés** : `rent_payments` où `status IN ('pending','partial','late')` ET (`due_date <= today` OU `month <= currentMonth`).
+- **Mois futurs proposés** : générer 12 mois à partir du mois courant + 1 ; exclure ceux déjà présents dans `rent_payments`.
+- **Logique de verrouillage** :
+  ```ts
+  const allArrearsSelected = arrears.every(a => selected.has(a.month));
+  // future month checkbox disabled when !allArrearsSelected
+  ```
+- **Contiguïté future** : au clic sur un mois futur, cocher tous les mois futurs antérieurs jusqu'à celui-ci.
+- **Submit** : conserver la logique existante (insert manquants → allocation séquentielle des `payment_records` → update `paid_amount`/`status`). Itérer sur la liste **triée par `month` croissant** (arriérés naturellement avant les futurs).
+- **État supprimés** : `monthsCount`, `customMonths`, `startMonth`, presets `[2,3,6,12]`, RadioGroup.
+- **État ajoutés** : `selectedMonths: Set<string>`, `arrears: RentPayment[]`, `futureMonths: {month, due_date, rent}[]`.
 
-### Fichiers impactés
+### Fichier modifié
+- `src/components/rent/AdvancePaymentDialog.tsx` (refonte UI + logique de sélection ; submit quasi inchangé)
 
-- **DB migration** : ajout colonne `properties.patrimony_asset_id`
-- **Modifiés** :
-  - `src/pages/Patrimoine.tsx` — checkbox + champs conditionnels + logique save/edit
-  - `src/pages/PatrimoineDetail.tsx` — badge + bouton de navigation vers le bien locatif
-  - `src/pages/Properties.tsx` — badge "Patrimoine"
-- **Mémoire** : note sur le lien patrimoine ↔ properties dans `mem://features/gestion-patrimoine`
-
+### Hors scope
+- Pas de migration SQL nécessaire.
+- Pas de changement sur `Rents.tsx` (props inchangées).
