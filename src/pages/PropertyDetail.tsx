@@ -86,6 +86,45 @@ export default function PropertyDetail() {
   const occupied = propertyUnits.filter(u => u.status === "occupied").length;
   const vacant = propertyUnits.filter(u => u.status === "vacant").length;
   const totalRevenue = propertyUnits.filter(u => u.status === "occupied").reduce((s, u) => s + u.rent, 0);
+  const monthlyRevenuePotential = propertyUnits.reduce((s, u) => s + u.rent, 0);
+
+  const acquisitionCost = property.acquisition_cost || 0;
+  const notaryFees = property.notary_fees || 0;
+  const totalCost = acquisitionCost + notaryFees;
+  const profitabilityData = computeProfitability({
+    totalCost,
+    totalCollected,
+    monthlyRevenueActual: totalRevenue,
+    acquisitionDate: property.acquisition_date,
+  });
+  const profitabilityPct = Math.min(100, profitabilityData.profitability);
+
+  const handleDownloadReport = () => {
+    if (totalCost === 0) {
+      toast.error("Renseignez d'abord le coût d'acquisition du bien");
+      return;
+    }
+    generatePropertyReport({
+      propertyName: property.name,
+      propertyAddress: property.address,
+      cityName: property.cities?.name,
+      acquisitionCost,
+      notaryFees,
+      totalCost,
+      acquisitionDate: property.acquisition_date,
+      totalUnits: propertyUnits.length,
+      occupiedUnits: occupied,
+      monthlyRevenuePotential,
+      monthlyRevenueActual: totalRevenue,
+      totalCollected,
+      profitability: profitabilityData.profitability,
+      monthsToBreakEven: profitabilityData.monthsToBreakEven,
+      breakEvenDate: profitabilityData.breakEvenDate,
+      amortizationPlan: profitabilityData.amortizationPlan,
+      organizationName: settings?.name,
+    });
+    toast.success("Rapport généré");
+  };
 
   const handleAddUnit = async () => {
     if (!unitForm.name || !unitForm.rent) return;
