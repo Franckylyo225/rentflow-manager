@@ -165,7 +165,11 @@ export default function Expenses() {
                           <Badge variant="outline" className="text-xs">{e.expense_categories?.name}</Badge>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground hidden md:table-cell truncate max-w-48">{e.description || "—"}</td>
-                        <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{e.properties?.name || "—"}</td>
+                        <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">
+                          {e.properties?.name ? (
+                            <span>{e.properties.name}{e.units?.name ? <span className="text-xs"> · {e.units.name}</span> : null}</span>
+                          ) : "—"}
+                        </td>
                         <td className="py-3 px-4 text-center hidden sm:table-cell">
                           <Badge variant={e.expense_type === "fixe" ? "default" : "secondary"} className="text-xs">
                             {e.expense_type === "fixe" ? "Fixe" : "Variable"}
@@ -245,15 +249,31 @@ export default function Expenses() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Bien (optionnel)</Label>
-              <Select value={form.property_id} onValueChange={v => setForm(f => ({ ...f, property_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Bien (optionnel)</Label>
+                <Select value={form.property_id} onValueChange={v => setForm(f => ({ ...f, property_id: v, unit_id: "" }))}>
+                  <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Unité (optionnel)</Label>
+                <Select
+                  value={form.unit_id}
+                  onValueChange={v => setForm(f => ({ ...f, unit_id: v }))}
+                  disabled={!form.property_id || form.property_id === "none"}
+                >
+                  <SelectTrigger><SelectValue placeholder={!form.property_id || form.property_id === "none" ? "Choisir un bien d'abord" : "Toutes les unités"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Bien entier (aucune unité spécifique)</SelectItem>
+                    {unitsForProperty.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
