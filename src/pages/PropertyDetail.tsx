@@ -4,7 +4,9 @@ import { useUnits } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2, TrendingUp, FileDown, Landmark, Target, Calendar } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -16,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { computeProfitability, generatePropertyReport } from "@/lib/generatePropertyReport";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 export default function PropertyDetail() {
   const { id } = useParams();
