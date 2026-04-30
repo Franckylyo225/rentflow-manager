@@ -311,6 +311,27 @@ export default function Properties() {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
       </div>
+      <div className="border-t border-border pt-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Landmark className="h-4 w-4 text-emerald-600" />
+          <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label className="text-xs">Prix d'achat (FCFA)</Label>
+            <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
+            <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Date d'acquisition</Label>
+          <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+        </div>
+        <p className="text-xs text-muted-foreground">Ces données permettent de calculer la rentabilité et le plan d'amortissement.</p>
+      </div>
     </div>
   );
 
