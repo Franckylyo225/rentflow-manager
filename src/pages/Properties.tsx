@@ -45,16 +45,24 @@ export default function Properties() {
   const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
   const [cityForm, setCityForm] = useState({ name: "", country_id: "" });
   const [countryForm, setCountryForm] = useState({ name: "", code: "" });
+  const [step, setStep] = useState<1 | 2>(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
       setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
+      setStep(1);
       setShowAdd(true);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams]);
+
+  // Reset step when dialogs close
+  useEffect(() => { if (!showAdd) setStep(1); }, [showAdd]);
+  useEffect(() => { if (!showEdit) setStep(1); }, [showEdit]);
+
+  const step1Valid = !!form.name && !!form.city_id;
 
   const { data: properties, loading, refetch } = useProperties();
   const { data: cities, refetch: refetchCities } = useCities();
