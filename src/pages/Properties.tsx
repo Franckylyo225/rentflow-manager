@@ -214,6 +214,9 @@ export default function Properties() {
       address: property.address,
       description: property.description || "",
       type: property.type || "immeuble",
+      acquisition_cost: property.acquisition_cost ? String(property.acquisition_cost) : "",
+      notary_fees: property.notary_fees ? String(property.notary_fees) : "",
+      acquisition_date: property.acquisition_date || "",
     });
     setShowEdit(true);
   };
