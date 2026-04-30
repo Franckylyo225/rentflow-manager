@@ -409,6 +409,7 @@ export type Database = {
           organization_id: string
           property_id: string | null
           receipt_url: string | null
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -426,6 +427,7 @@ export type Database = {
           organization_id: string
           property_id?: string | null
           receipt_url?: string | null
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -443,6 +445,7 @@ export type Database = {
           organization_id?: string
           property_id?: string | null
           receipt_url?: string | null
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
