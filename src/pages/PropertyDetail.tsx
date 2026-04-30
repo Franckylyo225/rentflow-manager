@@ -510,18 +510,125 @@ export default function PropertyDetail() {
       </div>
 
       {/* Add unit */}
-      <Dialog open={showAddUnit} onOpenChange={setShowAddUnit}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Ajouter une unité</DialogTitle></DialogHeader>
-          {unitFormFields}
-          <p className="text-xs text-muted-foreground">Statut par défaut : Vacant</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddUnit(false)}>Annuler</Button>
-            <Button onClick={handleAddUnit} disabled={saving || !unitForm.name || !unitForm.rent}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
-          </DialogFooter>
+      <Dialog open={showAddUnit} onOpenChange={(o) => { setShowAddUnit(o); if (!o) { setAddMode("single"); setBulkRows([]); } }}>
+        <DialogContent className={addMode === "bulk" ? "sm:max-w-2xl max-h-[90vh] overflow-y-auto" : "sm:max-w-sm"}>
+          <DialogHeader><DialogTitle>Ajouter {addMode === "bulk" ? "des unités (en lot)" : "une unité"}</DialogTitle></DialogHeader>
+          <Tabs value={addMode} onValueChange={(v) => setAddMode(v as any)} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="single">Une unité</TabsTrigger>
+              <TabsTrigger value="bulk">Plusieurs (lot)</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="single" className="space-y-4 pt-2">
+              {unitFormFields}
+              <p className="text-xs text-muted-foreground">Statut par défaut : Vacant</p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAddUnit(false)}>Annuler</Button>
+                <Button onClick={handleAddUnit} disabled={saving || !unitForm.name || !unitForm.rent}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+
+            <TabsContent value="bulk" className="space-y-4 pt-2">
+              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-3">
+                <p className="text-xs font-semibold text-foreground">1. Configuration du lot</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Préfixe</Label>
+                    <Input value={bulkConfig.prefix} onChange={e => setBulkConfig(c => ({ ...c, prefix: e.target.value }))} placeholder="Apt " />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">N° départ</Label>
+                    <Input type="number" min="1" value={bulkConfig.startNumber} onChange={e => setBulkConfig(c => ({ ...c, startNumber: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nombre d'unités</Label>
+                    <Input type="number" min="1" max="100" value={bulkConfig.count} onChange={e => setBulkConfig(c => ({ ...c, count: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Pièces (toutes)</Label>
+                    <Input type="number" min="1" value={bulkConfig.rooms} onChange={e => setBulkConfig(c => ({ ...c, rooms: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Étage (toutes)</Label>
+                    <Input type="number" min="0" value={bulkConfig.floor} onChange={e => setBulkConfig(c => ({ ...c, floor: e.target.value }))} placeholder="—" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Charges (FCFA)</Label>
+                    <Input type="number" min="0" value={bulkConfig.charges} onChange={e => setBulkConfig(c => ({ ...c, charges: e.target.value }))} placeholder="0" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Loyer mensuel</Label>
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant={bulkConfig.rentMode === "same" ? "default" : "outline"} onClick={() => setBulkConfig(c => ({ ...c, rentMode: "same" }))}>
+                      Même loyer
+                    </Button>
+                    <Button type="button" size="sm" variant={bulkConfig.rentMode === "different" ? "default" : "outline"} onClick={() => setBulkConfig(c => ({ ...c, rentMode: "different" }))}>
+                      Loyers différents
+                    </Button>
+                    {bulkConfig.rentMode === "same" && (
+                      <Input type="number" min="0" className="flex-1" value={bulkConfig.rentSame} onChange={e => setBulkConfig(c => ({ ...c, rentSame: e.target.value }))} placeholder="Ex: 350000" />
+                    )}
+                  </div>
+                </div>
+                <Button type="button" size="sm" className="w-full gap-2" onClick={generateBulkRows}>
+                  <Plus className="h-3.5 w-3.5" /> Générer la liste
+                </Button>
+              </div>
+
+              {bulkRows.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-foreground">2. Aperçu et ajustements ({bulkRows.length} unités)</p>
+                  <div className="border border-border rounded-md max-h-[300px] overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 sticky top-0">
+                        <tr>
+                          <th className="text-left py-2 px-3 text-xs text-muted-foreground font-medium">Nom</th>
+                          <th className="text-left py-2 px-3 text-xs text-muted-foreground font-medium">Loyer (FCFA)</th>
+                          <th className="text-left py-2 px-3 text-xs text-muted-foreground font-medium hidden sm:table-cell">Étage</th>
+                          <th className="w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkRows.map((row, idx) => (
+                          <tr key={idx} className="border-t border-border/50">
+                            <td className="py-1.5 px-2">
+                              <Input className="h-8" value={row.name} onChange={e => setBulkRows(rows => rows.map((r, i) => i === idx ? { ...r, name: e.target.value } : r))} />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <Input className="h-8" type="number" min="0" value={row.rent} onChange={e => setBulkRows(rows => rows.map((r, i) => i === idx ? { ...r, rent: e.target.value } : r))} />
+                            </td>
+                            <td className="py-1.5 px-2 hidden sm:table-cell">
+                              <Input className="h-8" type="number" min="0" value={row.floor} onChange={e => setBulkRows(rows => rows.map((r, i) => i === idx ? { ...r, floor: e.target.value } : r))} />
+                            </td>
+                            <td className="py-1.5 px-1 text-center">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setBulkRows(rows => rows.filter((_, i) => i !== idx))}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Toutes les unités seront créées avec le statut Vacant.</p>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAddUnit(false)}>Annuler</Button>
+                <Button onClick={handleBulkAdd} disabled={saving || bulkRows.length === 0}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Créer {bulkRows.length > 0 ? `${bulkRows.length} unités` : ""}
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
