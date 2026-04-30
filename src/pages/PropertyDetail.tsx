@@ -163,6 +163,50 @@ export default function PropertyDetail() {
     }
   };
 
+  const generateBulkRows = () => {
+    const count = Math.max(1, Math.min(100, parseInt(bulkConfig.count) || 0));
+    const start = parseInt(bulkConfig.startNumber) || 1;
+    const rows = Array.from({ length: count }, (_, i) => ({
+      name: `${bulkConfig.prefix}${start + i}`,
+      rent: bulkConfig.rentMode === "same" ? bulkConfig.rentSame : "",
+      floor: bulkConfig.floor,
+    }));
+    setBulkRows(rows);
+  };
+
+  const handleBulkAdd = async () => {
+    if (bulkRows.length === 0) { toast.error("Aucune unité à ajouter"); return; }
+    const invalid = bulkRows.find(r => !r.name.trim() || !r.rent || isNaN(parseInt(r.rent)));
+    if (invalid) { toast.error("Vérifiez les noms et loyers de toutes les unités"); return; }
+    const names = bulkRows.map(r => r.name.trim().toLowerCase());
+    if (new Set(names).size !== names.length) { toast.error("Noms d'unités en doublon dans la liste"); return; }
+    const existingNames = new Set(propertyUnits.map(u => u.name.toLowerCase()));
+    const conflict = bulkRows.find(r => existingNames.has(r.name.trim().toLowerCase()));
+    if (conflict) { toast.error(`L'unité "${conflict.name}" existe déjà dans ce bien`); return; }
+
+    setSaving(true);
+    const payload = bulkRows.map(r => ({
+      property_id: id,
+      name: r.name.trim(),
+      rent: parseInt(r.rent),
+      charges: parseInt(bulkConfig.charges) || 0,
+      rooms: parseInt(bulkConfig.rooms) || 1,
+      floor: r.floor ? parseInt(r.floor) : null,
+      status: "vacant" as const,
+    }));
+    const { error } = await supabase.from("units").insert(payload);
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success(`${bulkRows.length} unités ajoutées`);
+      setShowAddUnit(false);
+      setBulkRows([]);
+      setAddMode("single");
+      refetchUnits();
+    }
+  };
+
   const handleEditUnit = async () => {
     if (!unitForm.name || !unitForm.rent || !editingUnit) return;
     setSaving(true);
