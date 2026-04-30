@@ -478,31 +478,49 @@ export default function Properties() {
       </div>
 
       {/* Add property */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      <Dialog open={showAdd} onOpenChange={(o) => { setShowAdd(o); if (!o) setStep(1); }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Ajouter un bien — Étape {step}/2</DialogTitle></DialogHeader>
           {propertyFormDialog(false)}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving || !form.name || !form.city_id}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
+            {step === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => { setShowAdd(false); setStep(1); }}>Annuler</Button>
+                <Button onClick={() => setStep(2)} disabled={!form.name || !form.city_id}>Suivant</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
+                <Button onClick={async () => { await handleSave(); setStep(1); }} disabled={saving || !form.name || !form.city_id}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit property */}
-      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+      <Dialog open={showEdit} onOpenChange={(o) => { setShowEdit(o); if (!o) setStep(1); }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Modifier le bien — Étape {step}/2</DialogTitle></DialogHeader>
           {propertyFormDialog(true)}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
-            <Button onClick={handleEdit} disabled={saving || !form.name || !form.city_id}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
+            {step === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => { setShowEdit(false); setStep(1); }}>Annuler</Button>
+                <Button onClick={() => setStep(2)} disabled={!form.name || !form.city_id}>Suivant</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
+                <Button onClick={async () => { await handleEdit(); setStep(1); }} disabled={saving || !form.name || !form.city_id}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
