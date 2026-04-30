@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Loader2, Receipt, Trash2 } from "lucide-react";
+import { Plus, Search, Loader2, Receipt, Trash2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,13 +38,15 @@ export default function Expenses() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [form, setForm] = useState({
+  const emptyForm = {
     category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0],
     description: "", expense_type: "variable", frequency: "unique",
     property_id: "", unit_id: "", city_id: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
   const { data: unitsForProperty } = useUnits(form.property_id && form.property_id !== "none" ? form.property_id : undefined);
 
   useEffect(() => {
@@ -70,8 +72,7 @@ export default function Expenses() {
   const handleSave = async () => {
     if (!form.category_id || !form.amount) return;
     setSaving(true);
-    const { error } = await supabase.from("expenses").insert({
-      organization_id: profile?.organization_id,
+    const payload = {
       category_id: form.category_id,
       amount: parseInt(form.amount),
       expense_date: form.expense_date,
@@ -81,13 +82,33 @@ export default function Expenses() {
       property_id: form.property_id && form.property_id !== "none" ? form.property_id : null,
       unit_id: form.unit_id && form.unit_id !== "none" ? form.unit_id : null,
       city_id: form.city_id && form.city_id !== "none" ? form.city_id : null,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from("expenses").update(payload).eq("id", editingId)
+      : await supabase.from("expenses").insert({ ...payload, organization_id: profile?.organization_id });
     if (error) { toast.error("Erreur : " + error.message); setSaving(false); return; }
-    toast.success("Dépense ajoutée");
+    toast.success(editingId ? "Dépense modifiée" : "Dépense ajoutée");
     setShowAdd(false);
-    setForm({ category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0], description: "", expense_type: "variable", frequency: "unique", property_id: "", unit_id: "", city_id: "" });
+    setEditingId(null);
+    setForm(emptyForm);
     setSaving(false);
     refetch();
+  };
+
+  const openEdit = (e: any) => {
+    setEditingId(e.id);
+    setForm({
+      category_id: e.category_id || "",
+      amount: e.amount?.toString() || "",
+      expense_date: e.expense_date || new Date().toISOString().split("T")[0],
+      description: e.description || "",
+      expense_type: e.expense_type || "variable",
+      frequency: e.frequency || "unique",
+      property_id: e.property_id || "",
+      unit_id: e.unit_id || "",
+      city_id: e.city_id || "",
+    });
+    setShowAdd(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -178,9 +199,14 @@ export default function Expenses() {
                         <td className="py-3 px-4 text-center text-muted-foreground text-xs hidden sm:table-cell capitalize">{e.frequency}</td>
                         <td className="py-3 px-4 text-right font-medium text-card-foreground">{e.amount.toLocaleString()} FCFA</td>
                         <td className="py-3 px-4 text-center">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(e.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(e)}>
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(e.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -192,10 +218,10 @@ export default function Expenses() {
         )}
       </div>
 
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      <Dialog open={showAdd} onOpenChange={(o) => { setShowAdd(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ajouter une dépense</DialogTitle>
+            <DialogTitle>{editingId ? "Modifier la dépense" : "Ajouter une dépense"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
@@ -283,7 +309,7 @@ export default function Expenses() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
             <Button onClick={handleSave} disabled={saving || !form.category_id || !form.amount}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Ajouter
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} {editingId ? "Enregistrer" : "Ajouter"}
             </Button>
           </DialogFooter>
         </DialogContent>
