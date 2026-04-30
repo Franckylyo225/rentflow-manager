@@ -218,10 +218,10 @@ export default function Expenses() {
         )}
       </div>
 
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      <Dialog open={showAdd} onOpenChange={(o) => { setShowAdd(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ajouter une dépense</DialogTitle>
+            <DialogTitle>{editingId ? "Modifier la dépense" : "Ajouter une dépense"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
@@ -309,7 +309,7 @@ export default function Expenses() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
             <Button onClick={handleSave} disabled={saving || !form.category_id || !form.amount}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Ajouter
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} {editingId ? "Enregistrer" : "Ajouter"}
             </Button>
           </DialogFooter>
         </DialogContent>
