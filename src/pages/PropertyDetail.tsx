@@ -323,6 +323,7 @@ export default function PropertyDetail() {
         <Tabs defaultValue="units" className="space-y-4">
           <TabsList>
             <TabsTrigger value="units" className="gap-2"><Home className="h-3.5 w-3.5" />Unités locatives</TabsTrigger>
+            <TabsTrigger value="expenses" className="gap-2"><Receipt className="h-3.5 w-3.5" />Dépenses</TabsTrigger>
             <TabsTrigger value="profitability" className="gap-2"><TrendingUp className="h-3.5 w-3.5" />Rentabilité</TabsTrigger>
           </TabsList>
 
