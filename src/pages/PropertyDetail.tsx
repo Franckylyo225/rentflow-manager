@@ -33,6 +33,8 @@ export default function PropertyDetail() {
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
   const [propLoading, setPropLoading] = useState(true);
+  const [totalCollected, setTotalCollected] = useState(0);
+  const { settings } = useOrganizationSettings();
 
   const { data: propertyUnits, loading: unitsLoading, refetch: refetchUnits } = useUnits(id);
 
@@ -43,6 +45,26 @@ export default function PropertyDetail() {
       setPropLoading(false);
     });
   }, [id]);
+
+  // Fetch total rent collected for this property
+  useEffect(() => {
+    if (!id || propertyUnits.length === 0) {
+      setTotalCollected(0);
+      return;
+    }
+    (async () => {
+      const unitIds = propertyUnits.map(u => u.id);
+      const { data: tenants } = await supabase.from("tenants").select("id").in("unit_id", unitIds);
+      const tenantIds = (tenants || []).map(t => t.id);
+      if (tenantIds.length === 0) { setTotalCollected(0); return; }
+      const { data: payments } = await supabase
+        .from("rent_payments")
+        .select("paid_amount")
+        .in("tenant_id", tenantIds);
+      const sum = (payments || []).reduce((s, p) => s + (p.paid_amount || 0), 0);
+      setTotalCollected(sum);
+    })();
+  }, [id, propertyUnits]);
 
   if (propLoading) {
     return <AppLayout><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
