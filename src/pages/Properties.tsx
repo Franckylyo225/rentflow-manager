@@ -484,14 +484,26 @@ export default function Properties() {
       {/* Add property */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
-          {propertyFormDialog(false)}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving || !form.name || !form.city_id}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
+          <DialogHeader>
+            <DialogTitle>Ajouter un bien — {step === 1 ? "Informations" : "Coût d'acquisition"}</DialogTitle>
+          </DialogHeader>
+          <StepIndicator />
+          {step === 1 ? renderStep1() : renderStep2()}
+          <DialogFooter className="gap-2 sm:gap-2">
+            {step === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
+                <Button onClick={() => setStep(2)} disabled={!step1Valid}>Suivant</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
+                <Button onClick={handleSave} disabled={saving || !step1Valid}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -499,14 +511,26 @@ export default function Properties() {
       {/* Edit property */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
-          {propertyFormDialog(true)}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
-            <Button onClick={handleEdit} disabled={saving || !form.name || !form.city_id}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
+          <DialogHeader>
+            <DialogTitle>Modifier le bien — {step === 1 ? "Informations" : "Coût d'acquisition"}</DialogTitle>
+          </DialogHeader>
+          <StepIndicator />
+          {step === 1 ? renderStep1() : renderStep2()}
+          <DialogFooter className="gap-2 sm:gap-2">
+            {step === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
+                <Button onClick={() => setStep(2)} disabled={!step1Valid}>Suivant</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
+                <Button onClick={handleEdit} disabled={saving || !step1Valid}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
