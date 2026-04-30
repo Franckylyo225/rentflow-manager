@@ -42,7 +42,7 @@ export default function Properties() {
   const [saving, setSaving] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [deletingProperty, setDeletingProperty] = useState<any>(null);
-  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
   const [cityForm, setCityForm] = useState({ name: "", country_id: "" });
   const [countryForm, setCountryForm] = useState({ name: "", code: "" });
   const [searchParams, setSearchParams] = useSearchParams();
