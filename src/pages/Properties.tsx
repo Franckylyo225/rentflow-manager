@@ -110,6 +110,9 @@ export default function Properties() {
       address: form.address,
       description: form.description,
       type: form.type,
+      acquisition_cost: parseInt(form.acquisition_cost) || 0,
+      notary_fees: parseInt(form.notary_fees) || 0,
+      acquisition_date: form.acquisition_date || null,
     }).eq("id", editingProperty.id);
     setSaving(false);
     if (error) {
