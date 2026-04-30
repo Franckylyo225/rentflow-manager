@@ -967,36 +967,45 @@ export type Database = {
       }
       properties: {
         Row: {
+          acquisition_cost: number
+          acquisition_date: string | null
           address: string
           city_id: string
           created_at: string
           description: string | null
           id: string
           name: string
+          notary_fees: number
           organization_id: string
           patrimony_asset_id: string | null
           type: string
           updated_at: string
         }
         Insert: {
+          acquisition_cost?: number
+          acquisition_date?: string | null
           address?: string
           city_id: string
           created_at?: string
           description?: string | null
           id?: string
           name: string
+          notary_fees?: number
           organization_id: string
           patrimony_asset_id?: string | null
           type?: string
           updated_at?: string
         }
         Update: {
+          acquisition_cost?: number
+          acquisition_date?: string | null
           address?: string
           city_id?: string
           created_at?: string
           description?: string | null
           id?: string
           name?: string
+          notary_fees?: number
           organization_id?: string
           patrimony_asset_id?: string | null
           type?: string

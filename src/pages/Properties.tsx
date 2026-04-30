@@ -42,7 +42,7 @@ export default function Properties() {
   const [saving, setSaving] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [deletingProperty, setDeletingProperty] = useState<any>(null);
-  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+  const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
   const [cityForm, setCityForm] = useState({ name: "", country_id: "" });
   const [countryForm, setCountryForm] = useState({ name: "", code: "" });
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,7 +50,7 @@ export default function Properties() {
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
-      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
       setShowAdd(true);
       setSearchParams({}, { replace: true });
     }
@@ -86,6 +86,9 @@ export default function Properties() {
       description: form.description,
       type: form.type,
       organization_id: profile.organization_id,
+      acquisition_cost: parseInt(form.acquisition_cost) || 0,
+      notary_fees: parseInt(form.notary_fees) || 0,
+      acquisition_date: form.acquisition_date || null,
     });
     setSaving(false);
     if (error) {
@@ -93,7 +96,7 @@ export default function Properties() {
     } else {
       toast.success("Bien créé avec succès");
       setShowAdd(false);
-      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
       refetch();
     }
   };
@@ -107,6 +110,9 @@ export default function Properties() {
       address: form.address,
       description: form.description,
       type: form.type,
+      acquisition_cost: parseInt(form.acquisition_cost) || 0,
+      notary_fees: parseInt(form.notary_fees) || 0,
+      acquisition_date: form.acquisition_date || null,
     }).eq("id", editingProperty.id);
     setSaving(false);
     if (error) {
@@ -208,6 +214,9 @@ export default function Properties() {
       address: property.address,
       description: property.description || "",
       type: property.type || "immeuble",
+      acquisition_cost: property.acquisition_cost ? String(property.acquisition_cost) : "",
+      notary_fees: property.notary_fees ? String(property.notary_fees) : "",
+      acquisition_date: property.acquisition_date || "",
     });
     setShowEdit(true);
   };
@@ -302,6 +311,27 @@ export default function Properties() {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
       </div>
+      <div className="border-t border-border pt-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Landmark className="h-4 w-4 text-emerald-600" />
+          <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label className="text-xs">Prix d'achat (FCFA)</Label>
+            <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
+            <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Date d'acquisition</Label>
+          <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+        </div>
+        <p className="text-xs text-muted-foreground">Ces données permettent de calculer la rentabilité et le plan d'amortissement.</p>
+      </div>
     </div>
   );
 
@@ -313,7 +343,7 @@ export default function Properties() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Biens immobiliers</h1>
             <p className="text-muted-foreground text-sm mt-1">{properties.length} biens · {cities.length} villes</p>
           </div>
-          <Button className="gap-2 self-start" onClick={() => { setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" }); setShowAdd(true); }}>
+          <Button className="gap-2 self-start" onClick={() => { setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" }); setShowAdd(true); }}>
             <Plus className="h-4 w-4" /> Ajouter un bien
           </Button>
         </div>
@@ -428,7 +458,7 @@ export default function Properties() {
 
       {/* Add property */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
           {propertyFormDialog(false)}
           <DialogFooter>
@@ -443,7 +473,7 @@ export default function Properties() {
 
       {/* Edit property */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
           {propertyFormDialog(true)}
           <DialogFooter>

@@ -4,7 +4,9 @@ import { useUnits } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2, TrendingUp, FileDown, Landmark, Target, Calendar } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -16,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { computeProfitability, generatePropertyReport } from "@/lib/generatePropertyReport";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -29,6 +33,8 @@ export default function PropertyDetail() {
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
   const [propLoading, setPropLoading] = useState(true);
+  const [totalCollected, setTotalCollected] = useState(0);
+  const { settings } = useOrganizationSettings();
 
   const { data: propertyUnits, loading: unitsLoading, refetch: refetchUnits } = useUnits(id);
 
@@ -39,6 +45,26 @@ export default function PropertyDetail() {
       setPropLoading(false);
     });
   }, [id]);
+
+  // Fetch total rent collected for this property
+  useEffect(() => {
+    if (!id || propertyUnits.length === 0) {
+      setTotalCollected(0);
+      return;
+    }
+    (async () => {
+      const unitIds = propertyUnits.map(u => u.id);
+      const { data: tenants } = await supabase.from("tenants").select("id").in("unit_id", unitIds);
+      const tenantIds = (tenants || []).map(t => t.id);
+      if (tenantIds.length === 0) { setTotalCollected(0); return; }
+      const { data: payments } = await supabase
+        .from("rent_payments")
+        .select("paid_amount")
+        .in("tenant_id", tenantIds);
+      const sum = (payments || []).reduce((s, p) => s + (p.paid_amount || 0), 0);
+      setTotalCollected(sum);
+    })();
+  }, [id, propertyUnits]);
 
   if (propLoading) {
     return <AppLayout><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
@@ -60,6 +86,45 @@ export default function PropertyDetail() {
   const occupied = propertyUnits.filter(u => u.status === "occupied").length;
   const vacant = propertyUnits.filter(u => u.status === "vacant").length;
   const totalRevenue = propertyUnits.filter(u => u.status === "occupied").reduce((s, u) => s + u.rent, 0);
+  const monthlyRevenuePotential = propertyUnits.reduce((s, u) => s + u.rent, 0);
+
+  const acquisitionCost = property.acquisition_cost || 0;
+  const notaryFees = property.notary_fees || 0;
+  const totalCost = acquisitionCost + notaryFees;
+  const profitabilityData = computeProfitability({
+    totalCost,
+    totalCollected,
+    monthlyRevenueActual: totalRevenue,
+    acquisitionDate: property.acquisition_date,
+  });
+  const profitabilityPct = Math.min(100, profitabilityData.profitability);
+
+  const handleDownloadReport = () => {
+    if (totalCost === 0) {
+      toast.error("Renseignez d'abord le coût d'acquisition du bien");
+      return;
+    }
+    generatePropertyReport({
+      propertyName: property.name,
+      propertyAddress: property.address,
+      cityName: property.cities?.name,
+      acquisitionCost,
+      notaryFees,
+      totalCost,
+      acquisitionDate: property.acquisition_date,
+      totalUnits: propertyUnits.length,
+      occupiedUnits: occupied,
+      monthlyRevenuePotential,
+      monthlyRevenueActual: totalRevenue,
+      totalCollected,
+      profitability: profitabilityData.profitability,
+      monthsToBreakEven: profitabilityData.monthsToBreakEven,
+      breakEvenDate: profitabilityData.breakEvenDate,
+      amortizationPlan: profitabilityData.amortizationPlan,
+      organizationName: settings?.name,
+    });
+    toast.success("Rapport généré");
+  };
 
   const handleAddUnit = async () => {
     if (!unitForm.name || !unitForm.rent) return;
@@ -185,67 +250,205 @@ export default function PropertyDetail() {
           <StatCard title="Revenus mensuels" value={`${totalRevenue.toLocaleString()}`} icon={DollarSign} subtitle="FCFA" />
         </div>
 
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Unités locatives</h2>
-          <Button size="sm" className="gap-2" onClick={() => { setUnitForm({ name: "", rent: "", charges: "", rooms: "1", floor: "" }); setShowAddUnit(true); }}>
-            <Plus className="h-3.5 w-3.5" /> Ajouter une unité
-          </Button>
-        </div>
+        <Tabs defaultValue="units" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="units" className="gap-2"><Home className="h-3.5 w-3.5" />Unités locatives</TabsTrigger>
+            <TabsTrigger value="profitability" className="gap-2"><TrendingUp className="h-3.5 w-3.5" />Rentabilité</TabsTrigger>
+          </TabsList>
 
-        {unitsLoading ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : propertyUnits.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">Aucune unité. Ajoutez-en une pour commencer.</div>
-        ) : (
-          <Card className="border-border">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">N° Unité</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Pièces</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Étage</th>
-                      <th className="text-right py-3 px-4 text-muted-foreground font-medium">Loyer</th>
-                      <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Charges</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
-                      <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {propertyUnits.map(unit => (
-                      <tr key={unit.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                        <td className="py-3 px-4 font-medium text-card-foreground">{unit.name}</td>
-                        <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{(unit as any).rooms || "—"}</td>
-                        <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{(unit as any).floor != null ? (unit as any).floor : "RDC"}</td>
-                        <td className="py-3 px-4 text-right text-card-foreground">{unit.rent.toLocaleString()} FCFA</td>
-                        <td className="py-3 px-4 text-right text-muted-foreground hidden sm:table-cell">{unit.charges.toLocaleString()} FCFA</td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge variant="outline" className={unit.status === "occupied"
-                            ? "bg-success/10 text-success border-success/20"
-                            : "bg-muted text-muted-foreground border-border"
-                          }>
-                            {unit.status === "occupied" ? "Occupé" : "Vacant"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditUnit(unit)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => openDeleteUnit(unit)} disabled={unit.status === "occupied"}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="units" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Unités locatives</h2>
+              <Button size="sm" className="gap-2" onClick={() => { setUnitForm({ name: "", rent: "", charges: "", rooms: "1", floor: "" }); setShowAddUnit(true); }}>
+                <Plus className="h-3.5 w-3.5" /> Ajouter une unité
+              </Button>
+            </div>
+            {unitsLoading ? (
+              <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : propertyUnits.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">Aucune unité. Ajoutez-en une pour commencer.</div>
+            ) : (
+              <Card className="border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left py-3 px-4 text-muted-foreground font-medium">N° Unité</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Pièces</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium hidden sm:table-cell">Étage</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Loyer</th>
+                          <th className="text-right py-3 px-4 text-muted-foreground font-medium hidden md:table-cell">Charges</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Statut</th>
+                          <th className="text-center py-3 px-4 text-muted-foreground font-medium w-20">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {propertyUnits.map(unit => (
+                          <tr key={unit.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                            <td className="py-3 px-4 font-medium text-card-foreground">{unit.name}</td>
+                            <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{(unit as any).rooms || "—"}</td>
+                            <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{(unit as any).floor != null ? (unit as any).floor : "RDC"}</td>
+                            <td className="py-3 px-4 text-right text-card-foreground">{unit.rent.toLocaleString()} FCFA</td>
+                            <td className="py-3 px-4 text-right text-muted-foreground hidden sm:table-cell">{unit.charges.toLocaleString()} FCFA</td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant="outline" className={unit.status === "occupied"
+                                ? "bg-success/10 text-success border-success/20"
+                                : "bg-muted text-muted-foreground border-border"
+                              }>
+                                {unit.status === "occupied" ? "Occupé" : "Vacant"}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditUnit(unit)}>
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => openDeleteUnit(unit)} disabled={unit.status === "occupied"}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="profitability" className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-lg font-semibold text-foreground">Rentabilité du bien</h2>
+              <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadReport}>
+                <FileDown className="h-3.5 w-3.5" /> Télécharger le rapport PDF
+              </Button>
+            </div>
+
+            {totalCost === 0 ? (
+              <Card className="border-dashed border-border">
+                <CardContent className="py-10 text-center">
+                  <Landmark className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Renseignez le coût d'acquisition pour activer le calcul de rentabilité.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => navigate("/properties")}>
+                    Modifier le bien
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Cost summary */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                        <Landmark className="h-3.5 w-3.5" /> Coût total d'acquisition
+                      </div>
+                      <p className="text-2xl font-bold text-foreground">{totalCost.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Achat : {acquisitionCost.toLocaleString()} · Notaire : {notaryFees.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                        <DollarSign className="h-3.5 w-3.5" /> Cumul loyers perçus
+                      </div>
+                      <p className="text-2xl font-bold text-emerald-600">{totalCollected.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Revenu mensuel actuel : {totalRevenue.toLocaleString()} FCFA
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                        <Target className="h-3.5 w-3.5" /> Rentabilité
+                      </div>
+                      <p className="text-2xl font-bold text-foreground">{profitabilityData.profitability.toFixed(1)} %</p>
+                      <Progress value={profitabilityPct} className="mt-2 h-2" />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Break-even */}
+                <Card className="border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="rounded-full bg-amber-500/10 p-3">
+                      <Calendar className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground text-sm">Date estimée de rentabilité</h3>
+                      {profitabilityData.monthsToBreakEven === 0 ? (
+                        <p className="text-sm text-emerald-600 mt-1">✓ Le bien est déjà rentabilisé !</p>
+                      ) : profitabilityData.monthsToBreakEven && profitabilityData.breakEvenDate ? (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Dans <span className="font-semibold text-foreground">
+                            {Math.floor(profitabilityData.monthsToBreakEven / 12)} an(s) {profitabilityData.monthsToBreakEven % 12} mois
+                          </span> — soit <span className="font-semibold text-foreground capitalize">{profitabilityData.breakEvenDate}</span>
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Aucun revenu locatif actif — projection impossible.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Amortization plan */}
+                {profitabilityData.amortizationPlan.length > 0 && (
+                  <Card className="border-border">
+                    <CardContent className="p-0">
+                      <div className="px-4 py-3 border-b border-border">
+                        <h3 className="font-semibold text-foreground text-sm">Plan d'amortissement (jalons annuels)</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">Projection basée sur le loyer mensuel actuel ({totalRevenue.toLocaleString()} FCFA)</p>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/50">
+                              <th className="text-left py-2 px-4 text-muted-foreground font-medium">Année</th>
+                              <th className="text-left py-2 px-4 text-muted-foreground font-medium">Échéance</th>
+                              <th className="text-right py-2 px-4 text-muted-foreground font-medium">Cumul perçu</th>
+                              <th className="text-right py-2 px-4 text-muted-foreground font-medium hidden sm:table-cell">Restant</th>
+                              <th className="text-right py-2 px-4 text-muted-foreground font-medium">%</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {profitabilityData.amortizationPlan
+                              .filter((r, i) => r.month % 12 === 0 || i === profitabilityData.amortizationPlan.length - 1)
+                              .map((row) => {
+                                const pct = Math.min(100, (row.cumulativeRevenue / totalCost) * 100);
+                                return (
+                                  <tr key={row.month} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                                    <td className="py-2 px-4 font-medium text-card-foreground">An {Math.ceil(row.month / 12)}</td>
+                                    <td className="py-2 px-4 text-muted-foreground capitalize">{row.date}</td>
+                                    <td className="py-2 px-4 text-right text-emerald-600 font-medium">{row.cumulativeRevenue.toLocaleString()}</td>
+                                    <td className="py-2 px-4 text-right text-muted-foreground hidden sm:table-cell">{Math.max(0, row.remaining).toLocaleString()}</td>
+                                    <td className="py-2 px-4 text-right">
+                                      <span className={pct >= 100 ? "text-emerald-600 font-semibold" : "text-foreground"}>
+                                        {pct.toFixed(0)}%
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add unit */}
