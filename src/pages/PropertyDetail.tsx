@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2, TrendingUp, FileDown, Landmark, Target, Calendar } from "lucide-react";
+import { ArrowLeft, Building2, Home, Plus, Users, DollarSign, Edit, Trash2, Loader2, TrendingUp, FileDown, Landmark, Target, Calendar, Receipt } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -34,6 +34,7 @@ export default function PropertyDetail() {
   const [property, setProperty] = useState<any>(null);
   const [propLoading, setPropLoading] = useState(true);
   const [totalCollected, setTotalCollected] = useState(0);
+  const [propertyExpenses, setPropertyExpenses] = useState<any[]>([]);
   const { settings } = useOrganizationSettings();
 
   // Bulk add state
@@ -79,6 +80,17 @@ export default function PropertyDetail() {
       setTotalCollected(sum);
     })();
   }, [id, propertyUnits]);
+
+  // Fetch expenses for this property
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from("expenses")
+      .select("*, expense_categories(name), units(id, name)")
+      .eq("property_id", id)
+      .order("expense_date", { ascending: false })
+      .then(({ data }) => setPropertyExpenses(data || []));
+  }, [id]);
 
   if (propLoading) {
     return <AppLayout><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
