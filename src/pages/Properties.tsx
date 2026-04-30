@@ -45,16 +45,24 @@ export default function Properties() {
   const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
   const [cityForm, setCityForm] = useState({ name: "", country_id: "" });
   const [countryForm, setCountryForm] = useState({ name: "", code: "" });
+  const [step, setStep] = useState<1 | 2>(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
       setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
+      setStep(1);
       setShowAdd(true);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams]);
+
+  // Reset step when dialogs close
+  useEffect(() => { if (!showAdd) setStep(1); }, [showAdd]);
+  useEffect(() => { if (!showEdit) setStep(1); }, [showEdit]);
+
+  const step1Valid = !!form.name && !!form.city_id;
 
   const { data: properties, loading, refetch } = useProperties();
   const { data: cities, refetch: refetchCities } = useCities();
@@ -265,7 +273,7 @@ export default function Properties() {
     }
   };
 
-  const propertyFormDialog = (isEdit: boolean) => (
+  const renderStep1 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Type de bien</Label>
@@ -311,26 +319,43 @@ export default function Properties() {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
       </div>
-      <div className="border-t border-border pt-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Landmark className="h-4 w-4 text-emerald-600" />
-          <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label className="text-xs">Prix d'achat (FCFA)</Label>
-            <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
-            <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
-          </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Landmark className="h-4 w-4 text-emerald-600" />
+        <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
+      </div>
+      <p className="text-xs text-muted-foreground">Optionnel — permet de calculer la rentabilité et le plan d'amortissement. Vous pouvez compléter plus tard.</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs">Prix d'achat (FCFA)</Label>
+          <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs">Date d'acquisition</Label>
-          <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+          <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
+          <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
         </div>
-        <p className="text-xs text-muted-foreground">Ces données permettent de calculer la rentabilité et le plan d'amortissement.</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs">Date d'acquisition</Label>
+        <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+      </div>
+    </div>
+  );
+
+  const StepIndicator = () => (
+    <div className="flex items-center gap-2 text-xs pb-2">
+      <div className={`flex items-center gap-1.5 ${step === 1 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+        <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-semibold ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>1</span>
+        Informations
+      </div>
+      <div className="h-px flex-1 bg-border" />
+      <div className={`flex items-center gap-1.5 ${step === 2 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+        <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-semibold ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>2</span>
+        Coût d'acquisition
       </div>
     </div>
   );
@@ -459,14 +484,26 @@ export default function Properties() {
       {/* Add property */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
-          {propertyFormDialog(false)}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving || !form.name || !form.city_id}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
+          <DialogHeader>
+            <DialogTitle>Ajouter un bien — {step === 1 ? "Informations" : "Coût d'acquisition"}</DialogTitle>
+          </DialogHeader>
+          <StepIndicator />
+          {step === 1 ? renderStep1() : renderStep2()}
+          <DialogFooter className="gap-2 sm:gap-2">
+            {step === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
+                <Button onClick={() => setStep(2)} disabled={!step1Valid}>Suivant</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
+                <Button onClick={handleSave} disabled={saving || !step1Valid}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -474,14 +511,26 @@ export default function Properties() {
       {/* Edit property */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
-          {propertyFormDialog(true)}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
-            <Button onClick={handleEdit} disabled={saving || !form.name || !form.city_id}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Enregistrer
-            </Button>
+          <DialogHeader>
+            <DialogTitle>Modifier le bien — {step === 1 ? "Informations" : "Coût d'acquisition"}</DialogTitle>
+          </DialogHeader>
+          <StepIndicator />
+          {step === 1 ? renderStep1() : renderStep2()}
+          <DialogFooter className="gap-2 sm:gap-2">
+            {step === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
+                <Button onClick={() => setStep(2)} disabled={!step1Valid}>Suivant</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
+                <Button onClick={handleEdit} disabled={saving || !step1Valid}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
