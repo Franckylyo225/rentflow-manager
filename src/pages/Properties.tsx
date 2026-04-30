@@ -50,7 +50,7 @@ export default function Properties() {
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
-      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
       setShowAdd(true);
       setSearchParams({}, { replace: true });
     }
