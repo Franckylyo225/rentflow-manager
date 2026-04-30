@@ -322,7 +322,7 @@ export default function Properties() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Biens immobiliers</h1>
             <p className="text-muted-foreground text-sm mt-1">{properties.length} biens · {cities.length} villes</p>
           </div>
-          <Button className="gap-2 self-start" onClick={() => { setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" }); setShowAdd(true); }}>
+          <Button className="gap-2 self-start" onClick={() => { setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" }); setShowAdd(true); }}>
             <Plus className="h-4 w-4" /> Ajouter un bien
           </Button>
         </div>
