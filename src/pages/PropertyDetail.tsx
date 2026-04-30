@@ -36,6 +36,20 @@ export default function PropertyDetail() {
   const [totalCollected, setTotalCollected] = useState(0);
   const { settings } = useOrganizationSettings();
 
+  // Bulk add state
+  const [addMode, setAddMode] = useState<"single" | "bulk">("single");
+  const [bulkConfig, setBulkConfig] = useState({
+    prefix: "Apt ",
+    startNumber: "1",
+    count: "5",
+    rooms: "1",
+    floor: "",
+    charges: "",
+    rentMode: "same" as "same" | "different",
+    rentSame: "",
+  });
+  const [bulkRows, setBulkRows] = useState<{ name: string; rent: string; floor: string }[]>([]);
+
   const { data: propertyUnits, loading: unitsLoading, refetch: refetchUnits } = useUnits(id);
 
   useEffect(() => {
