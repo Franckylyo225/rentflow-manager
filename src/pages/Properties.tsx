@@ -273,7 +273,7 @@ export default function Properties() {
     }
   };
 
-  const propertyFormDialog = (isEdit: boolean) => (
+  const renderStep1 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Type de bien</Label>
@@ -319,26 +319,43 @@ export default function Properties() {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
       </div>
-      <div className="border-t border-border pt-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Landmark className="h-4 w-4 text-emerald-600" />
-          <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label className="text-xs">Prix d'achat (FCFA)</Label>
-            <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
-            <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
-          </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Landmark className="h-4 w-4 text-emerald-600" />
+        <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
+      </div>
+      <p className="text-xs text-muted-foreground">Optionnel — permet de calculer la rentabilité et le plan d'amortissement. Vous pouvez compléter plus tard.</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs">Prix d'achat (FCFA)</Label>
+          <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs">Date d'acquisition</Label>
-          <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+          <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
+          <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
         </div>
-        <p className="text-xs text-muted-foreground">Ces données permettent de calculer la rentabilité et le plan d'amortissement.</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs">Date d'acquisition</Label>
+        <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+      </div>
+    </div>
+  );
+
+  const StepIndicator = () => (
+    <div className="flex items-center gap-2 text-xs pb-2">
+      <div className={`flex items-center gap-1.5 ${step === 1 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+        <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-semibold ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>1</span>
+        Informations
+      </div>
+      <div className="h-px flex-1 bg-border" />
+      <div className={`flex items-center gap-1.5 ${step === 2 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+        <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-semibold ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>2</span>
+        Coût d'acquisition
       </div>
     </div>
   );
