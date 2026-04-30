@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Loader2, Receipt, Trash2 } from "lucide-react";
+import { Plus, Search, Loader2, Receipt, Trash2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,13 +38,15 @@ export default function Expenses() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [form, setForm] = useState({
+  const emptyForm = {
     category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0],
     description: "", expense_type: "variable", frequency: "unique",
     property_id: "", unit_id: "", city_id: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
   const { data: unitsForProperty } = useUnits(form.property_id && form.property_id !== "none" ? form.property_id : undefined);
 
   useEffect(() => {
@@ -70,8 +72,7 @@ export default function Expenses() {
   const handleSave = async () => {
     if (!form.category_id || !form.amount) return;
     setSaving(true);
-    const { error } = await supabase.from("expenses").insert({
-      organization_id: profile?.organization_id,
+    const payload = {
       category_id: form.category_id,
       amount: parseInt(form.amount),
       expense_date: form.expense_date,
@@ -81,13 +82,33 @@ export default function Expenses() {
       property_id: form.property_id && form.property_id !== "none" ? form.property_id : null,
       unit_id: form.unit_id && form.unit_id !== "none" ? form.unit_id : null,
       city_id: form.city_id && form.city_id !== "none" ? form.city_id : null,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from("expenses").update(payload).eq("id", editingId)
+      : await supabase.from("expenses").insert({ ...payload, organization_id: profile?.organization_id });
     if (error) { toast.error("Erreur : " + error.message); setSaving(false); return; }
-    toast.success("Dépense ajoutée");
+    toast.success(editingId ? "Dépense modifiée" : "Dépense ajoutée");
     setShowAdd(false);
-    setForm({ category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0], description: "", expense_type: "variable", frequency: "unique", property_id: "", unit_id: "", city_id: "" });
+    setEditingId(null);
+    setForm(emptyForm);
     setSaving(false);
     refetch();
+  };
+
+  const openEdit = (e: any) => {
+    setEditingId(e.id);
+    setForm({
+      category_id: e.category_id || "",
+      amount: e.amount?.toString() || "",
+      expense_date: e.expense_date || new Date().toISOString().split("T")[0],
+      description: e.description || "",
+      expense_type: e.expense_type || "variable",
+      frequency: e.frequency || "unique",
+      property_id: e.property_id || "",
+      unit_id: e.unit_id || "",
+      city_id: e.city_id || "",
+    });
+    setShowAdd(true);
   };
 
   const handleDelete = async (id: string) => {
