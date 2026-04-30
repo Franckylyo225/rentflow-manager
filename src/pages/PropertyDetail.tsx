@@ -390,6 +390,121 @@ export default function PropertyDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="expenses" className="space-y-4">
+            {(() => {
+              const totalExpenses = propertyExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+              const byUnit = new Map<string, { name: string; total: number; count: number }>();
+              const propertyLevel = { total: 0, count: 0 };
+              for (const e of propertyExpenses) {
+                if (e.unit_id) {
+                  const cur = byUnit.get(e.unit_id) || { name: e.units?.name || "Unité", total: 0, count: 0 };
+                  cur.total += e.amount || 0;
+                  cur.count += 1;
+                  cur.name = e.units?.name || cur.name;
+                  byUnit.set(e.unit_id, cur);
+                } else {
+                  propertyLevel.total += e.amount || 0;
+                  propertyLevel.count += 1;
+                }
+              }
+              // Include units with zero expenses
+              for (const u of propertyUnits) {
+                if (!byUnit.has(u.id)) byUnit.set(u.id, { name: u.name, total: 0, count: 0 });
+              }
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-border">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><Receipt className="h-3.5 w-3.5" /> Total dépenses du bien</div>
+                        <p className="text-2xl font-bold text-foreground">{totalExpenses.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                        <p className="text-xs text-muted-foreground mt-1">{propertyExpenses.length} dépense(s)</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-border">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><Building2 className="h-3.5 w-3.5" /> Bien entier (non rattaché)</div>
+                        <p className="text-2xl font-bold text-foreground">{propertyLevel.total.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                        <p className="text-xs text-muted-foreground mt-1">{propertyLevel.count} dépense(s)</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-border">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><Home className="h-3.5 w-3.5" /> Rattachées aux unités</div>
+                        <p className="text-2xl font-bold text-foreground">{(totalExpenses - propertyLevel.total).toLocaleString()} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
+                        <p className="text-xs text-muted-foreground mt-1">{propertyExpenses.length - propertyLevel.count} dépense(s)</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card className="border-border">
+                    <CardContent className="p-0">
+                      <div className="px-4 py-3 border-b border-border">
+                        <h3 className="font-semibold text-foreground text-sm">Récapitulatif par unité</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/50">
+                              <th className="text-left py-2 px-4 text-muted-foreground font-medium">Unité</th>
+                              <th className="text-center py-2 px-4 text-muted-foreground font-medium">Nombre</th>
+                              <th className="text-right py-2 px-4 text-muted-foreground font-medium">Total dépenses</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from(byUnit.entries()).map(([uid, u]) => (
+                              <tr key={uid} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                                <td className="py-2 px-4 font-medium text-card-foreground">{u.name}</td>
+                                <td className="py-2 px-4 text-center text-muted-foreground">{u.count}</td>
+                                <td className="py-2 px-4 text-right text-card-foreground">{u.total.toLocaleString()} FCFA</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-border">
+                    <CardContent className="p-0">
+                      <div className="px-4 py-3 border-b border-border">
+                        <h3 className="font-semibold text-foreground text-sm">Détail des dépenses</h3>
+                      </div>
+                      {propertyExpenses.length === 0 ? (
+                        <div className="text-center py-10 text-muted-foreground text-sm">Aucune dépense enregistrée pour ce bien.</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-border bg-muted/50">
+                                <th className="text-left py-2 px-4 text-muted-foreground font-medium">Date</th>
+                                <th className="text-left py-2 px-4 text-muted-foreground font-medium">Catégorie</th>
+                                <th className="text-left py-2 px-4 text-muted-foreground font-medium">Unité</th>
+                                <th className="text-left py-2 px-4 text-muted-foreground font-medium hidden md:table-cell">Description</th>
+                                <th className="text-right py-2 px-4 text-muted-foreground font-medium">Montant</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {propertyExpenses.map(e => (
+                                <tr key={e.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                                  <td className="py-2 px-4 text-card-foreground">{new Date(e.expense_date).toLocaleDateString("fr-FR")}</td>
+                                  <td className="py-2 px-4"><Badge variant="outline" className="text-xs">{e.expense_categories?.name}</Badge></td>
+                                  <td className="py-2 px-4 text-muted-foreground">{e.units?.name || <span className="italic">Bien entier</span>}</td>
+                                  <td className="py-2 px-4 text-muted-foreground hidden md:table-cell truncate max-w-48">{e.description || "—"}</td>
+                                  <td className="py-2 px-4 text-right text-card-foreground">{e.amount.toLocaleString()} FCFA</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              );
+            })()}
+          </TabsContent>
+
           <TabsContent value="profitability" className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h2 className="text-lg font-semibold text-foreground">Rentabilité du bien</h2>
