@@ -458,7 +458,7 @@ export default function Properties() {
 
       {/* Add property */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
           {propertyFormDialog(false)}
           <DialogFooter>
@@ -473,7 +473,7 @@ export default function Properties() {
 
       {/* Edit property */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
           {propertyFormDialog(true)}
           <DialogFooter>
