@@ -15,6 +15,7 @@ export interface DbExpense {
   organization_id: string;
   category_id: string;
   property_id: string | null;
+  unit_id: string | null;
   city_id: string | null;
   country_id: string | null;
   amount: number;
@@ -28,6 +29,7 @@ export interface DbExpense {
   updated_at: string;
   expense_categories?: { name: string };
   properties?: { name: string } | null;
+  units?: { name: string } | null;
   cities?: { name: string } | null;
   employees?: { full_name: string } | null;
 }
@@ -77,7 +79,7 @@ export function useExpenses() {
     setLoading(true);
     const { data: result } = await supabase
       .from("expenses")
-      .select("*, expense_categories(name), properties(name), cities(name), employees(full_name)")
+      .select("*, expense_categories(name), properties(name), units(name), cities(name), employees(full_name)")
       .order("expense_date", { ascending: false });
     if (result) setData(result as any);
     setLoading(false);

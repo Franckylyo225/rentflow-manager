@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useExpenses, useExpenseCategories } from "@/hooks/useExpenses";
-import { useProperties, useCities } from "@/hooks/useData";
+import { useProperties, useCities, useUnits } from "@/hooks/useData";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,8 +43,9 @@ export default function Expenses() {
   const [form, setForm] = useState({
     category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0],
     description: "", expense_type: "variable", frequency: "unique",
-    property_id: "", city_id: "",
+    property_id: "", unit_id: "", city_id: "",
   });
+  const { data: unitsForProperty } = useUnits(form.property_id && form.property_id !== "none" ? form.property_id : undefined);
 
   useEffect(() => {
     if (searchParams.get("action") === "new") {
@@ -78,12 +79,13 @@ export default function Expenses() {
       expense_type: form.expense_type,
       frequency: form.frequency,
       property_id: form.property_id && form.property_id !== "none" ? form.property_id : null,
+      unit_id: form.unit_id && form.unit_id !== "none" ? form.unit_id : null,
       city_id: form.city_id && form.city_id !== "none" ? form.city_id : null,
     });
     if (error) { toast.error("Erreur : " + error.message); setSaving(false); return; }
     toast.success("Dépense ajoutée");
     setShowAdd(false);
-    setForm({ category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0], description: "", expense_type: "variable", frequency: "unique", property_id: "", city_id: "" });
+    setForm({ category_id: "", amount: "", expense_date: new Date().toISOString().split("T")[0], description: "", expense_type: "variable", frequency: "unique", property_id: "", unit_id: "", city_id: "" });
     setSaving(false);
     refetch();
   };
@@ -163,7 +165,11 @@ export default function Expenses() {
                           <Badge variant="outline" className="text-xs">{e.expense_categories?.name}</Badge>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground hidden md:table-cell truncate max-w-48">{e.description || "—"}</td>
-                        <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{e.properties?.name || "—"}</td>
+                        <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">
+                          {e.properties?.name ? (
+                            <span>{e.properties.name}{e.units?.name ? <span className="text-xs"> · {e.units.name}</span> : null}</span>
+                          ) : "—"}
+                        </td>
                         <td className="py-3 px-4 text-center hidden sm:table-cell">
                           <Badge variant={e.expense_type === "fixe" ? "default" : "secondary"} className="text-xs">
                             {e.expense_type === "fixe" ? "Fixe" : "Variable"}
@@ -243,15 +249,31 @@ export default function Expenses() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Bien (optionnel)</Label>
-              <Select value={form.property_id} onValueChange={v => setForm(f => ({ ...f, property_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Bien (optionnel)</Label>
+                <Select value={form.property_id} onValueChange={v => setForm(f => ({ ...f, property_id: v, unit_id: "" }))}>
+                  <SelectTrigger><SelectValue placeholder="Optionnel" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Unité (optionnel)</Label>
+                <Select
+                  value={form.unit_id}
+                  onValueChange={v => setForm(f => ({ ...f, unit_id: v }))}
+                  disabled={!form.property_id || form.property_id === "none"}
+                >
+                  <SelectTrigger><SelectValue placeholder={!form.property_id || form.property_id === "none" ? "Choisir un bien d'abord" : "Toutes les unités"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Bien entier (aucune unité spécifique)</SelectItem>
+                    {unitsForProperty.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
