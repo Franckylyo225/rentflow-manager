@@ -43,7 +43,6 @@ export default function Properties() {
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [deletingProperty, setDeletingProperty] = useState<any>(null);
   const [form, setForm] = useState({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
-  const [step, setStep] = useState<1 | 2>(1);
   const [cityForm, setCityForm] = useState({ name: "", country_id: "" });
   const [countryForm, setCountryForm] = useState({ name: "", code: "" });
   const [searchParams, setSearchParams] = useSearchParams();
@@ -268,91 +267,71 @@ export default function Properties() {
 
   const propertyFormDialog = (isEdit: boolean) => (
     <div className="space-y-4">
-      {/* Stepper */}
-      <div className="flex items-center gap-2 pb-2">
-        <div className={`flex items-center gap-2 flex-1 ${step === 1 ? "text-foreground" : "text-muted-foreground"}`}>
-          <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>1</div>
-          <span className="text-xs font-medium">Informations</span>
-        </div>
-        <div className="h-px flex-1 bg-border" />
-        <div className={`flex items-center gap-2 flex-1 justify-end ${step === 2 ? "text-foreground" : "text-muted-foreground"}`}>
-          <span className="text-xs font-medium">Coût d'acquisition</span>
-          <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>2</div>
-        </div>
+      <div className="space-y-2">
+        <Label>Type de bien</Label>
+        <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
+          <SelectTrigger><SelectValue placeholder="Type de bien" /></SelectTrigger>
+          <SelectContent>
+            {PROPERTY_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
-
-      {step === 1 && (
-        <>
-          <div className="space-y-2">
-            <Label>Type de bien</Label>
-            <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-              <SelectTrigger><SelectValue placeholder="Type de bien" /></SelectTrigger>
-              <SelectContent>
-                {PROPERTY_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Ville</Label>
+          <div className="flex gap-1">
+            <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setShowAddCountry(true)}>
+              <Globe className="h-3 w-3" /> Pays
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setShowAddCity(true)}>
+              <MapPin className="h-3 w-3" /> Ville
+            </Button>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Ville</Label>
-              <div className="flex gap-1">
-                <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setShowAddCountry(true)}>
-                  <Globe className="h-3 w-3" /> Pays
-                </Button>
-                <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setShowAddCity(true)}>
-                  <MapPin className="h-3 w-3" /> Ville
-                </Button>
-              </div>
-            </div>
-            <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
-              <SelectContent>
-                {cities.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}{c.countries?.name ? ` (${c.countries.name})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Nom du bien</Label>
-            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Résidence Les Palmiers" />
-          </div>
-          <div className="space-y-2">
-            <Label>Adresse</Label>
-            <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ex: 12 Bd de France, Cocody" />
-          </div>
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
-          </div>
-        </>
-      )}
-
-      {step === 2 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Landmark className="h-4 w-4 text-emerald-600" />
-            <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Prix d'achat (FCFA)</Label>
-              <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
-              <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Date d'acquisition</Label>
-            <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
-          </div>
-          <p className="text-xs text-muted-foreground">Ces données permettent de calculer la rentabilité et le plan d'amortissement. Vous pouvez les renseigner plus tard.</p>
         </div>
-      )}
+        <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
+          <SelectTrigger><SelectValue placeholder="Sélectionner une ville" /></SelectTrigger>
+          <SelectContent>
+            {cities.map(c => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}{c.countries?.name ? ` (${c.countries.name})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Nom du bien</Label>
+        <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Résidence Les Palmiers" />
+      </div>
+      <div className="space-y-2">
+        <Label>Adresse</Label>
+        <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ex: 12 Bd de France, Cocody" />
+      </div>
+      <div className="space-y-2">
+        <Label>Description</Label>
+        <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description du bien..." rows={3} />
+      </div>
+      <div className="border-t border-border pt-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Landmark className="h-4 w-4 text-emerald-600" />
+          <h4 className="text-sm font-semibold text-foreground">Coût d'acquisition (rentabilité)</h4>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label className="text-xs">Prix d'achat (FCFA)</Label>
+            <Input type="number" min="0" value={form.acquisition_cost} onChange={e => setForm(f => ({ ...f, acquisition_cost: e.target.value }))} placeholder="Ex: 50000000" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Frais notaire & charges (FCFA)</Label>
+            <Input type="number" min="0" value={form.notary_fees} onChange={e => setForm(f => ({ ...f, notary_fees: e.target.value }))} placeholder="Ex: 3500000" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Date d'acquisition</Label>
+          <Input type="date" value={form.acquisition_date} onChange={e => setForm(f => ({ ...f, acquisition_date: e.target.value }))} />
+        </div>
+        <p className="text-xs text-muted-foreground">Ces données permettent de calculer la rentabilité et le plan d'amortissement.</p>
+      </div>
     </div>
   );
 
@@ -478,49 +457,31 @@ export default function Properties() {
       </div>
 
       {/* Add property */}
-      <Dialog open={showAdd} onOpenChange={(o) => { setShowAdd(o); if (!o) setStep(1); }}>
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Ajouter un bien — Étape {step}/2</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Ajouter un bien</DialogTitle></DialogHeader>
           {propertyFormDialog(false)}
           <DialogFooter>
-            {step === 1 ? (
-              <>
-                <Button variant="outline" onClick={() => { setShowAdd(false); setStep(1); }}>Annuler</Button>
-                <Button onClick={() => setStep(2)} disabled={!form.name || !form.city_id}>Suivant</Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
-                <Button onClick={async () => { await handleSave(); setStep(1); }} disabled={saving || !form.name || !form.city_id}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Enregistrer
-                </Button>
-              </>
-            )}
+            <Button variant="outline" onClick={() => setShowAdd(false)}>Annuler</Button>
+            <Button onClick={handleSave} disabled={saving || !form.name || !form.city_id}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit property */}
-      <Dialog open={showEdit} onOpenChange={(o) => { setShowEdit(o); if (!o) setStep(1); }}>
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Modifier le bien — Étape {step}/2</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Modifier le bien</DialogTitle></DialogHeader>
           {propertyFormDialog(true)}
           <DialogFooter>
-            {step === 1 ? (
-              <>
-                <Button variant="outline" onClick={() => { setShowEdit(false); setStep(1); }}>Annuler</Button>
-                <Button onClick={() => setStep(2)} disabled={!form.name || !form.city_id}>Suivant</Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => setStep(1)}>Précédent</Button>
-                <Button onClick={async () => { await handleEdit(); setStep(1); }} disabled={saving || !form.name || !form.city_id}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Enregistrer
-                </Button>
-              </>
-            )}
+            <Button variant="outline" onClick={() => setShowEdit(false)}>Annuler</Button>
+            <Button onClick={handleEdit} disabled={saving || !form.name || !form.city_id}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
