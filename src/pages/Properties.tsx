@@ -86,6 +86,9 @@ export default function Properties() {
       description: form.description,
       type: form.type,
       organization_id: profile.organization_id,
+      acquisition_cost: parseInt(form.acquisition_cost) || 0,
+      notary_fees: parseInt(form.notary_fees) || 0,
+      acquisition_date: form.acquisition_date || null,
     });
     setSaving(false);
     if (error) {
@@ -93,7 +96,7 @@ export default function Properties() {
     } else {
       toast.success("Bien créé avec succès");
       setShowAdd(false);
-      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble" });
+      setForm({ city_id: "", name: "", address: "", description: "", type: "immeuble", acquisition_cost: "", notary_fees: "", acquisition_date: "" });
       refetch();
     }
   };
