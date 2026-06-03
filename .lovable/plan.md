@@ -1,46 +1,93 @@
-## Refonte du Paiement Anticipé — Sélection de mois & blocage des arriérés
+## Objectif
 
-### Objectif
-Remplacer le choix "nombre de mois + mois de départ" par une **sélection visuelle des mois** que le locataire souhaite payer. Si des **impayés antérieurs** existent, l'utilisateur doit obligatoirement les régler **avant** de pouvoir cocher des échéances futures.
+Améliorer l'import Excel du Patrimoine pour :
+1. Importer plus de champs : **titulaire**, **N° Ilot**, **N° Lot**, ville, date de création, état de traitement.
+2. **Aperçu éditable** ligne par ligne pour compléter les manques avant import.
+3. Bouton **« Consolider »** : reconnaît les titulaires existants et crée automatiquement les nouveaux.
+4. Ajouter les nouveaux champs **N° Ilot / N° Lot** au formulaire manuel.
 
-### Comportement UX
+## 1. Migration SQL
 
-1. **Au chargement** : la modale charge tous les `rent_payments` du locataire et calcule également les **12 prochains mois** (à venir) qui n'existent pas encore en base.
+Ajout de deux colonnes à `patrimony_assets` :
 
-2. **Affichage en deux sections** :
-   - **Arriérés à régler en priorité** (statuts `pending`, `partial`, `late` dont `due_date < aujourd'hui`)  
-     → Cases **pré-cochées et verrouillées** (impossible de décocher).
-     → Bandeau d'avertissement orange : "Vous devez régler N mois en retard avant tout paiement anticipé".
-   - **Échéances à venir** (mois en cours + futurs)  
-     → Cases **cochables** UNIQUEMENT si tous les arriérés sont sélectionnés (sinon désactivées avec tooltip explicatif).
-     → Sélection contiguë : si l'utilisateur coche le mois N+3, les mois N+1 et N+2 se cochent automatiquement (pas de "trous").
+```sql
+ALTER TABLE public.patrimony_assets
+  ADD COLUMN block_number text NOT NULL DEFAULT '',
+  ADD COLUMN plot_number  text NOT NULL DEFAULT '';
 
-3. **Récapitulatif dynamique** sous la liste :
-   - Nombre total de mois sélectionnés
-   - Détail : "X mois d'arriérés + Y mois d'avance"
-   - Montant total dû (somme des montants de chaque échéance, en tenant compte des paiements partiels déjà effectués)
+CREATE INDEX IF NOT EXISTS idx_patrimony_assets_block_plot
+  ON public.patrimony_assets (organization_id, block_number, plot_number);
+```
 
-4. **Champ Montant** : pré-rempli avec le total, modifiable. Allocation séquentielle conservée (arriérés d'abord, puis futurs).
+Aucun changement de RLS/GRANTs (déjà en place sur la table).
 
-5. **Champs conservés** : date de paiement, méthode, commentaire, upload preuve (si déjà présent).
+## 2. Import Excel — `src/components/patrimoine/PatrimoineExcelImport.tsx`
 
-### Détails techniques
+### Nouveau mapping de colonnes
+Ajouter à `EXPECTED_COLUMNS` + `COLUMN_MAP` (avec alias FR usuels) :
 
-- **Source des arriérés** : `rent_payments` où `status IN ('pending','partial','late')` ET (`due_date <= today` OU `month <= currentMonth`).
-- **Mois futurs proposés** : générer 12 mois à partir du mois courant + 1 ; exclure ceux déjà présents dans `rent_payments`.
-- **Logique de verrouillage** :
-  ```ts
-  const allArrearsSelected = arrears.every(a => selected.has(a.month));
-  // future month checkbox disabled when !allArrearsSelected
-  ```
-- **Contiguïté future** : au clic sur un mois futur, cocher tous les mois futurs antérieurs jusqu'à celui-ci.
-- **Submit** : conserver la logique existante (insert manquants → allocation séquentielle des `payment_records` → update `paid_amount`/`status`). Itérer sur la liste **triée par `month` croissant** (arriérés naturellement avant les futurs).
-- **État supprimés** : `monthsCount`, `customMonths`, `startMonth`, presets `[2,3,6,12]`, RadioGroup.
-- **État ajoutés** : `selectedMonths: Set<string>`, `arrears: RentPayment[]`, `futureMonths: {month, due_date, rent}[]`.
+| Colonne Excel | Champ |
+|---|---|
+| Nom et prénoms / Titulaire | `holder_name` (+ `holder_phone`, `holder_email`) |
+| Lotissement | `locality` |
+| N° Ilot / Ilot | `block_number` |
+| N° Lot / Lot | `plot_number` |
+| N° Ordre de recette | `receipt_order_number` |
+| Date création | `title_creation_date` |
+| État de traitement | `description` |
+| Ville | `city_name` |
 
-### Fichier modifié
-- `src/components/rent/AdvancePaymentDialog.tsx` (refonte UI + logique de sélection ; submit quasi inchangé)
+Parsing dates : accepter sériel Excel (nombre), `JJ/MM/AAAA`, `AAAA-MM-JJ`.
+Nettoyage Ilot/Lot : retirer préfixes (`"Lot n°45"` → `"45"`).
 
-### Hors scope
-- Pas de migration SQL nécessaire.
-- Pas de changement sur `Rents.tsx` (props inchangées).
+### Aperçu éditable
+Remplacer la table en lecture seule par une grille éditable :
+- `Input` pour titre, ilot, lot, lotissement, titre foncier, titulaire (nom + téléphone), description ;
+- `Select` pour type d'actif et ville (résolue contre `cities` de l'org) ;
+- bouton « Supprimer la ligne ».
+- Badges erreurs (titre manquant, doublons) conservés.
+
+### Reconnaissance des titulaires
+Au chargement du fichier, charger aussi `asset_holders` de l'org.
+Pour chaque ligne avec `holder_name` :
+- match par **nom normalisé** (trim, casse) → `_holderMatch = { id, source: 'db' }`
+- sinon match par **téléphone** → idem
+- sinon → `_holderMatch = { source: 'new' }`
+
+Badge par ligne : « Titulaire reconnu » (vert) / « Nouveau titulaire » (bleu) / « Sans titulaire » (gris).
+
+### Filtres dans l'aperçu
+Barre au-dessus de la table avec :
+- recherche texte (titre / lotissement / titulaire / N° Ilot / N° Lot) ;
+- filtre statut titulaire : Tous / Reconnus / Nouveaux / Sans ;
+- filtre erreur : Tous / Valides / Doublons / Erreurs.
+
+### Bouton « Consolider »
+Nouveau bouton dans le footer (avant « Importer ») :
+1. Regroupe les `holder_name` marqués `new` (dédupliqués par nom normalisé) ;
+2. `insert` en lot dans `asset_holders` (nom + phone + email + `organization_id`) ;
+3. Met à jour les `_holderMatch` des lignes correspondantes ;
+4. Toast : « X titulaire(s) créé(s), Y reconnu(s) ».
+
+Tant qu'il reste des titulaires `new` non consolidés, le bouton « Importer » est désactivé.
+
+### Insertion finale
+Inclure dans le payload : `block_number`, `plot_number`, `holder_id`, `city_id` (résolu via `city_name`), `title_creation_date`, `description`.
+
+### Modèle Excel
+Mise à jour de `downloadTemplate` avec les nouvelles colonnes et un exemple complet.
+
+## 3. Formulaire manuel — `src/pages/Patrimoine.tsx`
+
+- Ajouter `block_number` et `plot_number` dans `form` initial, `resetForm`, `openEdit`, `handleSave`, `handleEdit`.
+- Ajouter deux `Input` côte à côte dans `assetFormDialog`, juste après « Lotissement / Nom du lotissement » :
+  - « N° Ilot »
+  - « N° Lot »
+
+## 4. Affichage liste / détail
+- Page liste patrimoine : afficher discrètement `Ilot X · Lot Y` sous le titre quand renseignés.
+- Page `PatrimoineDetail.tsx` : ajouter les deux champs dans la section « Informations foncières ».
+
+## Hors périmètre
+- Pas de changement d'enum sur l'état de traitement (reste texte libre dans `description`).
+- Pas d'import des contacts ou documents.
