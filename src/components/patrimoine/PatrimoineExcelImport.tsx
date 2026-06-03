@@ -254,7 +254,7 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
           // Auto-générer un titre si absent à partir de Lotissement / Ilot / Lot
           if (!m.title) {
             const parts: string[] = [];
-            if (m.subdivision_name) parts.push(m.subdivision_name);
+            if (m.locality) parts.push(m.locality);
             const il = m.block_number ? `Ilot ${m.block_number}` : "";
             const lo = m.plot_number ? `Lot ${m.plot_number}` : "";
             const sub = [il, lo].filter(Boolean).join(" / ");
