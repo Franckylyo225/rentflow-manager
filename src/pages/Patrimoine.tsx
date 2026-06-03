@@ -57,7 +57,7 @@ export default function Patrimoine() {
   const [deletingHolder, setDeletingHolder] = useState<any>(null);
   const [holderSearch, setHolderSearch] = useState("");
   const [viewingHolder, setViewingHolder] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" });
+  const [form, setForm] = useState({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", block_number: "", plot_number: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" });
   const [linkedPropertyId, setLinkedPropertyId] = useState<string | null>(null);
   const [holderForm, setHolderForm] = useState({ full_name: "", phone: "", email: "", address: "" });
   const navigate = useNavigate();
@@ -250,7 +250,7 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
+  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", block_number: "", plot_number: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
 
   const openEdit = async (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -265,7 +265,9 @@ export default function Patrimoine() {
     setForm({
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       city_id: asset.city_id || linked?.city_id || "",
-      locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
+      locality: asset.locality, subdivision_name: asset.subdivision_name,
+      block_number: asset.block_number || "", plot_number: asset.plot_number || "",
+      land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
       map_link: asset.map_link || "", receipt_order_number: asset.receipt_order_number || "",
       title_creation_date: asset.title_creation_date || "",
@@ -331,6 +333,16 @@ export default function Patrimoine() {
         <div className="space-y-2">
           <Label>Nom du lotissement</Label>
           <Input value={form.subdivision_name} onChange={e => setForm(f => ({ ...f, subdivision_name: e.target.value }))} placeholder="Ex: Lot 45, Ilot 12" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>N° Ilot</Label>
+          <Input value={form.block_number} onChange={e => setForm(f => ({ ...f, block_number: e.target.value }))} placeholder="Ex: 12" />
+        </div>
+        <div className="space-y-2">
+          <Label>N° Lot</Label>
+          <Input value={form.plot_number} onChange={e => setForm(f => ({ ...f, plot_number: e.target.value }))} placeholder="Ex: 45" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -496,7 +508,9 @@ export default function Patrimoine() {
                           <tr key={asset.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/patrimoine/${asset.id}`)}>
                             <td className="py-3 px-4">
                               <p className="font-medium text-card-foreground">{asset.title}</p>
-                              <p className="text-xs text-muted-foreground">{asset.subdivision_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {[asset.subdivision_name, asset.block_number ? `Ilot ${asset.block_number}` : "", asset.plot_number ? `Lot ${asset.plot_number}` : ""].filter(Boolean).join(" · ")}
+                              </p>
                             </td>
                             <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.asset_holders?.full_name || "—"}</td>
                             <td className="py-3 px-4 text-center hidden md:table-cell">

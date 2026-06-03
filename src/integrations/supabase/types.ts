@@ -692,6 +692,7 @@ export type Database = {
       patrimony_assets: {
         Row: {
           asset_type: string
+          block_number: string
           buyer_name: string | null
           city_id: string | null
           created_at: string
@@ -706,6 +707,7 @@ export type Database = {
           map_link: string | null
           notary_name: string | null
           organization_id: string
+          plot_number: string
           receipt_order_number: string | null
           sale_commission: number | null
           sale_date: string | null
@@ -720,6 +722,7 @@ export type Database = {
         }
         Insert: {
           asset_type?: string
+          block_number?: string
           buyer_name?: string | null
           city_id?: string | null
           created_at?: string
@@ -734,6 +737,7 @@ export type Database = {
           map_link?: string | null
           notary_name?: string | null
           organization_id: string
+          plot_number?: string
           receipt_order_number?: string | null
           sale_commission?: number | null
           sale_date?: string | null
@@ -748,6 +752,7 @@ export type Database = {
         }
         Update: {
           asset_type?: string
+          block_number?: string
           buyer_name?: string | null
           city_id?: string | null
           created_at?: string
@@ -762,6 +767,7 @@ export type Database = {
           map_link?: string | null
           notary_name?: string | null
           organization_id?: string
+          plot_number?: string
           receipt_order_number?: string | null
           sale_commission?: number | null
           sale_date?: string | null
