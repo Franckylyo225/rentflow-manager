@@ -262,7 +262,12 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
             m.title = parts.join(" – ").trim();
           }
 
-          if (!m.title) { m._error = "Titre manquant (renseignez Lotissement + Ilot/Lot ou une colonne Titre)"; m._holder = { source: "none" }; return m as ParsedRow; }
+          // Fallback sur N° d'ordre de recette si toujours sans titre
+          if (!m.title && m.receipt_order_number) {
+            m.title = m.receipt_order_number;
+          }
+
+          if (!m.title) { m._error = "Titre manquant (renseignez Lotissement + Ilot/Lot, une colonne Titre, ou N° d'ordre de recette)"; m._holder = { source: "none" }; return m as ParsedRow; }
 
           const titleKey = m.title.toLowerCase();
           const landKey = (m.land_title || "").toLowerCase();
