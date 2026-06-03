@@ -203,10 +203,7 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
         const mapping: Record<string, string> = {};
         headers.forEach(h => { const key = resolveColumn(h); if (key) mapping[h] = key; });
 
-        if (!Object.values(mapping).includes("title")) {
-          toast.error("Colonne 'Titre' introuvable.");
-          return;
-        }
+        const hasTitleCol = Object.values(mapping).includes("title");
 
         // Fetch refs
         const [{ data: existingAssets }, { data: holdersData }, { data: citiesData }] = await Promise.all([
