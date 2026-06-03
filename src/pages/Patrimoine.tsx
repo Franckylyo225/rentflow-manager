@@ -337,6 +337,16 @@ export default function Patrimoine() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label>N° Ilot</Label>
+          <Input value={form.block_number} onChange={e => setForm(f => ({ ...f, block_number: e.target.value }))} placeholder="Ex: 12" />
+        </div>
+        <div className="space-y-2">
+          <Label>N° Lot</Label>
+          <Input value={form.plot_number} onChange={e => setForm(f => ({ ...f, plot_number: e.target.value }))} placeholder="Ex: 45" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label>N° Ordre de recette</Label>
           <Input value={form.receipt_order_number} onChange={e => setForm(f => ({ ...f, receipt_order_number: e.target.value }))} placeholder="Ex: OR-2024-001" />
         </div>
