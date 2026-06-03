@@ -145,11 +145,21 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
     setErrorFilter("all");
   };
 
+  const fuzzy = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+
   const resolveColumn = (header: string): string | null => {
     const normalized = header.trim().toLowerCase();
     if (COLUMN_MAP[normalized]) return COLUMN_MAP[normalized];
     const direct = EXPECTED_COLUMNS.find(c => c.key === normalized);
     if (direct) return direct.key;
+    // Fuzzy match : ignore accents, espaces et ponctuation (ex: "N°Ilot", "N° ÎLOT", "Numéro Ilot")
+    const f = fuzzy(header);
+    if (!f) return null;
+    for (const [alias, key] of Object.entries(COLUMN_MAP)) {
+      if (fuzzy(alias) === f) return key;
+    }
+    if (["ilot", "nilot", "noilot", "numeroilot", "numilot"].includes(f)) return "block_number";
+    if (["lot", "nlot", "nolot", "numerolot", "numlot"].includes(f)) return "plot_number";
     return null;
   };
 
