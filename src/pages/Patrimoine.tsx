@@ -508,7 +508,9 @@ export default function Patrimoine() {
                           <tr key={asset.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/patrimoine/${asset.id}`)}>
                             <td className="py-3 px-4">
                               <p className="font-medium text-card-foreground">{asset.title}</p>
-                              <p className="text-xs text-muted-foreground">{asset.subdivision_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {[asset.subdivision_name, asset.block_number ? `Ilot ${asset.block_number}` : "", asset.plot_number ? `Lot ${asset.plot_number}` : ""].filter(Boolean).join(" · ")}
+                              </p>
                             </td>
                             <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.asset_holders?.full_name || "—"}</td>
                             <td className="py-3 px-4 text-center hidden md:table-cell">
