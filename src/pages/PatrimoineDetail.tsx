@@ -323,6 +323,16 @@ export default function PatrimoineDetail() {
                 <p className="text-xs text-muted-foreground">Lotissement</p>
                 <p className="font-medium text-card-foreground">{asset.locality || "—"}</p>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">N° Ilot</p>
+                  <p className="font-medium text-card-foreground">{asset.block_number || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">N° Lot</p>
+                  <p className="font-medium text-card-foreground">{asset.plot_number || "—"}</p>
+                </div>
+              </div>
               <div>
                 <p className="text-xs text-muted-foreground">N° Ordre de recette</p>
                 <p className="font-medium text-card-foreground">{asset.receipt_order_number || "—"}</p>
