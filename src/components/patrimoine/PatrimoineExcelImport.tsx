@@ -251,7 +251,18 @@ export function PatrimoineExcelImport({ open, onOpenChange, organizationId, onSu
 
           if (m.city_name) m.city_id = cityByName.get(m.city_name.toLowerCase().trim()) || null;
 
-          if (!m.title) { m._error = "Titre manquant"; m._holder = { source: "none" }; return m as ParsedRow; }
+          // Auto-générer un titre si absent à partir de Lotissement / Ilot / Lot
+          if (!m.title) {
+            const parts: string[] = [];
+            if (m.subdivision_name) parts.push(m.subdivision_name);
+            const il = m.block_number ? `Ilot ${m.block_number}` : "";
+            const lo = m.plot_number ? `Lot ${m.plot_number}` : "";
+            const sub = [il, lo].filter(Boolean).join(" / ");
+            if (sub) parts.push(sub);
+            m.title = parts.join(" – ").trim();
+          }
+
+          if (!m.title) { m._error = "Titre manquant (renseignez Lotissement + Ilot/Lot ou une colonne Titre)"; m._holder = { source: "none" }; return m as ParsedRow; }
 
           const titleKey = m.title.toLowerCase();
           const landKey = (m.land_title || "").toLowerCase();
