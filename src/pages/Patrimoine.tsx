@@ -265,7 +265,9 @@ export default function Patrimoine() {
     setForm({
       title: asset.title, asset_type: asset.asset_type, holder_id: asset.holder_id || "",
       city_id: asset.city_id || linked?.city_id || "",
-      locality: asset.locality, subdivision_name: asset.subdivision_name, land_title: asset.land_title,
+      locality: asset.locality, subdivision_name: asset.subdivision_name,
+      block_number: asset.block_number || "", plot_number: asset.plot_number || "",
+      land_title: asset.land_title,
       handling_firm: asset.handling_firm || "", description: asset.description || "",
       map_link: asset.map_link || "", receipt_order_number: asset.receipt_order_number || "",
       title_creation_date: asset.title_creation_date || "",
