@@ -250,7 +250,7 @@ export default function Patrimoine() {
     !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
   );
 
-  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
+  const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", block_number: "", plot_number: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
 
   const openEdit = async (asset: any, e: React.MouseEvent) => {
     e.stopPropagation();
