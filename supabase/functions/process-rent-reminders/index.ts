@@ -13,10 +13,14 @@ const corsHeaders = {
 
 // Reminder thresholds (days). Negative = before due date, positive = after.
 // Maps to template_key in notification_templates.
+// offset = number of days to ADD to today to obtain the target due_date.
+// before_5 = échéance dans 5 jours (J-5) -> due_date = today + 5
+// after_1  = échéance d'hier (J+1)        -> due_date = today - 1
+// after_7  = échéance il y a 7 jours (J+7)-> due_date = today - 7
 const REMINDERS: Array<{ offset: number; key: string }> = [
-  { offset: -5, key: "before_5" },
-  { offset: 1, key: "after_1" },
-  { offset: 7, key: "after_7" },
+  { offset: 5, key: "before_5" },
+  { offset: -1, key: "after_1" },
+  { offset: -7, key: "after_7" },
 ];
 
 function fmtDate(d: Date): string {
@@ -47,16 +51,32 @@ serve(async (req) => {
     // 1. Fetch all orgs with auto SMS enabled
     const { data: orgs, error: orgsErr } = await admin
       .from("organizations")
-      .select("id, name, sms_sender_name, auto_sms_enabled")
+      .select("id, name, sms_sender_name, auto_sms_enabled, auto_sms_hour, timezone")
       .eq("auto_sms_enabled", true);
 
     if (orgsErr) throw orgsErr;
 
-    const today = new Date();
+    const now = new Date();
+    const today = new Date(now);
     today.setUTCHours(0, 0, 0, 0);
 
     for (const org of orgs ?? []) {
       summary.organizations_processed++;
+
+      // Only run during the configured hour (in the org's timezone). Tolerate ±0h window.
+      try {
+        const tz = (org as any).timezone || "Africa/Abidjan";
+        const hourStr = new Intl.DateTimeFormat("en-US", {
+          timeZone: tz, hour: "2-digit", hour12: false,
+        }).format(now);
+        const localHour = parseInt(hourStr, 10);
+        const targetHour = Number((org as any).auto_sms_hour ?? 8);
+        if (localHour !== targetHour) {
+          summary.details.push({ org: org.name, skipped: `hour ${localHour} != ${targetHour}` });
+          continue;
+        }
+      } catch (_) { /* if tz fails, fall through and run */ }
+
 
       // Load templates for this org
       const { data: templates } = await admin
