@@ -13,10 +13,14 @@ const corsHeaders = {
 
 // Reminder thresholds (days). Negative = before due date, positive = after.
 // Maps to template_key in notification_templates.
+// offset = number of days to ADD to today to obtain the target due_date.
+// before_5 = échéance dans 5 jours (J-5) -> due_date = today + 5
+// after_1  = échéance d'hier (J+1)        -> due_date = today - 1
+// after_7  = échéance il y a 7 jours (J+7)-> due_date = today - 7
 const REMINDERS: Array<{ offset: number; key: string }> = [
-  { offset: -5, key: "before_5" },
-  { offset: 1, key: "after_1" },
-  { offset: 7, key: "after_7" },
+  { offset: 5, key: "before_5" },
+  { offset: -1, key: "after_1" },
+  { offset: -7, key: "after_7" },
 ];
 
 function fmtDate(d: Date): string {
