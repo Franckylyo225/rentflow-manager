@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
+import { AdvancePaymentDialog, type AdvancePaymentSummary } from "@/components/rent/AdvancePaymentDialog";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
