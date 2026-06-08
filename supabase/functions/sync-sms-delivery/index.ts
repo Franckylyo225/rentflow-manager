@@ -6,76 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ORANGE_TOKEN_URL = "https://api.orange.com/oauth/v3/token";
-const ORANGE_SMS_URL = "https://api.orange.com/smsmessaging/v1/outbound";
+const MONSMS_BASE_URL = "https://rest.monsms.pro/v1";
 
-const COUNTRY_SENDER_NUMBERS: Record<string, string> = {
-  "225": "2250000",
-  "237": "2370000",
-  "226": "2260000",
-  "224": "2240000",
-  "245": "2450000",
-  "243": "2430000",
-  "231": "2310000",
-  "223": "2230000",
-  "261": "2610000",
-  "221": "2210000",
-  "216": "2160000",
-  "267": "2670000",
-  "962": "9620000",
-};
+function resolveMonSmsStatus(data: any): { status: string; errorMessage: string | null } {
+  const rawStatus = String(data?.status ?? "").toUpperCase();
+  if (rawStatus === "SENT") return { status: "sent", errorMessage: null };
+  if (rawStatus === "FAILED") return { status: "failed", errorMessage: "Échec signalé par MonSMS" };
+  if (rawStatus === "PENDING") return { status: "pending", errorMessage: "Expédition opérateur en attente chez MonSMS" };
 
-function formatPhoneNumber(phone: string): string {
-  let cleaned = phone.replace(/[\s\-\.()]/g, "");
-  if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
-  return cleaned;
-}
-
-function getSenderNumberFromRecipient(recipientPhone: string): string {
-  const withoutPlus = recipientPhone.replace("+", "");
-  for (const [prefix, senderNum] of Object.entries(COUNTRY_SENDER_NUMBERS)) {
-    if (withoutPlus.startsWith(prefix)) return senderNum;
-  }
-  return withoutPlus.substring(0, 3) + "0000";
-}
-
-function buildDeliveryUrl(orangeMessageId: string, recipientPhone: string): string | null {
-  if (!orangeMessageId) return null;
-
-  if (orangeMessageId.startsWith("http://") || orangeMessageId.startsWith("https://")) {
-    return orangeMessageId.endsWith("/deliveryInfos")
-      ? orangeMessageId
-      : `${orangeMessageId}/deliveryInfos`;
+  const stats = data?.stats;
+  if (stats && Number(stats.total ?? 0) > 0) {
+    if (Number(stats.sent ?? 0) >= Number(stats.total ?? 0)) return { status: "sent", errorMessage: null };
+    if (Number(stats.failed ?? 0) > 0 && Number(stats.pending ?? 0) === 0) {
+      return { status: "failed", errorMessage: "Échec signalé par MonSMS" };
+    }
   }
 
-  const requestId = orangeMessageId.trim();
-  if (!requestId) return null;
-
-  const recipient = formatPhoneNumber(recipientPhone);
-  const sender = getSenderNumberFromRecipient(recipient);
-  const encodedSender = `tel%3A%2B${sender}`;
-  return `${ORANGE_SMS_URL}/${encodedSender}/requests/${requestId}/deliveryInfos`;
-}
-
-async function getOrangeAccessToken(clientId: string, clientSecret: string): Promise<string> {
-  const credentials = btoa(`${clientId}:${clientSecret}`);
-  const response = await fetch(ORANGE_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-    },
-    body: "grant_type=client_credentials",
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Orange OAuth failed [${response.status}]: ${errorBody}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
+  const creditUsed = Number(data?.creditUsed ?? 0);
+  if (creditUsed > 0) return { status: "sent", errorMessage: null };
+  return { status: "pending", errorMessage: "Campagne créée chez MonSMS, expédition opérateur non encore confirmée" };
 }
 
 async function getOrganizationIdFromAuth(req: Request, supabaseUrl: string): Promise<string | null> {
