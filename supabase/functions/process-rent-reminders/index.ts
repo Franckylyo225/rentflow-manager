@@ -1,6 +1,18 @@
-// Edge function: Process automatic rent reminders (J-5, J+1, J+7)
+// Edge function: Process automatic rent reminders
 // Triggered daily by cron. Loops over all organizations where auto_sms_enabled = true,
-// finds rent payments matching reminder thresholds, and sends SMS via send-sms function.
+// reads notification_templates (with trigger_after_days / repeat_every_days),
+// finds unpaid rent payments matching each template's conditions, and sends SMS.
+//
+// Template semantics:
+//   trigger_after_days = number of days to ADD to today to find the target due_date
+//     before_5 -> -5  (échéance dans 5 jours: due_date = today + 5)  [actually: today - (-5) = today+5? we use today + trigger_after_days inverted]
+//   We use: target_due_date = today + offset, where offset = -trigger_after_days for "after_X" semantics.
+//
+// To keep things explicit and aligned with previous behavior we map:
+//   trigger_after_days < 0  => one-shot, due_date = today + abs(trigger_after_days)  (rappel avant échéance)
+//   trigger_after_days >= 0 => due_date <= today - trigger_after_days (relance après échéance, en retard)
+//   repeat_every_days NULL/0 => one-shot (skip if already sent for this rent_payment + template_key)
+//   repeat_every_days > 0    => recurring (re-send if last send for same rent+template > repeat_every_days ago)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -10,18 +22,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-// Reminder thresholds (days). Negative = before due date, positive = after.
-// Maps to template_key in notification_templates.
-// offset = number of days to ADD to today to obtain the target due_date.
-// before_5 = échéance dans 5 jours (J-5) -> due_date = today + 5
-// after_1  = échéance d'hier (J+1)        -> due_date = today - 1
-// after_7  = échéance il y a 7 jours (J+7)-> due_date = today - 7
-const REMINDERS: Array<{ offset: number; key: string }> = [
-  { offset: 5, key: "before_5" },
-  { offset: -1, key: "after_1" },
-  { offset: -7, key: "after_7" },
-];
 
 function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -38,22 +38,34 @@ serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, supabaseServiceKey);
 
+  // Allow forced run via body.force (bypass hour check)
+  let forceRun = false;
+  let forcedOrgId: string | null = null;
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      forceRun = !!body?.force;
+      forcedOrgId = body?.organizationId ?? null;
+    } catch (_) { /* ignore */ }
+  }
+
   const summary = {
     organizations_processed: 0,
     sms_sent: 0,
     sms_failed: 0,
     skipped_already_paid: 0,
     skipped_no_template: 0,
+    skipped_recently_sent: 0,
     details: [] as any[],
   };
 
   try {
-    // 1. Fetch all orgs with auto SMS enabled
-    const { data: orgs, error: orgsErr } = await admin
+    let orgsQuery = admin
       .from("organizations")
       .select("id, name, sms_sender_name, auto_sms_enabled, auto_sms_hour, timezone")
       .eq("auto_sms_enabled", true);
-
+    if (forcedOrgId) orgsQuery = orgsQuery.eq("id", forcedOrgId);
+    const { data: orgs, error: orgsErr } = await orgsQuery;
     if (orgsErr) throw orgsErr;
 
     const now = new Date();
@@ -63,56 +75,60 @@ serve(async (req) => {
     for (const org of orgs ?? []) {
       summary.organizations_processed++;
 
-      // Only run during the configured hour (in the org's timezone). Tolerate ±0h window.
-      try {
-        const tz = (org as any).timezone || "Africa/Abidjan";
-        const hourStr = new Intl.DateTimeFormat("en-US", {
-          timeZone: tz, hour: "2-digit", hour12: false,
-        }).format(now);
-        const localHour = parseInt(hourStr, 10);
-        const targetHour = Number((org as any).auto_sms_hour ?? 8);
-        if (localHour !== targetHour) {
-          summary.details.push({ org: org.name, skipped: `hour ${localHour} != ${targetHour}` });
-          continue;
-        }
-      } catch (_) { /* if tz fails, fall through and run */ }
-
-
-      // Load templates for this org
-      const { data: templates } = await admin
-        .from("notification_templates")
-        .select("template_key, sms_content, sms_enabled")
-        .eq("organization_id", org.id);
-
-      const tplMap = new Map<string, { content: string; enabled: boolean }>();
-      for (const t of templates ?? []) {
-        tplMap.set(t.template_key, { content: t.sms_content, enabled: t.sms_enabled });
+      if (!forceRun) {
+        try {
+          const tz = (org as any).timezone || "Africa/Abidjan";
+          const hourStr = new Intl.DateTimeFormat("en-US", {
+            timeZone: tz, hour: "2-digit", hour12: false,
+          }).format(now);
+          const localHour = parseInt(hourStr, 10);
+          const targetHour = Number((org as any).auto_sms_hour ?? 8);
+          if (localHour !== targetHour) {
+            summary.details.push({ org: org.name, skipped: `hour ${localHour} != ${targetHour}` });
+            continue;
+          }
+        } catch (_) { /* fall through */ }
       }
 
-      // For each reminder threshold, compute target due_date and find unpaid rents
-      for (const reminder of REMINDERS) {
-        const target = new Date(today);
-        target.setUTCDate(target.getUTCDate() + reminder.offset);
-        const targetStr = fmtDate(target);
+      const { data: templates } = await admin
+        .from("notification_templates")
+        .select("template_key, sms_content, sms_enabled, trigger_after_days, repeat_every_days")
+        .eq("organization_id", org.id);
 
-        // Get rent payments due on this date that are NOT fully paid
-        const { data: rents, error: rentsErr } = await admin
+      for (const tpl of templates ?? []) {
+        if (!tpl.sms_enabled || !tpl.sms_content) continue;
+        if (tpl.trigger_after_days === null || tpl.trigger_after_days === undefined) continue;
+
+        const triggerDays = Number(tpl.trigger_after_days);
+        const repeatDays = Number(tpl.repeat_every_days ?? 0);
+
+        // Build rent query
+        let rentQuery = admin
           .from("rent_payments")
           .select(`
             id, amount, paid_amount, due_date, status,
             tenants!inner (
-              id, full_name, phone, organization_id:unit_id,
-              units!inner (
-                id, name,
-                properties!inner ( id, organization_id )
-              )
+              id, full_name, phone,
+              units!inner ( id, name, properties!inner ( id, organization_id ) )
             )
           `)
-          .eq("due_date", targetStr)
           .neq("status", "paid");
 
+        if (triggerDays < 0) {
+          // Rappel avant échéance : due_date = today + abs(triggerDays)
+          const target = new Date(today);
+          target.setUTCDate(target.getUTCDate() + Math.abs(triggerDays));
+          rentQuery = rentQuery.eq("due_date", fmtDate(target));
+        } else {
+          // Relance après échéance : due_date <= today - triggerDays
+          const target = new Date(today);
+          target.setUTCDate(target.getUTCDate() - triggerDays);
+          rentQuery = rentQuery.lte("due_date", fmtDate(target));
+        }
+
+        const { data: rents, error: rentsErr } = await rentQuery;
         if (rentsErr) {
-          summary.details.push({ org: org.name, threshold: reminder.key, error: rentsErr.message });
+          summary.details.push({ org: org.name, template: tpl.template_key, error: rentsErr.message });
           continue;
         }
 
@@ -123,38 +139,39 @@ serve(async (req) => {
           if (!property || property.organization_id !== org.id) continue;
           if (!tenant.phone) continue;
 
-          // Skip if already fully paid
           if (Number(rent.paid_amount) >= Number(rent.amount)) {
             summary.skipped_already_paid++;
             continue;
           }
 
-          const tpl = tplMap.get(reminder.key);
-          if (!tpl || !tpl.enabled || !tpl.content) {
-            summary.skipped_no_template++;
-            continue;
-          }
-
-          // Idempotency: avoid sending same template_key twice for same rent_payment
-          const { data: existing } = await admin
+          // Idempotency / recurrence check
+          const { data: lastSend } = await admin
             .from("sms_history")
-            .select("id")
+            .select("id, created_at")
             .eq("rent_payment_id", rent.id)
-            .eq("template_key", reminder.key)
+            .eq("template_key", tpl.template_key)
+            .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
-          if (existing) continue;
+          if (lastSend) {
+            if (repeatDays <= 0) continue; // one-shot already sent
+            const last = new Date(lastSend.created_at).getTime();
+            const diffDays = (now.getTime() - last) / (1000 * 60 * 60 * 24);
+            if (diffDays < repeatDays) {
+              summary.skipped_recently_sent++;
+              continue;
+            }
+          }
 
           const remaining = Number(rent.amount) - Number(rent.paid_amount);
-          const message = applyTemplate(tpl.content, {
+          const message = applyTemplate(tpl.sms_content, {
             nom: tenant.full_name || "",
             montant: remaining.toLocaleString("fr-FR").replace(/\u00A0|\u202F/g, " "),
             date_echeance: new Date(rent.due_date).toLocaleDateString("fr-FR"),
             unite: unit?.name || "",
           });
 
-          // Call send-sms function with service-role auth
           const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
             method: "POST",
             headers: {
@@ -165,7 +182,7 @@ serve(async (req) => {
               to: tenant.phone,
               message,
               recipientName: tenant.full_name,
-              templateKey: reminder.key,
+              templateKey: tpl.template_key,
               organizationId: org.id,
               senderName: org.sms_sender_name,
             }),
@@ -174,12 +191,11 @@ serve(async (req) => {
           const sendData = await sendRes.json().catch(() => ({}));
           if (sendRes.ok && sendData?.success) {
             summary.sms_sent++;
-            // Link sms_history row to rent_payment for idempotency
             await admin
               .from("sms_history")
               .update({ rent_payment_id: rent.id })
               .eq("organization_id", org.id)
-              .eq("template_key", reminder.key)
+              .eq("template_key", tpl.template_key)
               .eq("recipient_phone", tenant.phone.replace(/[\s\-\.()+ ]/g, ""))
               .is("rent_payment_id", null)
               .order("created_at", { ascending: false })
@@ -189,7 +205,7 @@ serve(async (req) => {
             summary.details.push({
               org: org.name,
               tenant: tenant.full_name,
-              threshold: reminder.key,
+              template: tpl.template_key,
               error: sendData?.error || `HTTP ${sendRes.status}`,
             });
           }
@@ -198,7 +214,7 @@ serve(async (req) => {
     }
 
     console.log("Reminder processing summary:", JSON.stringify(summary));
-    return new Response(JSON.stringify({ success: true, ...summary }), {
+    return new Response(JSON.stringify({ success: true, sent: summary.sms_sent, failed: summary.sms_failed, ...summary }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
