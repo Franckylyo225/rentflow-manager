@@ -60,11 +60,11 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const ORANGE_CLIENT_ID = Deno.env.get("ORANGE_CLIENT_ID");
-    const ORANGE_CLIENT_SECRET = Deno.env.get("ORANGE_CLIENT_SECRET");
+    const MONSMS_API_KEY = Deno.env.get("MONSMS_API_KEY");
+    const MONSMS_COMPANY_ID = Deno.env.get("MONSMS_COMPANY_ID");
 
     if (!supabaseUrl || !supabaseServiceKey) throw new Error("Backend config manquante");
-    if (!ORANGE_CLIENT_ID || !ORANGE_CLIENT_SECRET) throw new Error("Configuration Orange manquante");
+    if (!MONSMS_API_KEY || !MONSMS_COMPANY_ID) throw new Error("Configuration MonSMS manquante");
 
     const organizationId = await getOrganizationIdFromAuth(req, supabaseUrl);
     if (!organizationId) {
@@ -75,14 +75,13 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    const accessToken = await getOrangeAccessToken(ORANGE_CLIENT_ID, ORANGE_CLIENT_SECRET);
 
     const { data: rows, error: fetchError } = await supabaseAdmin
       .from("sms_history")
       .select("id, status, orange_message_id, recipient_phone")
       .eq("organization_id", organizationId)
       .not("orange_message_id", "is", null)
-      .in("status", ["pending", "sent", "DeliveredToNetwork", "DeliveryUncertain", "MessageWaiting"])
+      .in("status", ["pending", "sent"])
       .order("created_at", { ascending: false })
       .limit(30);
 
@@ -101,16 +100,21 @@ serve(async (req) => {
     const errors: string[] = [];
 
     for (const row of rows) {
-      const deliveryUrl = buildDeliveryUrl(row.orange_message_id ?? "", row.recipient_phone);
-      if (!deliveryUrl) continue;
+      const campaignId = String(row.orange_message_id ?? "").trim();
+      if (!campaignId) continue;
 
       try {
-        const drResponse = await fetch(deliveryUrl, {
-          method: "GET",
+        const drResponse = await fetch(`${MONSMS_BASE_URL}/campaign/${campaignId}`, {
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
             Accept: "application/json",
           },
+          body: JSON.stringify({
+            apiKey: MONSMS_API_KEY,
+            companyId: MONSMS_COMPANY_ID,
+            id: campaignId,
+          }),
         });
 
         if (!drResponse.ok) {
@@ -120,19 +124,19 @@ serve(async (req) => {
         }
 
         const drPayload = await drResponse.json();
-        const deliveryInfo = drPayload?.deliveryInfoList?.deliveryInfo;
-        const deliveryStatus = Array.isArray(deliveryInfo)
-          ? deliveryInfo[0]?.deliveryStatus
-          : deliveryInfo?.deliveryStatus;
+        if (drPayload?.success !== true) {
+          errors.push(`DR ${row.id}: ${JSON.stringify(drPayload?.error ?? drPayload)}`);
+          continue;
+        }
 
-        if (!deliveryStatus) continue;
+        const delivery = resolveMonSmsStatus(drPayload?.data);
 
-        if (deliveryStatus !== row.status) {
+        if (delivery.status !== row.status) {
           const { error: updateError } = await supabaseAdmin
             .from("sms_history")
             .update({
-              status: deliveryStatus,
-              error_message: deliveryStatus === "DeliveryImpossible" ? "Livraison impossible côté opérateur" : null,
+              status: delivery.status,
+              error_message: delivery.errorMessage,
             })
             .eq("id", row.id)
             .eq("organization_id", organizationId);
