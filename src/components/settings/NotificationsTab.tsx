@@ -441,7 +441,15 @@ export function NotificationsTab() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onChange={e => {
                   const t = templates.find(t => t.id === e.target.value);
-                  if (t) setTestMessage(t.sms_content);
+                  if (t) {
+                    const today = new Date().toLocaleDateString("fr-FR");
+                    const filled = String(t.sms_content)
+                      .replace(/\{\{nom\}\}/g, "M. TEST")
+                      .replace(/\{\{montant\}\}/g, "100 000")
+                      .replace(/\{\{date_echeance\}\}/g, today)
+                      .replace(/\{\{unite\}\}/g, "Appartement A1");
+                    setTestMessage(filled);
+                  }
                 }}
               >
                 <option value="">Message personnalisé</option>
