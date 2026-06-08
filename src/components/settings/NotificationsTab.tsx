@@ -100,7 +100,11 @@ export function NotificationsTab() {
       });
       if (error) throw error;
       if (data?.success) {
-        toast.success("SMS de test envoyé avec succès !");
+        if (data?.status === "pending") {
+          toast.warning(data?.message || "Campagne créée, en attente de confirmation opérateur");
+        } else {
+          toast.success("SMS de test envoyé avec succès !");
+        }
       } else {
         toast.error("Erreur : " + (data?.error || "Échec de l'envoi"));
       }
