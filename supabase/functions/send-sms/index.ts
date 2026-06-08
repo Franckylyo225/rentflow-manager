@@ -13,6 +13,22 @@ function formatPhoneNumber(phone: string): string {
   return phone.replace(/[\s\-\.()+ ]/g, "");
 }
 
+function resolveMonSmsStatus(data: any): "sent" | "pending" | "failed" {
+  const rawStatus = String(data?.status ?? "").toUpperCase();
+  if (rawStatus === "SENT") return "sent";
+  if (rawStatus === "FAILED") return "failed";
+  if (rawStatus === "PENDING") return "pending";
+
+  const stats = data?.stats;
+  if (stats && Number(stats.total ?? 0) > 0) {
+    if (Number(stats.sent ?? 0) >= Number(stats.total ?? 0)) return "sent";
+    if (Number(stats.failed ?? 0) > 0 && Number(stats.pending ?? 0) === 0) return "failed";
+  }
+
+  const creditUsed = Number(data?.creditUsed ?? 0);
+  return creditUsed > 0 ? "sent" : "pending";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -148,6 +164,10 @@ serve(async (req) => {
 
     const isSuccess = smsResponse.ok && smsData?.success === true;
     const messageId = smsData?.data?.id || smsData?.data?.campaignId || null;
+    const deliveryStatus = isSuccess ? resolveMonSmsStatus(smsData?.data) : "failed";
+    const pendingMessage = deliveryStatus === "pending"
+      ? "Campagne créée chez MonSMS, expédition opérateur non encore confirmée"
+      : null;
 
     // Log to sms_history (server-derived organizationId only)
     if (organizationId) {
@@ -157,8 +177,8 @@ serve(async (req) => {
         recipient_name: recipientName || "",
         message: message,
         sender_name: finalSenderName,
-        status: isSuccess ? "sent" : "failed",
-        error_message: isSuccess ? null : JSON.stringify(smsData?.error ?? smsData),
+        status: isSuccess ? deliveryStatus : "failed",
+        error_message: isSuccess ? pendingMessage : JSON.stringify(smsData?.error ?? smsData),
         orange_message_id: messageId,
         template_key: templateKey || null,
       });
@@ -169,7 +189,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: smsData?.data ?? smsData }),
+      JSON.stringify({ success: true, status: deliveryStatus, message: pendingMessage, data: smsData?.data ?? smsData }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
