@@ -16,13 +16,23 @@ interface Tenant {
   rent: number;
 }
 
+export interface AdvancePaymentSummary {
+  tenantId: string;
+  paidAmount: number;
+  paymentDate: string;
+  method: string;
+  comment: string;
+  groupRef: string;
+  months: { month: string; amount: number; paidAmount: number }[];
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenant: Tenant | null;
   rentDueDay: number;
   acceptedPaymentMethods: string[];
-  onComplete?: () => void;
+  onComplete?: (summary?: AdvancePaymentSummary) => void;
 }
 
 interface MonthRow {
