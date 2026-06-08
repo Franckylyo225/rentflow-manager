@@ -1,5 +1,11 @@
 import jsPDF from "jspdf";
 
+export interface QuittanceMonthLine {
+  month: string; // YYYY-MM
+  amount: number;
+  paidAmount: number;
+}
+
 export interface QuittanceData {
   quittanceNumber?: string;
   agentName?: string;
@@ -19,6 +25,15 @@ export interface QuittanceData {
   organizationAddress?: string;
   organizationPhone?: string;
   organizationEmail?: string;
+  // When present, quittance covers multiple months
+  monthsBreakdown?: QuittanceMonthLine[];
+}
+
+function formatMonthLabelFr(monthKey: string) {
+  const m = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!m) return monthKey;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+  return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
 function buildQuittancePDF(data: QuittanceData): jsPDF {
