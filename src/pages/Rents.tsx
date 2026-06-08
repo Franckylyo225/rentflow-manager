@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, AlertTriangle, CheckCircle2, Clock, Loader2, ListTodo, Plus, Check, FileText, CalendarClock, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { AdvancePaymentDialog } from "@/components/rent/AdvancePaymentDialog";
+import { AdvancePaymentDialog, type AdvancePaymentSummary } from "@/components/rent/AdvancePaymentDialog";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -607,7 +607,41 @@ export default function Rents() {
         tenant={advanceTenant}
         rentDueDay={orgSettings?.rent_due_day ?? 5}
         acceptedPaymentMethods={orgSettings?.accepted_payment_methods ?? paymentMethods}
-        onComplete={() => refetch()}
+        onComplete={(summary) => {
+          refetch();
+          if (summary && summary.months.length > 0 && advanceTenant) {
+            const first = summary.months[0];
+            const last = summary.months[summary.months.length - 1];
+            const totalAmount = summary.months.reduce((s, m) => s + m.amount, 0);
+            const quittanceNumber = `Q-${summary.groupRef}`;
+            // Find tenant details from current payments list
+            const sample = payments.find(p => p.tenant_id === advanceTenant.id);
+            setQuittanceData({
+              quittanceNumber,
+              agentName: profile?.full_name || undefined,
+              tenantName: advanceTenant.full_name,
+              tenantPhone: sample?.tenants?.phone ?? "",
+              tenantEmail: sample?.tenants?.email ?? "",
+              unitName: sample?.tenants?.units?.name ?? "",
+              propertyName: sample?.tenants?.units?.properties?.name ?? "",
+              propertyAddress: "",
+              amount: totalAmount,
+              paidAmount: summary.paidAmount,
+              dueDate: first.month + "-01",
+              month: summary.months.length > 1
+                ? `${summary.months.length} mois (${first.month} → ${last.month})`
+                : first.month,
+              paymentDate: summary.paymentDate,
+              paymentMethod: summary.method,
+              organizationName: orgSettings?.name,
+              organizationAddress: orgSettings?.address ?? undefined,
+              organizationPhone: orgSettings?.phone ?? undefined,
+              organizationEmail: orgSettings?.email ?? undefined,
+              monthsBreakdown: summary.months.length > 1 ? summary.months : undefined,
+            });
+            setShowQuittance(true);
+          }
+        }}
       />
     </AppLayout>
   );

@@ -16,13 +16,23 @@ interface Tenant {
   rent: number;
 }
 
+export interface AdvancePaymentSummary {
+  tenantId: string;
+  paidAmount: number;
+  paymentDate: string;
+  method: string;
+  comment: string;
+  groupRef: string;
+  months: { month: string; amount: number; paidAmount: number }[];
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenant: Tenant | null;
   rentDueDay: number;
   acceptedPaymentMethods: string[];
-  onComplete?: () => void;
+  onComplete?: (summary?: AdvancePaymentSummary) => void;
 }
 
 interface MonthRow {
@@ -219,6 +229,7 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
       let remaining = amt;
       const groupRef = `ADV-${Date.now().toString(36).toUpperCase()}`;
       const totalLabel = `Paiement anticipé ${selectedRows.length} mois — réf. ${groupRef}${comment ? ` — ${comment}` : ""}`;
+      const allocations: { month: string; amount: number; paidAmount: number }[] = [];
 
       for (const r of selectedRows) {
         if (remaining <= 0) break;
@@ -245,12 +256,21 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
           .eq("id", rp.id);
         if (updErr) throw updErr;
 
+        allocations.push({ month: r.month, amount: rp.amount || 0, paidAmount: allocate });
         remaining -= allocate;
       }
 
       toast.success(`Paiement enregistré sur ${selectedRows.length} mois`);
       onOpenChange(false);
-      onComplete?.();
+      onComplete?.({
+        tenantId: tenant.id,
+        paidAmount: amt - remaining,
+        paymentDate,
+        method,
+        comment,
+        groupRef,
+        months: allocations,
+      });
     } catch (e: any) {
       toast.error("Erreur : " + (e.message || "échec de l'opération"));
     } finally {

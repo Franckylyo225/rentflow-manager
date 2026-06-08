@@ -1,5 +1,11 @@
 import jsPDF from "jspdf";
 
+export interface QuittanceMonthLine {
+  month: string; // YYYY-MM
+  amount: number;
+  paidAmount: number;
+}
+
 export interface QuittanceData {
   quittanceNumber?: string;
   agentName?: string;
@@ -19,6 +25,15 @@ export interface QuittanceData {
   organizationAddress?: string;
   organizationPhone?: string;
   organizationEmail?: string;
+  // When present, quittance covers multiple months
+  monthsBreakdown?: QuittanceMonthLine[];
+}
+
+function formatMonthLabelFr(monthKey: string) {
+  const m = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!m) return monthKey;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+  return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
 function buildQuittancePDF(data: QuittanceData): jsPDF {
@@ -65,10 +80,11 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   y = 55;
 
   // Title
-  doc.setFontSize(18);
+  const isMulti = !!(data.monthsBreakdown && data.monthsBreakdown.length > 1);
+  doc.setFontSize(isMulti ? 16 : 18);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 100, 60);
-  doc.text("QUITTANCE DE LOYER", pageWidth / 2, y, { align: "center" });
+  doc.text(isMulti ? "QUITTANCE DE LOYER — PAIEMENT MULTI-MOIS" : "QUITTANCE DE LOYER", pageWidth / 2, y, { align: "center" });
   y += 4;
   doc.setDrawColor(0, 150, 80);
   doc.setLineWidth(0.8);
@@ -79,7 +95,13 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   // Period
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(`Période : ${data.month}`, pageWidth / 2, y, { align: "center" });
+  if (isMulti) {
+    const first = formatMonthLabelFr(data.monthsBreakdown![0].month);
+    const last = formatMonthLabelFr(data.monthsBreakdown![data.monthsBreakdown!.length - 1].month);
+    doc.text(`Période : ${data.monthsBreakdown!.length} mois — de ${first} à ${last}`, pageWidth / 2, y, { align: "center" });
+  } else {
+    doc.text(`Période : ${data.month}`, pageWidth / 2, y, { align: "center" });
+  }
   y += 15;
 
   // Tenant info box
@@ -100,56 +122,119 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   }
   y += 38;
 
-  // Payment details box - calculate height dynamically
-  let boxLines = 3; // loyer, montant réglé, échéance
-  if (data.paymentDate) boxLines++;
-  if (data.paymentMethod) boxLines++;
-  const boxHeight = 18 + boxLines * 7;
+  // Payment details box
+  if (isMulti) {
+    const lines = data.monthsBreakdown!;
+    const headerH = 14;
+    const rowH = 6;
+    const footerLines = 1 + (data.paymentDate ? 1 : 0) + (data.paymentMethod ? 1 : 0);
+    const footerH = 6 + footerLines * 6;
+    const boxHeight = headerH + lines.length * rowH + footerH + 4;
 
-  doc.setFillColor(240, 248, 255);
-  doc.setDrawColor(180, 200, 220);
-  doc.roundedRect(marginLeft, y - 5, contentWidth, boxHeight, 3, 3, "FD");
+    doc.setFillColor(240, 248, 255);
+    doc.setDrawColor(180, 200, 220);
+    doc.roundedRect(marginLeft, y - 5, contentWidth, boxHeight, 3, 3, "FD");
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text("Détails du paiement", marginLeft + 8, y + 2);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Détails du paiement", marginLeft + 8, y + 2);
 
-  y += 10;
-  doc.setFont("helvetica", "normal");
-  doc.text("Loyer mensuel :", marginLeft + 8, y);
-  doc.text(`${formatNumber(data.amount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+    y += 10;
+    doc.setFontSize(9);
+    doc.text("Mois", marginLeft + 8, y);
+    doc.text("Loyer", marginLeft + contentWidth - 60, y, { align: "right" });
+    doc.text("Réglé", marginLeft + contentWidth - 8, y, { align: "right" });
+    y += 3;
+    doc.setDrawColor(200, 210, 220);
+    doc.line(marginLeft + 8, y, marginLeft + contentWidth - 8, y);
+    y += 3;
 
-  y += 7;
-  doc.text("Montant réglé :", marginLeft + 8, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 120, 60);
-  doc.text(`${formatNumber(data.paidAmount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
-  doc.setTextColor(0);
+    doc.setFont("helvetica", "normal");
+    for (const ln of lines) {
+      doc.text(formatMonthLabelFr(ln.month), marginLeft + 8, y);
+      doc.text(`${formatNumber(ln.amount)} FCFA`, marginLeft + contentWidth - 60, y, { align: "right" });
+      doc.text(`${formatNumber(ln.paidAmount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+      y += rowH;
+    }
 
-  y += 7;
-  doc.setFont("helvetica", "normal");
-  doc.text("Échéance :", marginLeft + 8, y);
-  doc.text(dueDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+    y += 2;
+    doc.setDrawColor(180, 200, 220);
+    doc.line(marginLeft + 8, y, marginLeft + contentWidth - 8, y);
+    y += 5;
 
-  if (data.paymentDate) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Total réglé :", marginLeft + 8, y);
+    doc.setTextColor(0, 120, 60);
+    doc.text(`${formatNumber(data.paidAmount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "normal");
+
+    if (data.paymentDate) {
+      y += 6;
+      doc.text("Date de paiement :", marginLeft + 8, y);
+      doc.text(paymentDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+    }
+    if (data.paymentMethod) {
+      y += 6;
+      doc.text("Mode de paiement :", marginLeft + 8, y);
+      doc.text(data.paymentMethod, marginLeft + contentWidth - 8, y, { align: "right" });
+    }
+    y += 20;
+  } else {
+    let boxLines = 3;
+    if (data.paymentDate) boxLines++;
+    if (data.paymentMethod) boxLines++;
+    const boxHeight = 18 + boxLines * 7;
+
+    doc.setFillColor(240, 248, 255);
+    doc.setDrawColor(180, 200, 220);
+    doc.roundedRect(marginLeft, y - 5, contentWidth, boxHeight, 3, 3, "FD");
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Détails du paiement", marginLeft + 8, y + 2);
+
+    y += 10;
+    doc.setFont("helvetica", "normal");
+    doc.text("Loyer mensuel :", marginLeft + 8, y);
+    doc.text(`${formatNumber(data.amount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+
     y += 7;
-    doc.text("Date de paiement :", marginLeft + 8, y);
-    doc.text(paymentDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+    doc.text("Montant réglé :", marginLeft + 8, y);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 120, 60);
+    doc.text(`${formatNumber(data.paidAmount)} FCFA`, marginLeft + contentWidth - 8, y, { align: "right" });
+    doc.setTextColor(0);
+
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.text("Échéance :", marginLeft + 8, y);
+    doc.text(dueDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+
+    if (data.paymentDate) {
+      y += 7;
+      doc.text("Date de paiement :", marginLeft + 8, y);
+      doc.text(paymentDateFormatted, marginLeft + contentWidth - 8, y, { align: "right" });
+    }
+
+    if (data.paymentMethod) {
+      y += 7;
+      doc.text("Mode de paiement :", marginLeft + 8, y);
+      doc.text(data.paymentMethod, marginLeft + contentWidth - 8, y, { align: "right" });
+    }
+
+    y += 20;
   }
 
-  if (data.paymentMethod) {
-    y += 7;
-    doc.text("Mode de paiement :", marginLeft + 8, y);
-    doc.text(data.paymentMethod, marginLeft + contentWidth - 8, y, { align: "right" });
-  }
-
-  y += 20;
-
-  // Confirmation text - use splitTextToSize to avoid overflow
+  // Confirmation text
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   const signataire = data.agentName || data.organizationName || "l'agence immobilière";
-  const confirmParagraph = `Je soussigné(e), ${signataire}, représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${formatNumber(data.paidAmount)} FCFA au titre du loyer du mois de ${data.month}, et lui en donne quittance, sous réserve de tous droits.`;
+  const periodPhrase = isMulti
+    ? `aux loyers des mois suivants : ${data.monthsBreakdown!.map(l => formatMonthLabelFr(l.month)).join(", ")}`
+    : `au loyer du mois de ${data.month}`;
+  const confirmParagraph = `Je soussigné(e), ${signataire}, représentant(e) de ${data.organizationName || "l'agence immobilière"}, reconnais avoir reçu de ${data.tenantName} la somme de ${formatNumber(data.paidAmount)} FCFA correspondant ${periodPhrase}, et lui en donne quittance, sous réserve de tous droits.`;
 
   const wrappedLines = doc.splitTextToSize(confirmParagraph, contentWidth);
   doc.text(wrappedLines, marginLeft, y);
