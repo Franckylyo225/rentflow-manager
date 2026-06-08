@@ -153,16 +153,26 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
     setAmount(totalDue ? String(totalDue) : "");
   }, [totalDue]);
 
+  const toggleArrearMonth = (monthKey: string) => {
+    const next = new Set(selected);
+    if (next.has(monthKey)) {
+      next.delete(monthKey);
+      // Si on décoche un arriéré, on retire aussi tous les futurs (règle: arriérés avant anticipé)
+      futures.forEach(f => next.delete(f.month));
+    } else {
+      next.add(monthKey);
+    }
+    setSelected(next);
+  };
+
   const toggleFutureMonth = (monthKey: string) => {
     if (!allArrearsSelected) return;
     const next = new Set(selected);
     if (next.has(monthKey)) {
-      // Décocher : décocher aussi tous les futurs APRÈS celui-ci (contiguïté)
       futures.forEach(f => {
         if (f.month >= monthKey) next.delete(f.month);
       });
     } else {
-      // Cocher : cocher tous les futurs jusqu'à celui-ci inclus (contiguïté)
       futures.forEach(f => {
         if (f.month <= monthKey) next.add(f.month);
       });
@@ -275,28 +285,36 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
               <div className="rounded-md border border-orange-500/40 bg-orange-500/10 p-3 text-sm flex gap-2 items-start">
                 <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                 <p className="text-orange-700 dark:text-orange-300">
-                  <strong>{arrears.length} mois en retard.</strong> Les arriérés doivent être réglés avant tout paiement anticipé.
+                  <strong>{arrears.length} mois en retard.</strong> Sélectionnez le(s) mois d'arriérés à régler. Pour effectuer un paiement anticipé sur les mois à venir, <strong>tous les arriérés</strong> doivent être inclus.
                 </p>
               </div>
             )}
 
             {arrears.length > 0 && (
               <div>
-                <Label className="mb-2 block">Arriérés à régler (obligatoire)</Label>
+                <Label className="mb-2 block">
+                  Arriérés à régler
+                  <span className="text-xs text-muted-foreground ml-2">(sélectionnez le ou les mois à payer)</span>
+                </Label>
                 <div className="rounded-md border border-border divide-y divide-border">
-                  {arrears.map(r => (
-                    <div key={r.month} className="flex items-center justify-between p-2.5 bg-orange-500/5">
-                      <div className="flex items-center gap-2.5">
-                        <Checkbox checked disabled />
-                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm capitalize">{formatMonthLabel(r.month)}</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {r.remaining.toLocaleString()} FCFA
-                        {r.paid_amount > 0 && <span className="text-xs ml-1">(partiel)</span>}
-                      </span>
-                    </div>
-                  ))}
+                  {arrears.map(r => {
+                    const checked = selected.has(r.month);
+                    return (
+                      <label
+                        key={r.month}
+                        className="flex items-center justify-between p-2.5 bg-orange-500/5 cursor-pointer hover:bg-orange-500/10"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Checkbox checked={checked} onCheckedChange={() => toggleArrearMonth(r.month)} />
+                          <span className="text-sm capitalize">{formatMonthLabel(r.month)}</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {r.remaining.toLocaleString()} FCFA
+                          {r.paid_amount > 0 && <span className="text-xs ml-1">(partiel)</span>}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
