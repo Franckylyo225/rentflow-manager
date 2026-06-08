@@ -292,21 +292,29 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
 
             {arrears.length > 0 && (
               <div>
-                <Label className="mb-2 block">Arriérés à régler (obligatoire)</Label>
+                <Label className="mb-2 block">
+                  Arriérés à régler
+                  <span className="text-xs text-muted-foreground ml-2">(sélectionnez le ou les mois à payer)</span>
+                </Label>
                 <div className="rounded-md border border-border divide-y divide-border">
-                  {arrears.map(r => (
-                    <div key={r.month} className="flex items-center justify-between p-2.5 bg-orange-500/5">
-                      <div className="flex items-center gap-2.5">
-                        <Checkbox checked disabled />
-                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm capitalize">{formatMonthLabel(r.month)}</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {r.remaining.toLocaleString()} FCFA
-                        {r.paid_amount > 0 && <span className="text-xs ml-1">(partiel)</span>}
-                      </span>
-                    </div>
-                  ))}
+                  {arrears.map(r => {
+                    const checked = selected.has(r.month);
+                    return (
+                      <label
+                        key={r.month}
+                        className="flex items-center justify-between p-2.5 bg-orange-500/5 cursor-pointer hover:bg-orange-500/10"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Checkbox checked={checked} onCheckedChange={() => toggleArrearMonth(r.month)} />
+                          <span className="text-sm capitalize">{formatMonthLabel(r.month)}</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {r.remaining.toLocaleString()} FCFA
+                          {r.paid_amount > 0 && <span className="text-xs ml-1">(partiel)</span>}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
