@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Bell, MessageSquare, Mail, Save, Loader2, Send, Phone, Info, Smartphone, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Bell, MessageSquare, Mail, Save, Loader2, Send, Phone, Info, Smartphone, Clock, AlertTriangle, CheckCircle2, RotateCw, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const TIMELINE_ICONS: Record<string, { icon: typeof Bell; label: string; color: 
   before_5: { icon: Clock, label: "J-5", color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
   after_1: { icon: AlertTriangle, label: "Jour J", color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
   after_7: { icon: AlertTriangle, label: "J+5", color: "text-destructive", bg: "bg-destructive/10" },
+  overdue_monthly: { icon: CalendarClock, label: "+1 mois", color: "text-destructive", bg: "bg-destructive/10" },
 };
 
 export function NotificationsTab() {
@@ -70,7 +71,9 @@ export function NotificationsTab() {
         email_enabled: t.email_enabled,
         sms_content: t.sms_content,
         email_content: t.email_content,
-      }).eq("id", t.id);
+        trigger_after_days: t.trigger_after_days,
+        repeat_every_days: t.repeat_every_days,
+      } as any).eq("id", t.id);
     }
     setSaving(false);
     toast.success("Paramètres de relance sauvegardés");
@@ -293,6 +296,67 @@ export function NotificationsTab() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
+                {/* Conditions de déclenchement */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-lg bg-muted/40 border border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" /> Condition d'envoi
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={(template.trigger_after_days ?? 0) < 0 ? "before" : "after"}
+                        onChange={e => {
+                          const sign = e.target.value === "before" ? -1 : 1;
+                          const abs = Math.abs(template.trigger_after_days ?? 1) || 1;
+                          updateTemplate(template.id, "trigger_after_days", sign * abs);
+                        }}
+                        className="flex h-9 rounded-md border border-input bg-background px-2 text-xs"
+                      >
+                        <option value="before">Avant échéance</option>
+                        <option value="after">Après échéance</option>
+                      </select>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={Math.abs(template.trigger_after_days ?? 0)}
+                        onChange={e => {
+                          const v = Math.max(0, parseInt(e.target.value || "0", 10));
+                          const sign = (template.trigger_after_days ?? 0) < 0 ? -1 : 1;
+                          updateTemplate(template.id, "trigger_after_days", sign * v);
+                        }}
+                        className="h-9 w-20 text-xs"
+                      />
+                      <span className="text-xs text-muted-foreground">jours</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {(template.trigger_after_days ?? 0) < 0
+                        ? `Envoi ${Math.abs(template.trigger_after_days ?? 0)} jour(s) avant l'échéance`
+                        : `Envoi à partir de ${template.trigger_after_days ?? 0} jour(s) après l'échéance`}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <RotateCw className="h-3.5 w-3.5 text-muted-foreground" /> Périodicité de relance
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={(template.repeat_every_days ?? 0) > 0}
+                        onCheckedChange={v => updateTemplate(template.id, "repeat_every_days", v ? (template.repeat_every_days || 7) : 0)}
+                      />
+                      <Input
+                        type="number"
+                        min={1}
+                        disabled={(template.repeat_every_days ?? 0) <= 0}
+                        value={template.repeat_every_days ?? 7}
+                        onChange={e => updateTemplate(template.id, "repeat_every_days", Math.max(1, parseInt(e.target.value || "1", 10)))}
+                        className="h-9 w-20 text-xs"
+                      />
+                      <span className="text-xs text-muted-foreground">jours</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Désactivé : envoi unique. Activé : relance répétée tant que le loyer reste impayé.</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* SMS Section */}
                   <div className="space-y-3">
