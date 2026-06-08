@@ -501,9 +501,11 @@ export type Database = {
           id: string
           label: string
           organization_id: string
+          repeat_every_days: number | null
           sms_content: string
           sms_enabled: boolean
           template_key: string
+          trigger_after_days: number | null
           updated_at: string
         }
         Insert: {
@@ -513,9 +515,11 @@ export type Database = {
           id?: string
           label: string
           organization_id: string
+          repeat_every_days?: number | null
           sms_content?: string
           sms_enabled?: boolean
           template_key: string
+          trigger_after_days?: number | null
           updated_at?: string
         }
         Update: {
@@ -525,9 +529,11 @@ export type Database = {
           id?: string
           label?: string
           organization_id?: string
+          repeat_every_days?: number | null
           sms_content?: string
           sms_enabled?: boolean
           template_key?: string
+          trigger_after_days?: number | null
           updated_at?: string
         }
         Relationships: [
