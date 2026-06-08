@@ -153,16 +153,26 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
     setAmount(totalDue ? String(totalDue) : "");
   }, [totalDue]);
 
+  const toggleArrearMonth = (monthKey: string) => {
+    const next = new Set(selected);
+    if (next.has(monthKey)) {
+      next.delete(monthKey);
+      // Si on décoche un arriéré, on retire aussi tous les futurs (règle: arriérés avant anticipé)
+      futures.forEach(f => next.delete(f.month));
+    } else {
+      next.add(monthKey);
+    }
+    setSelected(next);
+  };
+
   const toggleFutureMonth = (monthKey: string) => {
     if (!allArrearsSelected) return;
     const next = new Set(selected);
     if (next.has(monthKey)) {
-      // Décocher : décocher aussi tous les futurs APRÈS celui-ci (contiguïté)
       futures.forEach(f => {
         if (f.month >= monthKey) next.delete(f.month);
       });
     } else {
-      // Cocher : cocher tous les futurs jusqu'à celui-ci inclus (contiguïté)
       futures.forEach(f => {
         if (f.month <= monthKey) next.add(f.month);
       });
