@@ -285,7 +285,7 @@ export function AdvancePaymentDialog({ open, onOpenChange, tenant, rentDueDay, a
               <div className="rounded-md border border-orange-500/40 bg-orange-500/10 p-3 text-sm flex gap-2 items-start">
                 <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                 <p className="text-orange-700 dark:text-orange-300">
-                  <strong>{arrears.length} mois en retard.</strong> Les arriérés doivent être réglés avant tout paiement anticipé.
+                  <strong>{arrears.length} mois en retard.</strong> Sélectionnez le(s) mois d'arriérés à régler. Pour effectuer un paiement anticipé sur les mois à venir, <strong>tous les arriérés</strong> doivent être inclus.
                 </p>
               </div>
             )}
