@@ -59,7 +59,7 @@ export function NotificationsTab() {
     });
   }, [user]);
 
-  const updateTemplate = (id: string, field: string, value: string | boolean) => {
+  const updateTemplate = (id: string, field: string, value: string | boolean | number | null) => {
     setTemplates(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
