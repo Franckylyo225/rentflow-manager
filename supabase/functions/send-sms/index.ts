@@ -75,7 +75,7 @@ serve(async (req) => {
         .eq("user_id", userId)
         .single();
 
-      isAdminOrGestionnaire = roleRow?.role === "admin" || roleRow?.role === "gestionnaire";
+      isAdminOrGestionnaire = roleRow?.role === "admin" || roleRow?.role === "gestionnaire" || roleRow?.role === "super_admin";
       if (!isAdminOrGestionnaire) {
         return new Response(
           JSON.stringify({ success: false, error: "Privilèges insuffisants" }),
