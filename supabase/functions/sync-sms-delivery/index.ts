@@ -6,76 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ORANGE_TOKEN_URL = "https://api.orange.com/oauth/v3/token";
-const ORANGE_SMS_URL = "https://api.orange.com/smsmessaging/v1/outbound";
+const MONSMS_BASE_URL = "https://rest.monsms.pro/v1";
 
-const COUNTRY_SENDER_NUMBERS: Record<string, string> = {
-  "225": "2250000",
-  "237": "2370000",
-  "226": "2260000",
-  "224": "2240000",
-  "245": "2450000",
-  "243": "2430000",
-  "231": "2310000",
-  "223": "2230000",
-  "261": "2610000",
-  "221": "2210000",
-  "216": "2160000",
-  "267": "2670000",
-  "962": "9620000",
-};
+function resolveMonSmsStatus(data: any): { status: string; errorMessage: string | null } {
+  const rawStatus = String(data?.status ?? "").toUpperCase();
+  if (rawStatus === "SENT") return { status: "sent", errorMessage: null };
+  if (rawStatus === "FAILED") return { status: "failed", errorMessage: "Échec signalé par MonSMS" };
+  if (rawStatus === "PENDING") return { status: "pending", errorMessage: "Expédition opérateur en attente chez MonSMS" };
 
-function formatPhoneNumber(phone: string): string {
-  let cleaned = phone.replace(/[\s\-\.()]/g, "");
-  if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
-  return cleaned;
-}
-
-function getSenderNumberFromRecipient(recipientPhone: string): string {
-  const withoutPlus = recipientPhone.replace("+", "");
-  for (const [prefix, senderNum] of Object.entries(COUNTRY_SENDER_NUMBERS)) {
-    if (withoutPlus.startsWith(prefix)) return senderNum;
-  }
-  return withoutPlus.substring(0, 3) + "0000";
-}
-
-function buildDeliveryUrl(orangeMessageId: string, recipientPhone: string): string | null {
-  if (!orangeMessageId) return null;
-
-  if (orangeMessageId.startsWith("http://") || orangeMessageId.startsWith("https://")) {
-    return orangeMessageId.endsWith("/deliveryInfos")
-      ? orangeMessageId
-      : `${orangeMessageId}/deliveryInfos`;
+  const stats = data?.stats;
+  if (stats && Number(stats.total ?? 0) > 0) {
+    if (Number(stats.sent ?? 0) >= Number(stats.total ?? 0)) return { status: "sent", errorMessage: null };
+    if (Number(stats.failed ?? 0) > 0 && Number(stats.pending ?? 0) === 0) {
+      return { status: "failed", errorMessage: "Échec signalé par MonSMS" };
+    }
   }
 
-  const requestId = orangeMessageId.trim();
-  if (!requestId) return null;
-
-  const recipient = formatPhoneNumber(recipientPhone);
-  const sender = getSenderNumberFromRecipient(recipient);
-  const encodedSender = `tel%3A%2B${sender}`;
-  return `${ORANGE_SMS_URL}/${encodedSender}/requests/${requestId}/deliveryInfos`;
-}
-
-async function getOrangeAccessToken(clientId: string, clientSecret: string): Promise<string> {
-  const credentials = btoa(`${clientId}:${clientSecret}`);
-  const response = await fetch(ORANGE_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-    },
-    body: "grant_type=client_credentials",
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Orange OAuth failed [${response.status}]: ${errorBody}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
+  const creditUsed = Number(data?.creditUsed ?? 0);
+  if (creditUsed > 0) return { status: "sent", errorMessage: null };
+  return { status: "pending", errorMessage: "Campagne créée chez MonSMS, expédition opérateur non encore confirmée" };
 }
 
 async function getOrganizationIdFromAuth(req: Request, supabaseUrl: string): Promise<string | null> {
@@ -111,11 +60,11 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const ORANGE_CLIENT_ID = Deno.env.get("ORANGE_CLIENT_ID");
-    const ORANGE_CLIENT_SECRET = Deno.env.get("ORANGE_CLIENT_SECRET");
+    const MONSMS_API_KEY = Deno.env.get("MONSMS_API_KEY");
+    const MONSMS_COMPANY_ID = Deno.env.get("MONSMS_COMPANY_ID");
 
     if (!supabaseUrl || !supabaseServiceKey) throw new Error("Backend config manquante");
-    if (!ORANGE_CLIENT_ID || !ORANGE_CLIENT_SECRET) throw new Error("Configuration Orange manquante");
+    if (!MONSMS_API_KEY || !MONSMS_COMPANY_ID) throw new Error("Configuration MonSMS manquante");
 
     const organizationId = await getOrganizationIdFromAuth(req, supabaseUrl);
     if (!organizationId) {
@@ -126,14 +75,13 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    const accessToken = await getOrangeAccessToken(ORANGE_CLIENT_ID, ORANGE_CLIENT_SECRET);
 
     const { data: rows, error: fetchError } = await supabaseAdmin
       .from("sms_history")
       .select("id, status, orange_message_id, recipient_phone")
       .eq("organization_id", organizationId)
       .not("orange_message_id", "is", null)
-      .in("status", ["pending", "sent", "DeliveredToNetwork", "DeliveryUncertain", "MessageWaiting"])
+      .in("status", ["pending", "sent"])
       .order("created_at", { ascending: false })
       .limit(30);
 
@@ -152,16 +100,21 @@ serve(async (req) => {
     const errors: string[] = [];
 
     for (const row of rows) {
-      const deliveryUrl = buildDeliveryUrl(row.orange_message_id ?? "", row.recipient_phone);
-      if (!deliveryUrl) continue;
+      const campaignId = String(row.orange_message_id ?? "").trim();
+      if (!campaignId) continue;
 
       try {
-        const drResponse = await fetch(deliveryUrl, {
-          method: "GET",
+        const drResponse = await fetch(`${MONSMS_BASE_URL}/campaign/${campaignId}`, {
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
             Accept: "application/json",
           },
+          body: JSON.stringify({
+            apiKey: MONSMS_API_KEY,
+            companyId: MONSMS_COMPANY_ID,
+            id: campaignId,
+          }),
         });
 
         if (!drResponse.ok) {
@@ -171,19 +124,19 @@ serve(async (req) => {
         }
 
         const drPayload = await drResponse.json();
-        const deliveryInfo = drPayload?.deliveryInfoList?.deliveryInfo;
-        const deliveryStatus = Array.isArray(deliveryInfo)
-          ? deliveryInfo[0]?.deliveryStatus
-          : deliveryInfo?.deliveryStatus;
+        if (drPayload?.success !== true) {
+          errors.push(`DR ${row.id}: ${JSON.stringify(drPayload?.error ?? drPayload)}`);
+          continue;
+        }
 
-        if (!deliveryStatus) continue;
+        const delivery = resolveMonSmsStatus(drPayload?.data);
 
-        if (deliveryStatus !== row.status) {
+        if (delivery.status !== row.status) {
           const { error: updateError } = await supabaseAdmin
             .from("sms_history")
             .update({
-              status: deliveryStatus,
-              error_message: deliveryStatus === "DeliveryImpossible" ? "Livraison impossible côté opérateur" : null,
+              status: delivery.status,
+              error_message: delivery.errorMessage,
             })
             .eq("id", row.id)
             .eq("organization_id", organizationId);
