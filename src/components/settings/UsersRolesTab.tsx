@@ -421,7 +421,144 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
           onCreated={() => { setShowAddUser(false); fetch(); }}
         />
       )}
+
+      {resetMember && (
+        <ResetPasswordDialog
+          member={resetMember}
+          onClose={() => setResetMember(null)}
+        />
+      )}
+
+      {deleteMember && (
+        <DeleteUserDialog
+          member={deleteMember}
+          onClose={() => setDeleteMember(null)}
+          onDeleted={() => { setDeleteMember(null); fetch(); }}
+        />
+      )}
     </div>
+  );
+}
+
+/* ─── Reset Password Dialog (Super Admin) ─── */
+function ResetPasswordDialog({ member, onClose }: { member: OrgMember; onClose: () => void }) {
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const generate = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+    let p = "";
+    for (let i = 0; i < 12; i++) p += chars[Math.floor(Math.random() * chars.length)];
+    setPassword(p);
+  };
+
+  useEffect(() => { generate(); }, []);
+
+  const handleSubmit = async () => {
+    if (password.length < 8) { toast.error("Le mot de passe doit contenir au moins 8 caractères"); return; }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-user-action", {
+        body: { action: "reset_password", target_user_id: member.user_id, new_password: password },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Mot de passe de ${member.full_name} réinitialisé`);
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Erreur");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-amber-500" />
+            Réinitialiser le mot de passe
+          </DialogTitle>
+          <DialogDescription>
+            Définissez un nouveau mot de passe pour <span className="font-medium">{member.full_name}</span>. Communiquez-le de manière sécurisée.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <Label>Nouveau mot de passe</Label>
+          <div className="flex gap-2">
+            <Input type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} />
+            <Button type="button" variant="outline" size="icon" onClick={() => setShow(!show)}><Eye className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="sm" onClick={generate} className="gap-1.5">
+              <KeyRound className="h-3.5 w-3.5" /> Générer
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Minimum 8 caractères.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button onClick={handleSubmit} disabled={saving || password.length < 8} className="gap-2">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Réinitialiser
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Delete User Dialog (Super Admin) ─── */
+function DeleteUserDialog({ member, onClose, onDeleted }: { member: OrgMember; onClose: () => void; onDeleted: () => void }) {
+  const [confirmText, setConfirmText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const expected = "SUPPRIMER";
+
+  const handleDelete = async () => {
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-user-action", {
+        body: { action: "delete_user", target_user_id: member.user_id },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${member.full_name} a été supprimé`);
+      onDeleted();
+    } catch (e: any) {
+      toast.error(e.message || "Erreur");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            Supprimer l'utilisateur
+          </DialogTitle>
+          <DialogDescription>
+            Cette action est <span className="font-semibold text-destructive">irréversible</span>. Le compte de <span className="font-medium">{member.full_name}</span> ({member.email}) ainsi que ses accès seront définitivement supprimés.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label>Tapez <code className="text-destructive font-mono">{expected}</code> pour confirmer</Label>
+          <Input value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder={expected} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={saving || confirmText !== expected}
+            className="gap-2"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Supprimer définitivement
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
