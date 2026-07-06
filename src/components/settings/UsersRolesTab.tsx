@@ -370,6 +370,16 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
                             {member.is_active ? <XCircle className="h-3.5 w-3.5 text-destructive" /> : <CheckCircle className="h-3.5 w-3.5 text-green-500" />}
                           </Button>
                         )}
+                        {isSuperAdmin && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setResetMember(member)} title="Réinitialiser le mot de passe">
+                              <KeyRound className="h-3.5 w-3.5 text-amber-500" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteMember(member)} title="Supprimer l'utilisateur">
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </>
+                        )}
                       </>
                     ) : (
                       <Badge variant="secondary" className="text-xs">
