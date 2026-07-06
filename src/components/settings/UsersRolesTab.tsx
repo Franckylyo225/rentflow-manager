@@ -382,9 +382,21 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
                         )}
                       </>
                     ) : (
-                      <Badge variant="secondary" className="text-xs">
-                        {member.role === "super_admin" ? "Super Admin" : (customRole?.name || member.role)}
-                      </Badge>
+                      <>
+                        <Badge variant="secondary" className="text-xs">
+                          {member.role === "super_admin" ? "Super Admin" : (customRole?.name || member.role)}
+                        </Badge>
+                        {isSuperAdmin && !isSelf && member.role === "super_admin" && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setResetMember(member)} title="Réinitialiser le mot de passe">
+                              <KeyRound className="h-3.5 w-3.5 text-amber-500" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteMember(member)} title="Supprimer l'utilisateur">
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
