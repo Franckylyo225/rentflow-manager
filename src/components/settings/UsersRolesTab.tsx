@@ -166,6 +166,8 @@ function MembersSection({ isAdmin, isSuperAdmin = false, currentUserId, orgId }:
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editMember, setEditMember] = useState<OrgMember | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [resetMember, setResetMember] = useState<OrgMember | null>(null);
+  const [deleteMember, setDeleteMember] = useState<OrgMember | null>(null);
 
   const fetch = useCallback(async () => {
     if (!orgId) return;
