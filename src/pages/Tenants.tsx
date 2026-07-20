@@ -336,6 +336,7 @@ export default function Tenants() {
           .limit(advanceMonths);
 
         const today = new Date().toISOString().split("T")[0];
+        const groupRef = `ADV-INIT-${Date.now().toString(36).toUpperCase()}`;
         for (const p of (allPays || [])) {
           await supabase.from("rent_payments").update({
             paid_amount: p.amount,
@@ -346,7 +347,7 @@ export default function Tenants() {
             amount: p.amount,
             payment_date: today,
             method: form.advance_method || "cash",
-            comment: "Avance à la signature du bail",
+            comment: `Avance à la signature du bail — réf. ${groupRef}`,
           });
           quittanceLines.push({ month: p.month, amount: p.amount, paidAmount: p.amount });
         }

@@ -113,11 +113,72 @@ export default function Rents() {
     setShowTasks(true);
   };
 
-  const openQuittance = (payment: any) => {
+  const openQuittance = async (payment: any) => {
     // Generate unique quittance number from payment id and date
     const datePrefix = payment.due_date?.replace(/-/g, "").slice(2, 8) ?? "";
     const idSuffix = payment.id?.slice(0, 6).toUpperCase() ?? "";
     const quittanceNumber = `Q-${datePrefix}-${idSuffix}`;
+
+    // Detect a grouped payment (advance at signing or bulk advance) via
+    // "réf. XXX" tag stored in payment_records.comment. If found, aggregate
+    // all sibling rent_payments sharing the same ref into one multi-month quittance.
+    let monthsBreakdown: { month: string; amount: number; paidAmount: number }[] | undefined;
+    let aggregatedAmount = payment.amount;
+    let aggregatedPaid = payment.paid_amount;
+    let aggregatedPeriodLabel = payment.month;
+    let aggregatedPaymentDate: string | undefined;
+    let aggregatedMethod: string | undefined;
+
+    try {
+      const { data: recs } = await supabase
+        .from("payment_records")
+        .select("comment, payment_date, method")
+        .eq("rent_payment_id", payment.id)
+        .order("payment_date", { ascending: true });
+
+      const refMatch = (recs || [])
+        .map((r: any) => /réf\.\s*([A-Z0-9-]+)/i.exec(r.comment || ""))
+        .find((m: any) => m);
+
+      if (refMatch) {
+        const ref = refMatch[1];
+        const { data: siblings } = await supabase
+          .from("payment_records")
+          .select("rent_payment_id, amount, payment_date, method, rent_payments(id, month, amount, paid_amount, tenant_id)")
+          .ilike("comment", `%réf. ${ref}%`);
+
+        const sameTenant = (siblings || []).filter(
+          (s: any) => s.rent_payments?.tenant_id === payment.tenant_id
+        );
+
+        // Deduplicate by rent_payment_id (a single rent_payment may have multiple records)
+        const byRp = new Map<string, any>();
+        for (const s of sameTenant) {
+          if (s.rent_payments) byRp.set(s.rent_payment_id, s);
+        }
+
+        if (byRp.size > 1) {
+          const rows = Array.from(byRp.values())
+            .map((s: any) => ({
+              month: s.rent_payments.month,
+              amount: s.rent_payments.amount,
+              paidAmount: s.rent_payments.paid_amount,
+              payment_date: s.payment_date,
+              method: s.method,
+            }))
+            .sort((a, b) => a.month.localeCompare(b.month));
+
+          monthsBreakdown = rows.map(r => ({ month: r.month, amount: r.amount, paidAmount: r.paidAmount }));
+          aggregatedAmount = rows.reduce((s, r) => s + r.amount, 0);
+          aggregatedPaid = rows.reduce((s, r) => s + r.paidAmount, 0);
+          aggregatedPeriodLabel = `${rows.length} mois (${rows[0].month} → ${rows[rows.length - 1].month})`;
+          aggregatedPaymentDate = rows[0].payment_date;
+          aggregatedMethod = rows[0].method;
+        }
+      }
+    } catch (e) {
+      console.error("Regroupement quittance échoué:", e);
+    }
 
     setQuittanceData({
       quittanceNumber,
@@ -128,15 +189,17 @@ export default function Rents() {
       unitName: payment.tenants?.units?.name ?? "",
       propertyName: payment.tenants?.units?.properties?.name ?? "",
       propertyAddress: "",
-      amount: payment.amount,
-      paidAmount: payment.paid_amount,
+      amount: aggregatedAmount,
+      paidAmount: aggregatedPaid,
       dueDate: payment.due_date,
-      month: payment.month,
-      paymentDate: payment.updated_at ?? payment.due_date,
+      month: aggregatedPeriodLabel,
+      paymentDate: aggregatedPaymentDate ?? payment.updated_at ?? payment.due_date,
+      paymentMethod: aggregatedMethod,
       organizationName: orgSettings?.name,
       organizationAddress: orgSettings?.address ?? undefined,
       organizationPhone: orgSettings?.phone ?? undefined,
       organizationEmail: orgSettings?.email ?? undefined,
+      monthsBreakdown,
     });
     setShowQuittance(true);
   };
