@@ -52,7 +52,7 @@ export default function Tenants() {
   const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
   const [showQuittance, setShowQuittance] = useState(false);
   const { settings: orgSettings } = useOrganizationSettings();
-  const { profile } = useProfile();
+  const { profile, role } = useProfile();
   const [formerSearch, setFormerSearch] = useState("");
   const [formerTenants, setFormerTenants] = useState<any[]>([]);
   const [formerLoading, setFormerLoading] = useState(false);
