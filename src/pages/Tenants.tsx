@@ -47,7 +47,12 @@ export default function Tenants() {
     lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "",
     tenant_type: "individual" as "individual" | "company",
     company_name: "", contact_person: "", rccm: "",
+    advance_months: "0", advance_method: "cash",
   });
+  const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
+  const [showQuittance, setShowQuittance] = useState(false);
+  const { settings: orgSettings } = useOrganizationSettings();
+  const { profile } = useProfile();
   const [formerSearch, setFormerSearch] = useState("");
   const [formerTenants, setFormerTenants] = useState<any[]>([]);
   const [formerLoading, setFormerLoading] = useState(false);
