@@ -22,6 +22,9 @@ import { computeTenantRiskScore, riskStyles, riskProgressColors, type TenantRisk
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
+import { QuittanceDialog } from "@/components/rent/QuittanceDialog";
+import type { QuittanceData } from "@/lib/generateQuittance";
 
 const REASON_LABELS: Record<string, string> = {
   normal: "Fin normale",
@@ -44,7 +47,12 @@ export default function Tenants() {
     lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "",
     tenant_type: "individual" as "individual" | "company",
     company_name: "", contact_person: "", rccm: "",
+    advance_months: "0", advance_method: "cash",
   });
+  const [quittanceData, setQuittanceData] = useState<QuittanceData | null>(null);
+  const [showQuittance, setShowQuittance] = useState(false);
+  const { settings: orgSettings } = useOrganizationSettings();
+  const { profile, role } = useProfile();
   const [formerSearch, setFormerSearch] = useState("");
   const [formerTenants, setFormerTenants] = useState<any[]>([]);
   const [formerLoading, setFormerLoading] = useState(false);
@@ -53,7 +61,7 @@ export default function Tenants() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { role } = useProfile();
+  
   const isAdmin = role?.role === "admin";
   const [deletingFormer, setDeletingFormer] = useState<any>(null);
   const [deletingFormerLoading, setDeletingFormerLoading] = useState(false);
@@ -275,13 +283,124 @@ export default function Tenants() {
       console.error("Génération des échéances rétroactives échouée:", e);
     }
 
+    // Paiements d'avance à la signature : marque les N premières échéances comme payées
+    const advanceMonths = Math.max(0, parseInt(form.advance_months) || 0);
+    let quittanceLines: { month: string; amount: number; paidAmount: number }[] = [];
+    if (advanceMonths > 0) {
+      try {
+        // S'assure d'avoir des échéances pour couvrir les mois d'avance (même dans le futur)
+        const { data: propRow2 } = await supabase
+          .from("properties")
+          .select("organizations:organization_id(rent_due_day)")
+          .eq("id", unit.property_id)
+          .maybeSingle();
+        const rentDueDay2 = (propRow2 as any)?.organizations?.rent_due_day || 5;
+        const leaseStart2 = new Date(form.lease_start);
+
+        const { data: existingPays } = await supabase
+          .from("rent_payments")
+          .select("id, month, amount, due_date")
+          .eq("tenant_id", insertedTenant.id)
+          .order("month", { ascending: true });
+        const existingSet2 = new Set((existingPays || []).map((p: any) => p.month));
+
+        // Génère les mois d'avance manquants (si lease_start dans le futur ou si période > mois courant)
+        const missing: any[] = [];
+        for (let i = 0; i < advanceMonths; i++) {
+          const d = new Date(leaseStart2.getFullYear(), leaseStart2.getMonth() + i, 1);
+          const y = d.getFullYear();
+          const m = d.getMonth() + 1;
+          const monthKey = `${y}-${String(m).padStart(2, "0")}`;
+          if (existingSet2.has(monthKey)) continue;
+          const lastDay = new Date(y, m, 0).getDate();
+          const safeDay = Math.min(rentDueDay2, lastDay);
+          missing.push({
+            tenant_id: insertedTenant.id,
+            amount: unit.rent,
+            paid_amount: 0,
+            due_date: `${y}-${String(m).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`,
+            month: monthKey,
+            status: "pending" as const,
+          });
+        }
+        if (missing.length > 0) {
+          await supabase.from("rent_payments").insert(missing);
+        }
+
+        // Recharge la liste triée et prend les N premières
+        const { data: allPays } = await supabase
+          .from("rent_payments")
+          .select("id, month, amount, due_date")
+          .eq("tenant_id", insertedTenant.id)
+          .order("month", { ascending: true })
+          .limit(advanceMonths);
+
+        const today = new Date().toISOString().split("T")[0];
+        for (const p of (allPays || [])) {
+          await supabase.from("rent_payments").update({
+            paid_amount: p.amount,
+            status: "paid" as const,
+          }).eq("id", p.id);
+          await supabase.from("payment_records").insert({
+            rent_payment_id: p.id,
+            amount: p.amount,
+            payment_date: today,
+            method: form.advance_method || "cash",
+            comment: "Avance à la signature du bail",
+          });
+          quittanceLines.push({ month: p.month, amount: p.amount, paidAmount: p.amount });
+        }
+      } catch (e) {
+        console.error("Enregistrement des mois d'avance échoué:", e);
+        toast.error("Locataire créé mais les paiements d'avance n'ont pas pu être enregistrés");
+      }
+    }
+
     toast.success(
-      createdCount > 0
+      advanceMonths > 0
+        ? `Locataire ajouté · ${advanceMonths} mois d'avance encaissé${advanceMonths > 1 ? "s" : ""}`
+        : createdCount > 0
         ? `Locataire ajouté · ${createdCount} échéance${createdCount > 1 ? "s" : ""} générée${createdCount > 1 ? "s" : ""} (à marquer payées si réglées)`
         : "Locataire ajouté"
     );
+
+    // Déclenche la quittance multi-mois si mois d'avance payés
+    if (quittanceLines.length > 0) {
+      const first = quittanceLines[0];
+      const last = quittanceLines[quittanceLines.length - 1];
+      const totalPaid = quittanceLines.reduce((s, l) => s + l.paidAmount, 0);
+      const totalAmount = quittanceLines.reduce((s, l) => s + l.amount, 0);
+      const today = new Date();
+      const datePrefix = today.toISOString().slice(2, 10).replace(/-/g, "");
+      const idSuffix = insertedTenant.id.slice(0, 6).toUpperCase();
+      setQuittanceData({
+        quittanceNumber: `Q-${datePrefix}-${idSuffix}`,
+        agentName: profile?.full_name || undefined,
+        tenantName: form.full_name,
+        tenantPhone: form.phone,
+        tenantEmail: form.email,
+        unitName: unit.name,
+        propertyName: (properties.find(p => p.id === unit.property_id)?.name) ?? "",
+        propertyAddress: "",
+        amount: totalAmount,
+        paidAmount: totalPaid,
+        dueDate: first.month + "-01",
+        month: quittanceLines.length > 1
+          ? `${quittanceLines.length} mois (${first.month} → ${last.month})`
+          : first.month,
+        paymentDate: today.toISOString().split("T")[0],
+        paymentMethod: form.advance_method || "cash",
+        organizationName: orgSettings?.name,
+        organizationAddress: orgSettings?.address ?? undefined,
+        organizationPhone: orgSettings?.phone ?? undefined,
+        organizationEmail: orgSettings?.email ?? undefined,
+        monthsBreakdown: quittanceLines.length > 1 ? quittanceLines : undefined,
+      });
+      setShowQuittance(true);
+    }
+
     setShowAdd(false);
-    setForm({ unit_id: "", full_name: "", phone: "", email: "", id_number: "", lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "", tenant_type: "individual", company_name: "", contact_person: "", rccm: "" });
+    setForm({ unit_id: "", full_name: "", phone: "", email: "", id_number: "", lease_start: new Date().toISOString().split("T")[0], lease_duration: "12", deposit: "", tenant_type: "individual", company_name: "", contact_person: "", rccm: "", advance_months: "0", advance_method: "cash" });
     setSelectedProperty("");
     setSaving(false);
     refetch();
@@ -608,8 +727,38 @@ export default function Tenants() {
               <Label>Dépôt de garantie (FCFA)</Label>
               <Input type="number" value={form.deposit} onChange={e => setForm(f => ({ ...f, deposit: e.target.value }))} placeholder={selectedUnit ? (selectedUnit.rent * 2).toString() : "Ex: 700000"} />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Mois d'avance payés</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={form.advance_months}
+                  onChange={e => setForm(f => ({ ...f, advance_months: e.target.value }))}
+                  placeholder="0"
+                />
+                {selectedUnit && parseInt(form.advance_months) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Total : {(selectedUnit.rent * parseInt(form.advance_months)).toLocaleString()} FCFA
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Mode de paiement (avance)</Label>
+                <Select value={form.advance_method} onValueChange={v => setForm(f => ({ ...f, advance_method: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Espèces</SelectItem>
+                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                    <SelectItem value="check">Chèque</SelectItem>
+                    <SelectItem value="transfer">Virement</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="p-3 rounded-lg bg-accent/30 text-xs text-accent-foreground">
               <strong>Règle métier :</strong> Dès validation, l'unité passera en statut "Occupé".
+              {parseInt(form.advance_months) > 0 && " Une quittance unique sera générée pour les mois d'avance encaissés."}
             </div>
           </div>
           <DialogFooter>
@@ -643,6 +792,7 @@ export default function Tenants() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <QuittanceDialog open={showQuittance} onOpenChange={setShowQuittance} data={quittanceData} />
     </AppLayout>
   );
 }
