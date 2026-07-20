@@ -792,6 +792,7 @@ export default function Tenants() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <QuittanceDialog open={showQuittance} onOpenChange={setShowQuittance} data={quittanceData} />
     </AppLayout>
   );
 }
