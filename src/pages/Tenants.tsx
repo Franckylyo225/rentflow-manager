@@ -22,6 +22,9 @@ import { computeTenantRiskScore, riskStyles, riskProgressColors, type TenantRisk
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
+import { QuittanceDialog } from "@/components/rent/QuittanceDialog";
+import type { QuittanceData } from "@/lib/generateQuittance";
 
 const REASON_LABELS: Record<string, string> = {
   normal: "Fin normale",
