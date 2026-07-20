@@ -727,8 +727,38 @@ export default function Tenants() {
               <Label>Dépôt de garantie (FCFA)</Label>
               <Input type="number" value={form.deposit} onChange={e => setForm(f => ({ ...f, deposit: e.target.value }))} placeholder={selectedUnit ? (selectedUnit.rent * 2).toString() : "Ex: 700000"} />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Mois d'avance payés</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={form.advance_months}
+                  onChange={e => setForm(f => ({ ...f, advance_months: e.target.value }))}
+                  placeholder="0"
+                />
+                {selectedUnit && parseInt(form.advance_months) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Total : {(selectedUnit.rent * parseInt(form.advance_months)).toLocaleString()} FCFA
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Mode de paiement (avance)</Label>
+                <Select value={form.advance_method} onValueChange={v => setForm(f => ({ ...f, advance_method: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Espèces</SelectItem>
+                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                    <SelectItem value="check">Chèque</SelectItem>
+                    <SelectItem value="transfer">Virement</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="p-3 rounded-lg bg-accent/30 text-xs text-accent-foreground">
               <strong>Règle métier :</strong> Dès validation, l'unité passera en statut "Occupé".
+              {parseInt(form.advance_months) > 0 && " Une quittance unique sera générée pour les mois d'avance encaissés."}
             </div>
           </div>
           <DialogFooter>
