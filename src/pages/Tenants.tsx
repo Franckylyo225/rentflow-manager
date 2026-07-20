@@ -61,7 +61,7 @@ export default function Tenants() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { role } = useProfile();
+  
   const isAdmin = role?.role === "admin";
   const [deletingFormer, setDeletingFormer] = useState<any>(null);
   const [deletingFormerLoading, setDeletingFormerLoading] = useState(false);
