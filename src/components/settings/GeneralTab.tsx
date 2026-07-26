@@ -37,6 +37,7 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
     salaries_enabled: settings.salaries_enabled ?? true,
     sms_sender_name: settings.sms_sender_name || "SCI BINIEBA",
     sms_sender_number: settings.sms_sender_number || "",
+    receipt_signatory_name: settings.receipt_signatory_name || "",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
