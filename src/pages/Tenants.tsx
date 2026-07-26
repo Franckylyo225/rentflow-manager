@@ -376,7 +376,7 @@ export default function Tenants() {
       const idSuffix = insertedTenant.id.slice(0, 6).toUpperCase();
       setQuittanceData({
         quittanceNumber: `Q-${datePrefix}-${idSuffix}`,
-        agentName: profile?.full_name || undefined,
+        agentName: orgSettings?.receipt_signatory_name || orgSettings?.name || undefined,
         tenantName: form.full_name,
         tenantPhone: form.phone,
         tenantEmail: form.email,

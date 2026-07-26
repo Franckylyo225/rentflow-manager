@@ -245,7 +245,7 @@ function buildQuittancePDF(data: QuittanceData): jsPDF {
   doc.text("Le bailleur,", marginLeft, y);
   y += 7;
   doc.setFont("helvetica", "normal");
-  doc.text(data.organizationName || "La Direction", marginLeft, y);
+  doc.text(data.agentName || data.organizationName || "La Direction", marginLeft, y);
 
   // Footer
   doc.setFontSize(8);

@@ -29,6 +29,7 @@ export interface OrganizationSettings {
   sms_sender_number: string | null;
   auto_sms_enabled: boolean;
   auto_sms_hour: number;
+  receipt_signatory_name: string | null;
 }
 
 export function useOrganizationSettings() {

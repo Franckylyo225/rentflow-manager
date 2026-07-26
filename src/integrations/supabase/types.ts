@@ -620,6 +620,7 @@ export type Database = {
           monsms_sender_id: string | null
           name: string
           phone: string | null
+          receipt_signatory_name: string | null
           rent_due_day: number
           salaries_enabled: boolean
           sms_sender_name: string | null
@@ -653,6 +654,7 @@ export type Database = {
           monsms_sender_id?: string | null
           name: string
           phone?: string | null
+          receipt_signatory_name?: string | null
           rent_due_day?: number
           salaries_enabled?: boolean
           sms_sender_name?: string | null
@@ -686,6 +688,7 @@ export type Database = {
           monsms_sender_id?: string | null
           name?: string
           phone?: string | null
+          receipt_signatory_name?: string | null
           rent_due_day?: number
           salaries_enabled?: boolean
           sms_sender_name?: string | null

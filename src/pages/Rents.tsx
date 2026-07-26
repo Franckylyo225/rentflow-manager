@@ -182,7 +182,7 @@ export default function Rents() {
 
     setQuittanceData({
       quittanceNumber,
-      agentName: profile?.full_name || undefined,
+      agentName: orgSettings?.receipt_signatory_name || orgSettings?.name || undefined,
       tenantName: payment.tenants?.full_name ?? "",
       tenantPhone: payment.tenants?.phone ?? "",
       tenantEmail: payment.tenants?.email ?? "",
@@ -681,7 +681,7 @@ export default function Rents() {
             const sample = payments.find(p => p.tenant_id === advanceTenant.id);
             setQuittanceData({
               quittanceNumber,
-              agentName: profile?.full_name || undefined,
+              agentName: orgSettings?.receipt_signatory_name || orgSettings?.name || undefined,
               tenantName: advanceTenant.full_name,
               tenantPhone: sample?.tenants?.phone ?? "",
               tenantEmail: sample?.tenants?.email ?? "",

@@ -37,6 +37,7 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
     salaries_enabled: settings.salaries_enabled ?? true,
     sms_sender_name: settings.sms_sender_name || "SCI BINIEBA",
     sms_sender_number: settings.sms_sender_number || "",
+    receipt_signatory_name: settings.receipt_signatory_name || "",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -72,6 +73,7 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
       salaries_enabled: form.salaries_enabled,
       sms_sender_name: form.sms_sender_name || "SCI BINIEBA",
       sms_sender_number: form.sms_sender_number || null,
+      receipt_signatory_name: form.receipt_signatory_name || null,
     } as any);
     setSaving(false);
   };
@@ -143,6 +145,11 @@ export function GeneralTab({ settings, onSave, onUploadLogo }: Props) {
               <Label>N° expéditeur SMS</Label>
               <Input value={form.sms_sender_number} onChange={e => set("sms_sender_number", e.target.value)} placeholder="Ex: +2250000" />
               <p className="text-xs text-muted-foreground">Numéro d'expéditeur Orange (requis en mode Sandbox)</p>
+            </div>
+            <div className="sm:col-span-2 space-y-2">
+              <Label>Signataire des quittances de loyer</Label>
+              <Input value={form.receipt_signatory_name} onChange={e => set("receipt_signatory_name", e.target.value)} placeholder="Ex: Nom du représentant de SCI BINIEBA" />
+              <p className="text-xs text-muted-foreground">Nom qui apparaîtra comme signataire sur toutes les quittances de loyer. Si vide, le nom de l'entreprise sera utilisé.</p>
             </div>
           </div>
         </CardContent>
