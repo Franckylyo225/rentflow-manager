@@ -104,9 +104,17 @@ export function SecurityTab() {
   const startEnroll = async () => {
     setEnrolling(true);
     try {
+      // Nettoyer les facteurs non vérifiés d'une tentative précédente
+      const { data: existing } = await supabase.auth.mfa.listFactors();
+      const pending = (existing?.all ?? []).filter(
+        (f: any) => f.factor_type === "totp" && f.status !== "verified"
+      );
+      for (const f of pending) {
+        await supabase.auth.mfa.unenroll({ factorId: f.id });
+      }
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "Application Authenticator",
+        friendlyName: `Authenticator ${new Date().toISOString().slice(0, 19).replace("T", " ")}`,
       });
       if (error) throw error;
       setQrCode(data.totp.qr_code);
