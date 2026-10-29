@@ -158,10 +158,12 @@ export default function PatrimoineDetail() {
     let okCount = 0;
     let errCount = 0;
     for (const item of docItems) {
-      const fileExt = item.file.name.split(".").pop();
+      const parts = item.file.name.split(".");
+      const mimeExt = (item.file.type.split("/")[1] || "bin").replace("jpeg", "jpg");
+      const fileExt = (parts.length > 1 ? parts.pop()! : mimeExt).toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
       const filePath = `${id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from("patrimony-docs").upload(filePath, item.file);
-      if (uploadError) { errCount++; continue; }
+      const { error: uploadError } = await supabase.storage.from("patrimony-docs").upload(filePath, item.file, { contentType: item.file.type || "application/octet-stream", upsert: false });
+      if (uploadError) { console.error("Upload error", uploadError); toast.error(`${item.file.name} : ${uploadError.message}`); errCount++; continue; }
       const { error } = await supabase.from("patrimony_documents").insert({
         asset_id: id,
         name: item.name,
@@ -555,9 +557,10 @@ export default function PatrimoineDetail() {
               <Input
                 type="file"
                 multiple
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.doc,.docx,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={e => {
-                  const files = Array.from(e.target.files || []);
+                  const input = e.currentTarget;
+                  const files = Array.from(input.files || []);
                   if (files.length === 0) return;
                   setDocItems(prev => [
                     ...prev,
@@ -567,7 +570,7 @@ export default function PatrimoineDetail() {
                       document_type: "autre",
                     })),
                   ]);
-                  e.target.value = "";
+                  setTimeout(() => { input.value = ""; }, 0);
                 }}
               />
               <p className="text-xs text-muted-foreground">PDF, JPG, PNG, DOC, DOCX</p>
