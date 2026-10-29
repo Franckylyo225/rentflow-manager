@@ -169,7 +169,7 @@ export function RecordSaleDialog({ open, onOpenChange, asset, onSuccess }: Recor
             <Label>Acte de vente (PDF)</Label>
             <Input
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".pdf,.jpg,.jpeg,.png,.heic,application/pdf,image/*"
               onChange={(e) => setDeedFile(e.target.files?.[0] || null)}
             />
             {deedFile && (
