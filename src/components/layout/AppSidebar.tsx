@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useOrganizationSettings } from "@/hooks/useOrganizationSettings";
+import { InstallMenuItem } from "@/components/pwa/InstallMenuItem";
 
 interface AppSidebarProps {
   open: boolean;
@@ -65,6 +66,11 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
             );
           })}
         </nav>
+
+        {/* Installation de l'application */}
+        <div className="px-3 pb-2">
+          <InstallMenuItem />
+        </div>
 
         {/* User */}
         <div className="px-4 py-4 border-t border-border">

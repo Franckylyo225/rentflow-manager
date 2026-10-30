@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { useProfile } from "@/hooks/useProfile";
+import { InstallBanner } from "@/components/pwa/InstallBanner";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,6 +23,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+
+      <InstallBanner />
     </div>
   );
 }
