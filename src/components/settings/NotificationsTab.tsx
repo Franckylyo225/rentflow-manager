@@ -49,7 +49,11 @@ export function NotificationsTab() {
   }, [orgSettings]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     supabase.from("notification_templates").select("*").order("created_at").then(({ data }) => {
       if (data) {
         setTemplates(data);
@@ -57,7 +61,7 @@ export function NotificationsTab() {
       }
       setLoading(false);
     });
-  }, [user]);
+  }, [user?.id]);
 
   const updateTemplate = (id: string, field: string, value: string | boolean | number | null) => {
     setTemplates(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));

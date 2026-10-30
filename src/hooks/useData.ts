@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
 
 // Countries hook
 export function useCountries() {
@@ -10,14 +9,18 @@ export function useCountries() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase.from("countries").select("*").order("name");
     if (result) setData(result as any);
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }
 
@@ -28,14 +31,18 @@ export function useCities() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase.from("cities").select("*, countries(name)").order("name");
     if (result) setData(result as any);
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }
 
@@ -110,7 +117,11 @@ export function useProperties() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase
       .from("properties")
@@ -120,7 +131,7 @@ export function useProperties() {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }
 
@@ -130,7 +141,11 @@ export function useUnits(propertyId?: string) {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let query = supabase.from("units").select("*, properties(name, organization_id)").order("name");
     if (propertyId) query = query.eq("property_id", propertyId);
@@ -139,7 +154,7 @@ export function useUnits(propertyId?: string) {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user, propertyId]);
+  useEffect(() => { refetch(); }, [user?.id, propertyId]);
   return { data, loading, refetch };
 }
 
@@ -149,7 +164,11 @@ export function useTenants() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase
       .from("tenants")
@@ -160,7 +179,7 @@ export function useTenants() {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }
 
@@ -170,7 +189,11 @@ export function useRentPayments() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase
       .from("rent_payments")
@@ -180,6 +203,6 @@ export function useRentPayments() {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }

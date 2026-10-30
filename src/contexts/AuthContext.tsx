@@ -19,17 +19,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // supabase-js re-reads the session from storage and re-parses it on every
+    // auth event — tab focus (visibilitychange), token refresh, cross-tab
+    // broadcast — so `session.user` is always a brand new object even when it is
+    // the same account. Keeping the previous reference in that case is what
+    // stops every `[user]` effect from refiring and remounting the whole tree.
+    const applySession = (next: Session | null) => {
+      setSession(next);
+      setUser(prev => (prev?.id === next?.user?.id ? prev : next?.user ?? null));
       setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      applySession(session);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => applySession(session));
 
     return () => subscription.unsubscribe();
   }, []);

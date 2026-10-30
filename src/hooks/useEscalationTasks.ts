@@ -21,7 +21,11 @@ export function useEscalationTasks(rentPaymentId?: string) {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let query = supabase.from("escalation_tasks").select("*").order("created_at", { ascending: false });
     if (rentPaymentId) query = query.eq("rent_payment_id", rentPaymentId);
@@ -30,6 +34,6 @@ export function useEscalationTasks(rentPaymentId?: string) {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user, rentPaymentId]);
+  useEffect(() => { refetch(); }, [user?.id, rentPaymentId]);
   return { data, loading, refetch };
 }
