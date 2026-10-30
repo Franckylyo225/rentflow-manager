@@ -121,6 +121,43 @@ export function useTenants(options?: ListOptions) {
   );
 }
 
+/**
+ * Variante allégée de `rent_payments`, pour les écrans qui n'affichent jamais
+ * le bien ni la ville d'un loyer : le tableau de bord et le score de risque.
+ * La requête complète traîne une chaîne locataire → unité → bien → ville sur
+ * chaque ligne, ce qui multiplie le poids de la réponse alors que seuls le
+ * montant, le statut et le nom du locataire sont lus.
+ *
+ * `since` borne l'historique ('YYYY-MM' inclus). `month` est un TEXT au format
+ * 'YYYY-MM', donc la comparaison lexicographique correspond bien à l'ordre
+ * chronologique.
+ */
+export interface DbRentPaymentSummary {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  paid_amount: number;
+  due_date: string;
+  status: "pending" | "paid" | "partial" | "late";
+  month: string;
+  tenants?: { full_name: string };
+}
+
+export function useRentPaymentsSummary(since?: string, options?: ListOptions) {
+  return useSupabaseList<DbRentPaymentSummary>(
+    ["rent_payments_summary", since ?? null],
+    () => {
+      let query = supabase
+        .from("rent_payments")
+        .select("id, tenant_id, amount, paid_amount, due_date, status, month, tenants(full_name)")
+        .order("due_date", { ascending: false });
+      if (since) query = query.gte("month", since);
+      return rows<DbRentPaymentSummary>(query);
+    },
+    options
+  );
+}
+
 export function useRentPayments(options?: ListOptions) {
   return useSupabaseList<DbRentPayment>(
     ["rent_payments"],

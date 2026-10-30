@@ -64,7 +64,7 @@ vi.mock("@/integrations/supabase/client", () => {
 
 const { AuthProvider } = await import("@/contexts/AuthContext");
 const { ProfileProvider, useProfile } = await import("@/contexts/ProfileContext");
-const { useProperties, useTenants, useUnits } = await import("@/hooks/useData");
+const { useProperties, useTenants, useUnits, useRentPaymentsSummary } = await import("@/hooks/useData");
 
 /** Imite le Dashboard : il demande biens, unités et locataires. */
 function PageLikeDashboard() {
@@ -149,6 +149,22 @@ describe("chargement des données", () => {
     expect(countOf("properties")).toBe(1);
     expect(countOf("units")).toBe(1);
     expect(countOf("tenants")).toBe(1);
+  });
+
+  it("ne demande pas la chaîne bien/ville pour le tableau de bord", async () => {
+    function DashboardPayments() {
+      useRentPaymentsSummary("2025-01");
+      return null;
+    }
+    await render(<DashboardPayments />);
+
+    const select = state.selects.find(entry => entry.startsWith("rent_payments:"));
+    expect(select).toBeDefined();
+    // Le tableau de bord n'affiche que le nom du locataire : embarquer
+    // unités → biens → villes alourdissait chaque ligne pour rien.
+    expect(select).toContain("tenants(full_name)");
+    expect(select).not.toContain("properties");
+    expect(select).not.toContain("cities");
   });
 
   it("ne charge rien pour la recherche tant qu'elle n'est pas ouverte", async () => {

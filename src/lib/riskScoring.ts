@@ -1,5 +1,8 @@
 import { type DbRentPayment } from "@/hooks/useData";
 
+/** Le score ne lit que ces champs : la requête allégée suffit. */
+type PaymentForRisk = Pick<DbRentPayment, "tenant_id" | "due_date" | "amount" | "paid_amount" | "status">;
+
 export interface TenantRiskScore {
   score: number; // 0-100, 100 = highest risk
   level: "low" | "medium" | "high" | "critical";
@@ -10,7 +13,7 @@ export interface TenantRiskScore {
   unpaidAmount: number;
 }
 
-export function computeTenantRiskScore(tenantId: string, payments: DbRentPayment[]): TenantRiskScore {
+export function computeTenantRiskScore(tenantId: string, payments: PaymentForRisk[]): TenantRiskScore {
   const tenantPayments = payments.filter(p => p.tenant_id === tenantId);
   if (tenantPayments.length === 0) {
     return { score: 0, level: "low", label: "Nouveau", lateCount: 0, totalPayments: 0, avgDaysLate: 0, unpaidAmount: 0 };

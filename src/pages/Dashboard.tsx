@@ -1,20 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Building2, Users, AlertTriangle, TrendingUp, Home, Loader2, Wallet, TrendingDown, ChevronLeft, ChevronRight, Calendar, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
-import { useProperties, useUnits, useTenants, useRentPayments } from "@/hooks/useData";
+import { useProperties, useUnits, useTenants, useRentPaymentsSummary } from "@/hooks/useData";
+
+// recharts pèse plus de 100 Ko compressés et ne sert qu'aux deux graphiques
+// du bas : il ne doit pas retarder l'affichage des indicateurs du haut.
+const DashboardCharts = lazy(() => import("@/components/dashboard/DashboardCharts"));
 import { useExpenses } from "@/hooks/useExpenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  PieChart, Pie, Cell,
-} from "recharts";
 
-const FCFA = (v: number) => `${(v / 1000).toFixed(0)}k`;
 const formatAmount = (v: number, short: boolean) => {
   if (short) {
     if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -24,28 +23,12 @@ const formatAmount = (v: number, short: boolean) => {
   return v.toLocaleString();
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  paid: "hsl(160, 84%, 39%)",
-  late: "hsl(0, 72%, 51%)",
-  partial: "hsl(38, 92%, 50%)",
-  pending: "hsl(220, 10%, 70%)",
-};
-
 const STATUS_LABELS: Record<string, string> = {
   paid: "Payé",
   partial: "Partiel",
   late: "En retard",
   pending: "En attente",
 };
-
-const CITY_COLORS = [
-  "hsl(160, 84%, 39%)",
-  "hsl(210, 100%, 52%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(280, 65%, 60%)",
-  "hsl(0, 72%, 51%)",
-  "hsl(190, 70%, 50%)",
-];
 
 const MONTH_LABELS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
@@ -60,12 +43,24 @@ function shiftMonth(month: string, delta: number): string {
   return d.toISOString().slice(0, 7);
 }
 
+// Le tableau de bord est une vue d'ensemble : il travaille sur une fenêtre
+// glissante plutôt que sur tout l'historique, dont le volume grandit chaque
+// mois. L'historique complet reste consultable dans Loyers et Rapports
+// financiers. Changer cette constante élargit la fenêtre et la navigation.
+const HISTORY_MONTHS = 24;
+const HISTORY_START = shiftMonth(new Date().toISOString().slice(0, 7), -(HISTORY_MONTHS - 1));
+// Sur le mois le plus ancien atteignable, l'écran compare encore au mois
+// précédent et trace une courbe sur six mois. On charge donc un peu avant la
+// borne de navigation : sans cela ces deux-là afficheraient zéro, ce qui se
+// lirait comme une vraie chute plutôt que comme une absence de données.
+const QUERY_START = shiftMonth(HISTORY_START, -6);
+
 export default function Dashboard() {
   const { profile } = useProfile();
   const { data: properties, loading: pLoading } = useProperties();
   const { data: units } = useUnits();
   const { data: tenants } = useTenants();
-  const { data: payments } = useRentPayments();
+  const { data: payments } = useRentPaymentsSummary(QUERY_START);
   const { data: expenses } = useExpenses();
 
   const isMobile = useIsMobile();
@@ -74,6 +69,7 @@ export default function Dashboard() {
   const now = new Date().toISOString().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(now);
   const isCurrentMonth = selectedMonth === now;
+  const isOldestMonth = selectedMonth <= HISTORY_START;
 
   // Financial KPIs for selected month
   const prevMonth = useMemo(() => shiftMonth(selectedMonth, -1), [selectedMonth]);
@@ -123,6 +119,7 @@ export default function Dashboard() {
   const monthlyData = useMemo(() => {
     const byMonth: Record<string, { month: string; paid: number; unpaid: number }> = {};
     payments.forEach(p => {
+      if (p.month < HISTORY_START) return;
       if (!byMonth[p.month]) byMonth[p.month] = { month: p.month, paid: 0, unpaid: 0 };
       byMonth[p.month].paid += p.paid_amount;
       byMonth[p.month].unpaid += (p.amount - p.paid_amount);
@@ -135,23 +132,6 @@ export default function Dashboard() {
         isSelected: d.month === selectedMonth,
       }));
   }, [payments, selectedMonth]);
-
-  // Revenue by city for selected month
-  const cityData = useMemo(() => {
-    const tenantsByUnit: Record<string, boolean> = {};
-    monthPayments.forEach(p => {
-      const tenant = tenants.find(t => t.id === p.tenant_id);
-      if (tenant) tenantsByUnit[tenant.unit_id] = true;
-    });
-    const byCity: Record<string, { city: string; revenue: number }> = {};
-    units.filter(u => tenantsByUnit[u.id]).forEach(u => {
-      const prop = properties.find(p => p.id === u.property_id);
-      const cityName = prop?.cities?.name || "Autre";
-      if (!byCity[cityName]) byCity[cityName] = { city: cityName, revenue: 0 };
-      byCity[cityName].revenue += u.rent;
-    });
-    return Object.values(byCity).sort((a, b) => b.revenue - a.revenue);
-  }, [monthPayments, units, properties, tenants]);
 
   // Payment status breakdown for selected month
   const statusData = useMemo(() => {
@@ -201,7 +181,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSelectedMonth(m => shiftMonth(m, -1))}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSelectedMonth(m => shiftMonth(m, -1))} disabled={isOldestMonth}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <button
@@ -317,112 +297,21 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Charts row - Status Analysis & Revenue */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Payment status donut - Databrain style */}
-              <Card className="border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    Analyse des statuts
-                    <span className="text-muted-foreground text-xs font-normal">({formatMonthLabel(selectedMonth)})</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {statusData.length === 0 ? (
-                    <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">Aucune donnée</div>
-                  ) : (
-                    <div className="flex items-center gap-6">
-                      <div className="relative flex-shrink-0">
-                        <ResponsiveContainer width={200} height={200}>
-                          <PieChart>
-                            <Pie
-                              data={statusData}
-                              dataKey="count"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={55}
-                              outerRadius={90}
-                              paddingAngle={3}
-                              strokeWidth={0}
-                            >
-                              {statusData.map((entry) => (
-                                <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v: number, name: string) => [`${v} loyer(s)`, name]} contentStyle={{ borderRadius: 12, border: "1px solid hsl(220, 13%, 90%)", fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        {/* Center label */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-2xl font-bold text-card-foreground">{totalStatusCount}</span>
-                          <span className="text-xs text-muted-foreground">Loyers</span>
-                        </div>
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        {statusData.map(s => {
-                          const pct = Math.round((s.count / totalStatusCount) * 100);
-                          return (
-                            <div key={s.key} className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[s.key] }} />
-                                  <span className="text-sm text-card-foreground font-medium">{s.name}</span>
-                                </div>
-                                <span className="text-sm font-bold text-card-foreground">{s.count}</span>
-                              </div>
-                              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-500"
-                                  style={{ width: `${pct}%`, backgroundColor: STATUS_COLORS[s.key] }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Monthly revenue bar chart - Databrain style */}
-              <Card className="border-border">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold">Revenus mensuels</CardTitle>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 rounded-sm bg-success" />
-                        Payé
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 rounded-sm bg-destructive" />
-                        Impayé
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {monthlyData.length === 0 ? (
-                    <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">Aucune donnée</div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={monthlyData} barGap={2} barCategoryGap="20%">
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" vertical={false} />
-                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(220, 10%, 46%)" }} axisLine={false} tickLine={false} />
-                        <YAxis tickFormatter={FCFA} tick={{ fontSize: 11, fill: "hsl(220, 10%, 46%)" }} axisLine={false} tickLine={false} width={50} />
-                        <Tooltip
-                          formatter={(value: number) => `${value.toLocaleString()} FCFA`}
-                          contentStyle={{ borderRadius: 12, border: "1px solid hsl(220, 13%, 90%)", fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
-                        />
-                        <Bar dataKey="paid" name="Payé" fill="hsl(160, 84%, 39%)" radius={[6, 6, 0, 0]} />
-                        <Bar dataKey="unpaid" name="Impayé" fill="hsl(0, 72%, 51%)" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <Suspense
+              fallback={
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="h-[340px] rounded-xl border border-border bg-card animate-pulse" />
+                  <div className="h-[340px] rounded-xl border border-border bg-card animate-pulse" />
+                </div>
+              }
+            >
+              <DashboardCharts
+                statusData={statusData}
+                totalStatusCount={totalStatusCount}
+                monthlyData={monthlyData}
+                monthLabel={formatMonthLabel(selectedMonth)}
+              />
+            </Suspense>
 
             {/* Transactions */}
             <Card className="border-border">

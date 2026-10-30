@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useProperties, useUnits, useRentPayments } from "@/hooks/useData";
+import { useProperties, useUnits, useRentPaymentsSummary } from "@/hooks/useData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,7 +143,7 @@ export default function Tenants() {
 
   const { data: properties } = useProperties();
   const { data: allUnits } = useUnits();
-  const { data: allPayments } = useRentPayments();
+  const { data: allPayments } = useRentPaymentsSummary();
 
   const riskScores = useMemo(() => {
     const map = new Map<string, TenantRiskScore>();
