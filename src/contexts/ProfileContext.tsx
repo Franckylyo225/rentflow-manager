@@ -19,6 +19,11 @@ export interface UserRole {
   role: "admin" | "gestionnaire" | "comptable" | "super_admin";
 }
 
+/**
+ * Ligne `organizations` complète : elle porte à la fois l'identité de
+ * l'organisation et ses réglages, que OrganizationSettingsContext réutilise au
+ * lieu de refaire la même requête.
+ */
 export interface Organization {
   id: string;
   name: string;
@@ -26,6 +31,7 @@ export interface Organization {
   phone: string | null;
   address: string | null;
   invite_token?: string;
+  [key: string]: unknown;
 }
 
 interface ProfileContextType {
@@ -67,7 +73,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (!loadedRef.current) setLoading(true);
 
     const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+      // `profiles.organization_id` référence `organizations.id`, donc PostgREST
+      // sait ramener l'organisation dans la même requête. C'était auparavant un
+      // second aller-retour, qui ne pouvait partir qu'une fois le profil reçu.
+      supabase.from("profiles").select("*, organizations(*)").eq("user_id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
     ]);
 
@@ -75,14 +84,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (roleRes.error) console.error("Error fetching user role:", roleRes.error);
 
     if (profileRes.data) {
-      setProfile(profileRes.data as unknown as Profile);
-      const orgRes = await supabase
-        .from("organizations")
-        .select("*")
-        .eq("id", profileRes.data.organization_id)
-        .maybeSingle();
-      if (orgRes.error) console.error("Error fetching organization:", orgRes.error);
-      if (orgRes.data) setOrganization(orgRes.data as unknown as Organization);
+      const { organizations, ...profileRow } = profileRes.data as Record<string, unknown>;
+      setProfile(profileRow as unknown as Profile);
+      setOrganization((organizations ?? null) as Organization | null);
     }
 
     if (roleRes.data) setRole(roleRes.data as UserRole);

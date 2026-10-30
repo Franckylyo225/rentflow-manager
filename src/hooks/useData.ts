@@ -1,50 +1,5 @@
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-
-// Countries hook
-export function useCountries() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbCountry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase.from("countries").select("*").order("name");
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
-}
-
-// Cities hook
-export function useCities() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbCity[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase.from("cities").select("*, countries(name)").order("name");
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
-}
+import { useSupabaseList, type ListOptions } from "@/hooks/useSupabaseList";
 
 export interface DbCountry {
   id: string;
@@ -109,100 +64,73 @@ export interface DbRentPayment {
   tenants?: { full_name: string; phone?: string; email?: string; unit_id: string; units?: { name: string; property_id: string; properties?: { name: string; city_id: string; cities?: { name: string } } } };
 }
 
-// Specific hooks
-
-export function useProperties() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbProperty[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase
-      .from("properties")
-      .select("*, cities(name)")
-      .order("name");
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
+async function rows<T>(query: PromiseLike<{ data: unknown; error: { message: string } | null }>) {
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as T[];
 }
 
-export function useUnits(propertyId?: string) {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbUnit[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    let query = supabase.from("units").select("*, properties(name, organization_id)").order("name");
-    if (propertyId) query = query.eq("property_id", propertyId);
-    const { data: result } = await query;
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id, propertyId]);
-  return { data, loading, refetch };
+export function useCountries(options?: ListOptions) {
+  return useSupabaseList<DbCountry>(
+    ["countries"],
+    () => rows<DbCountry>(supabase.from("countries").select("*").order("name")),
+    options
+  );
 }
 
-export function useTenants() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbTenant[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase
-      .from("tenants")
-      .select("*, units(name, property_id, properties(name, city_id, cities(name)))")
-      .eq("is_active", true)
-      .order("full_name");
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
+export function useCities(options?: ListOptions) {
+  return useSupabaseList<DbCity>(
+    ["cities"],
+    () => rows<DbCity>(supabase.from("cities").select("*, countries(name)").order("name")),
+    options
+  );
 }
 
-export function useRentPayments() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbRentPayment[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useProperties(options?: ListOptions) {
+  return useSupabaseList<DbProperty>(
+    ["properties"],
+    () => rows<DbProperty>(supabase.from("properties").select("*, cities(name)").order("name")),
+    options
+  );
+}
 
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase
-      .from("rent_payments")
-      .select("*, tenants(full_name, phone, email, unit_id, units(name, property_id, properties(name, city_id, cities(name))))")
-      .order("due_date", { ascending: false });
-    if (result) setData(result as any);
-    setLoading(false);
-  };
+export function useUnits(propertyId?: string, options?: ListOptions) {
+  return useSupabaseList<DbUnit>(
+    ["units", propertyId ?? null],
+    () => {
+      let query = supabase.from("units").select("*, properties(name, organization_id)").order("name");
+      if (propertyId) query = query.eq("property_id", propertyId);
+      return rows<DbUnit>(query);
+    },
+    options
+  );
+}
 
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
+export function useTenants(options?: ListOptions) {
+  return useSupabaseList<DbTenant>(
+    ["tenants"],
+    () =>
+      rows<DbTenant>(
+        supabase
+          .from("tenants")
+          .select("*, units(name, property_id, properties(name, city_id, cities(name)))")
+          .eq("is_active", true)
+          .order("full_name")
+      ),
+    options
+  );
+}
+
+export function useRentPayments(options?: ListOptions) {
+  return useSupabaseList<DbRentPayment>(
+    ["rent_payments"],
+    () =>
+      rows<DbRentPayment>(
+        supabase
+          .from("rent_payments")
+          .select("*, tenants(full_name, phone, email, unit_id, units(name, property_id, properties(name, city_id, cities(name))))")
+          .order("due_date", { ascending: false })
+      ),
+    options
+  );
 }

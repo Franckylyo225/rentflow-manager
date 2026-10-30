@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useSupabaseList, type ListOptions } from "@/hooks/useSupabaseList";
 
 export interface DbExpenseCategory {
   id: string;
@@ -49,74 +48,38 @@ export interface DbEmployee {
   properties?: { name: string } | null;
 }
 
-export function useExpenseCategories() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbExpenseCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase
-      .from("expense_categories")
-      .select("*")
-      .order("name");
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
+async function rows<T>(query: PromiseLike<{ data: unknown; error: { message: string } | null }>) {
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as T[];
 }
 
-export function useExpenses() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbExpense[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase
-      .from("expenses")
-      .select("*, expense_categories(name), properties(name), units(name), cities(name), employees(full_name)")
-      .order("expense_date", { ascending: false });
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
+export function useExpenseCategories(options?: ListOptions) {
+  return useSupabaseList<DbExpenseCategory>(
+    ["expense_categories"],
+    () => rows<DbExpenseCategory>(supabase.from("expense_categories").select("*").order("name")),
+    options
+  );
 }
 
-export function useEmployees() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DbEmployee[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useExpenses(options?: ListOptions) {
+  return useSupabaseList<DbExpense>(
+    ["expenses"],
+    () =>
+      rows<DbExpense>(
+        supabase
+          .from("expenses")
+          .select("*, expense_categories(name), properties(name), units(name), cities(name), employees(full_name)")
+          .order("expense_date", { ascending: false })
+      ),
+    options
+  );
+}
 
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data: result } = await supabase
-      .from("employees")
-      .select("*, cities(name), properties(name)")
-      .order("full_name");
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id]);
-  return { data, loading, refetch };
+export function useEmployees(options?: ListOptions) {
+  return useSupabaseList<DbEmployee>(
+    ["employees"],
+    () => rows<DbEmployee>(supabase.from("employees").select("*, cities(name), properties(name)").order("full_name")),
+    options
+  );
 }

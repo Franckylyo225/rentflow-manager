@@ -20,9 +20,15 @@ export function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const { data: properties } = useProperties();
-  const { data: units } = useUnits();
-  const { data: tenants } = useTenants();
+  // GlobalSearch est dans l'en-tête, donc monté sur toutes les pages. Charger
+  // biens, unités et locataires d'emblée faisait trois requêtes sur des écrans
+  // qui n'en ont aucun usage (Dépenses, Paramètres, Aide...). Elles ne partent
+  // désormais qu'à l'ouverture du champ de recherche — et React Query réutilise
+  // le cache si la page les a déjà demandées.
+  const searching = open;
+  const { data: properties } = useProperties({ enabled: searching });
+  const { data: units } = useUnits(undefined, { enabled: searching });
+  const { data: tenants } = useTenants({ enabled: searching });
 
   const results = useMemo<SearchResult[]>(() => {
     const q = query.trim().toLowerCase();

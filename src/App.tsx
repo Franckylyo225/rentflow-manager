@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -9,26 +10,51 @@ import { ProfileProvider } from "@/contexts/ProfileContext";
 import { OrganizationSettingsProvider } from "@/contexts/OrganizationSettingsContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import AuthPage from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Properties from "./pages/Properties";
-import PropertyDetail from "./pages/PropertyDetail";
-import Tenants from "./pages/Tenants";
-import TenantDetail from "./pages/TenantDetail";
-import Rents from "./pages/Rents";
-import Expenses from "./pages/Expenses";
-import Employees from "./pages/Employees";
-import FinancialReports from "./pages/FinancialReports";
-import SettingsPage from "./pages/Settings";
-import Notifications from "./pages/Notifications";
-import Patrimoine from "./pages/Patrimoine";
-import PatrimoineDetail from "./pages/PatrimoineDetail";
-import MfaVerify from "./pages/MfaVerify";
-import SmsMfaVerify from "./pages/SmsMfaVerify";
-import ResetPassword from "./pages/ResetPassword";
-import Help from "./pages/Help";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Properties = lazy(() => import("./pages/Properties"));
+const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
+const Tenants = lazy(() => import("./pages/Tenants"));
+const TenantDetail = lazy(() => import("./pages/TenantDetail"));
+const Rents = lazy(() => import("./pages/Rents"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const Employees = lazy(() => import("./pages/Employees"));
+const FinancialReports = lazy(() => import("./pages/FinancialReports"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Patrimoine = lazy(() => import("./pages/Patrimoine"));
+const PatrimoineDetail = lazy(() => import("./pages/PatrimoineDetail"));
+const MfaVerify = lazy(() => import("./pages/MfaVerify"));
+const SmsMfaVerify = lazy(() => import("./pages/SmsMfaVerify"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Help = lazy(() => import("./pages/Help"));
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // `staleTime` reste à 0 volontairement. Garder les données en cache
+      // plusieurs secondes accélérerait la navigation, mais l'application écrit
+      // dans plusieurs tables à la fois (créer un locataire touche `tenants`,
+      // `units`, `rent_payments` et `payment_records`) depuis une soixantaine
+      // d'endroits qui ne rafraîchissent que leur propre liste. On afficherait
+      // alors des loyers périmés. Le gain de confort est conservé autrement :
+      // React Query rend immédiatement les données déjà connues et revalide en
+      // arrière-plan, au lieu de repartir d'une liste vide avec un spinner.
+      staleTime: 0,
+      // Le retour sur l'onglet rechargeait tout sans que rien ne l'ait demandé.
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+}
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -40,7 +66,8 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <Routes>
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/mfa-verify" element={<MfaVerify />} />
                   <Route path="/sms-mfa-verify" element={<SmsMfaVerify />} />
@@ -61,6 +88,7 @@ const App = () => (
                   <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </BrowserRouter>
             </TooltipProvider>
           </OrganizationSettingsProvider>

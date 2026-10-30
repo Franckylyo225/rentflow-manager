@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useSupabaseList, type ListOptions } from "@/hooks/useSupabaseList";
 
 export interface EscalationTask {
   id: string;
@@ -15,25 +14,16 @@ export interface EscalationTask {
   created_at: string;
 }
 
-export function useEscalationTasks(rentPaymentId?: string) {
-  const { user } = useAuth();
-  const [data, setData] = useState<EscalationTask[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = async () => {
-    if (!user) {
-      // Never leave `loading` stuck on: consumers gate their whole list on it.
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    let query = supabase.from("escalation_tasks").select("*").order("created_at", { ascending: false });
-    if (rentPaymentId) query = query.eq("rent_payment_id", rentPaymentId);
-    const { data: result } = await query;
-    if (result) setData(result as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { refetch(); }, [user?.id, rentPaymentId]);
-  return { data, loading, refetch };
+export function useEscalationTasks(rentPaymentId?: string, options?: ListOptions) {
+  return useSupabaseList<EscalationTask>(
+    ["escalation_tasks", rentPaymentId ?? null],
+    async () => {
+      let query = supabase.from("escalation_tasks").select("*").order("created_at", { ascending: false });
+      if (rentPaymentId) query = query.eq("rent_payment_id", rentPaymentId);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as EscalationTask[];
+    },
+    options
+  );
 }

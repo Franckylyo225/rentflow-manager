@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
@@ -43,84 +43,61 @@ interface OrganizationSettingsContextType {
 const OrganizationSettingsContext = createContext<OrganizationSettingsContextType | undefined>(undefined);
 
 /**
- * Loads the organization settings once per session and shares them, instead of
- * once per consumer as before.
+ * Les réglages d'organisation ne sont plus chargés séparément : la ligne
+ * `organizations` complète arrive déjà avec le profil, en une seule requête.
+ * Ce contexte se contente de l'exposer sous le nom attendu par les pages et de
+ * porter les écritures.
  */
 export function OrganizationSettingsProvider({ children }: { children: ReactNode }) {
-  const { profile, loading: profileLoading } = useProfile();
-  const organizationId = profile?.organization_id;
-  const [settings, setSettings] = useState<OrganizationSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const loadedRef = useRef(false);
+  const { organization, loading, refetch } = useProfile();
+  const organizationId = organization?.id;
+  const settings = (organization ?? null) as unknown as OrganizationSettings | null;
 
-  const fetchSettings = useCallback(async () => {
-    if (!organizationId) {
-      // Stay in the loading state only while the profile is still on its way:
-      // once it has settled without an organization there is nothing to wait
-      // for, and leaving `loading` on would hang every consumer forever.
-      setSettings(null);
-      loadedRef.current = false;
-      setLoading(profileLoading);
-      return;
-    }
+  const updateSettings = useCallback(
+    async (updates: Partial<OrganizationSettings>) => {
+      if (!organizationId) return false;
+      const { error } = await supabase
+        .from("organizations")
+        .update(updates as never)
+        .eq("id", organizationId);
+      if (error) {
+        toast.error("Erreur lors de la sauvegarde : " + error.message);
+        return false;
+      }
+      toast.success("Paramètres sauvegardés");
+      await refetch();
+      return true;
+    },
+    [organizationId, refetch]
+  );
 
-    if (!loadedRef.current) setLoading(true);
+  const uploadLogo = useCallback(
+    async (file: File): Promise<string | null> => {
+      if (!organizationId) return null;
+      const ext = file.name.split(".").pop();
+      const path = `${organizationId}/logo.${ext}`;
 
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("*")
-      .eq("id", organizationId)
-      .maybeSingle();
-    if (data) setSettings(data as unknown as OrganizationSettings);
-    if (error) console.error("Error fetching org settings:", error);
-
-    loadedRef.current = true;
-    setLoading(false);
-  }, [organizationId, profileLoading]);
-
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
-
-  const updateSettings = async (updates: Partial<OrganizationSettings>) => {
-    if (!organizationId) return false;
-    const { error } = await supabase
-      .from("organizations")
-      .update(updates as any)
-      .eq("id", organizationId);
-    if (error) {
-      toast.error("Erreur lors de la sauvegarde : " + error.message);
-      return false;
-    }
-    toast.success("Paramètres sauvegardés");
-    await fetchSettings();
-    return true;
-  };
-
-  const uploadLogo = async (file: File): Promise<string | null> => {
-    if (!organizationId) return null;
-    const ext = file.name.split(".").pop();
-    const path = `${organizationId}/logo.${ext}`;
-
-    const { error } = await supabase.storage
-      .from("logos")
-      .upload(path, file, { upsert: true });
-    if (error) {
-      toast.error("Erreur upload logo : " + error.message);
-      return null;
-    }
-    // Bucket privé : URL signée longue durée (1 an)
-    const { data: signed, error: signedErr } = await supabase.storage
-      .from("logos")
-      .createSignedUrl(path, 60 * 60 * 24 * 365);
-    if (signedErr || !signed?.signedUrl) {
-      toast.error("Erreur génération URL logo");
-      return null;
-    }
-    return signed.signedUrl;
-  };
+      const { error } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+      if (error) {
+        toast.error("Erreur upload logo : " + error.message);
+        return null;
+      }
+      // Bucket privé : URL signée longue durée (1 an)
+      const { data: signed, error: signedErr } = await supabase.storage
+        .from("logos")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signedErr || !signed?.signedUrl) {
+        toast.error("Erreur génération URL logo");
+        return null;
+      }
+      return signed.signedUrl;
+    },
+    [organizationId]
+  );
 
   return (
     <OrganizationSettingsContext.Provider
-      value={{ settings, loading, updateSettings, uploadLogo, refetch: fetchSettings }}
+      value={{ settings, loading, updateSettings, uploadLogo, refetch }}
     >
       {children}
     </OrganizationSettingsContext.Provider>
