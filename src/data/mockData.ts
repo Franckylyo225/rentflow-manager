@@ -1,4 +1,5 @@
 import { Building2, Users, CreditCard, LayoutDashboard, Settings, Receipt, Users2, BarChart3, Bell, Landmark, HelpCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export interface City {
   id: string;
@@ -131,18 +132,47 @@ export const rentPayments: RentPayment[] = [
   { id: "r12", tenantId: "t6", tenantName: "Marie-Claire N'Guessan", unitName: "Villa A", propertyId: "p4", propertyName: "Villa Présidentielle", cityName: "Yamoussoukro", amount: 750000, dueDate: "2026-03-01", status: "pending", paidAmount: 0, month: "2026-03" },
 ];
 
-export const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, path: "/" },
-  { label: "Biens", icon: Building2, path: "/properties" },
-  { label: "Patrimoine", icon: Landmark, path: "/patrimoine" },
-  { label: "Locataires", icon: Users, path: "/tenants" },
-  { label: "Loyers", icon: CreditCard, path: "/rents" },
-  { label: "Dépenses", icon: Receipt, path: "/expenses" },
-  { label: "Salaires", icon: Users2, path: "/employees" },
-  { label: "Rapports", icon: BarChart3, path: "/financial-reports" },
-  { label: "Notifications", icon: Bell, path: "/notifications" },
-  { label: "Centre d'aide", icon: HelpCircle, path: "/help" },
-  { label: "Paramètres", icon: Settings, path: "/settings" },
+export interface NavItem {
+  label: string;
+  icon: LucideIcon;
+  path: string;
+}
+
+export interface NavGroup {
+  /** Le premier groupe n'a pas de titre : le tableau de bord est l'accueil. */
+  title?: string;
+  items: NavItem[];
+}
+
+export const navGroups: NavGroup[] = [
+  {
+    items: [{ label: "Tableau de bord", icon: LayoutDashboard, path: "/" }],
+  },
+  {
+    title: "Portefeuille",
+    items: [
+      { label: "Biens", icon: Building2, path: "/properties" },
+      { label: "Patrimoine", icon: Landmark, path: "/patrimoine" },
+      { label: "Locataires", icon: Users, path: "/tenants" },
+    ],
+  },
+  {
+    title: "Finances",
+    items: [
+      { label: "Loyers", icon: CreditCard, path: "/rents" },
+      { label: "Dépenses", icon: Receipt, path: "/expenses" },
+      { label: "Salaires", icon: Users2, path: "/employees" },
+      { label: "Rapports", icon: BarChart3, path: "/financial-reports" },
+    ],
+  },
+  {
+    title: "Système",
+    items: [
+      { label: "Notifications", icon: Bell, path: "/notifications" },
+      { label: "Centre d'aide", icon: HelpCircle, path: "/help" },
+      { label: "Paramètres", icon: Settings, path: "/settings" },
+    ],
+  },
 ];
 
 export const monthlyRevenue = [

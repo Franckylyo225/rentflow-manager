@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { navItems } from "@/data/mockData";
+import { navGroups } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
@@ -43,26 +43,43 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems
-            .filter(item => item.path !== "/employees" || settings?.salaries_enabled === true)
-            .map((item) => {
-            const isActive = location.pathname === item.path;
+        {/* `overflow-y-auto` : les titres de groupe allongent le menu, qui
+            dépasserait sinon sur une tablette en paysage. */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {navGroups.map((group, groupIndex) => {
+            const items = group.items.filter(
+              item => item.path !== "/employees" || settings?.salaries_enabled === true
+            );
+            // Un groupe vidé par les réglages ne doit pas laisser son titre seul.
+            if (items.length === 0) return null;
+
             return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={onClose}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              <div key={group.title ?? "principal"} className={cn("space-y-1", groupIndex > 0 && "mt-5")}>
+                {group.title && (
+                  <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    {group.title}
+                  </p>
                 )}
-              >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                {item.label}
-              </NavLink>
+                {items.map(item => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={onClose}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 flex-shrink-0" />
+                      {item.label}
+                    </NavLink>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
