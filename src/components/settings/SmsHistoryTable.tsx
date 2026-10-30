@@ -37,7 +37,11 @@ export function SmsHistoryTable() {
   };
 
   const fetchHistory = async (withSync = true) => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     if (withSync) {
@@ -56,7 +60,7 @@ export function SmsHistoryTable() {
 
   useEffect(() => {
     fetchHistory(true);
-  }, [user]);
+  }, [user?.id]);
 
   if (loading) {
     return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;

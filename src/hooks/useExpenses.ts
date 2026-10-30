@@ -55,7 +55,11 @@ export function useExpenseCategories() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase
       .from("expense_categories")
@@ -65,7 +69,7 @@ export function useExpenseCategories() {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }
 
@@ -75,7 +79,11 @@ export function useExpenses() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase
       .from("expenses")
@@ -85,7 +93,7 @@ export function useExpenses() {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }
 
@@ -95,7 +103,11 @@ export function useEmployees() {
   const [loading, setLoading] = useState(true);
 
   const refetch = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: result } = await supabase
       .from("employees")
@@ -105,6 +117,6 @@ export function useEmployees() {
     setLoading(false);
   };
 
-  useEffect(() => { refetch(); }, [user]);
+  useEffect(() => { refetch(); }, [user?.id]);
   return { data, loading, refetch };
 }

@@ -38,9 +38,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       setMfaChecking(false);
     };
     checkMfa();
-  }, [user]);
+  }, [user?.id]);
 
-  if (loading || profileLoading || mfaChecking) {
+  // Gate on the first load only. Flipping back to the spinner on a background
+  // refetch would unmount `children`, throwing away whatever the user had typed.
+  if (loading || (profileLoading && !profile) || mfaChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />

@@ -78,7 +78,11 @@ export default function Tenants() {
   const [loading, setLoading] = useState(true);
 
   const fetchActiveTenants = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data } = await supabase
       .from("tenants")
@@ -90,7 +94,11 @@ export default function Tenants() {
   };
 
   const fetchFormerTenants = async () => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setFormerLoading(false);
+      return;
+    }
     setFormerLoading(true);
     const [tRes, bRes] = await Promise.all([
       supabase
@@ -109,8 +117,8 @@ export default function Tenants() {
     setFormerLoading(false);
   };
 
-  useEffect(() => { fetchActiveTenants(); }, [user]);
-  useEffect(() => { if (activeTab === "former") fetchFormerTenants(); }, [activeTab, user]);
+  useEffect(() => { fetchActiveTenants(); }, [user?.id]);
+  useEffect(() => { if (activeTab === "former") fetchFormerTenants(); }, [activeTab, user?.id]);
 
   const refetch = () => { fetchActiveTenants(); };
 

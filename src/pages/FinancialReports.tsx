@@ -33,7 +33,11 @@ export default function FinancialReports() {
   const [salesLoading, setSalesLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Never leave `loading` stuck on: consumers gate their whole list on it.
+      setSalesLoading(false);
+      return;
+    }
     setSalesLoading(true);
     supabase
       .from("patrimony_assets")
@@ -44,7 +48,7 @@ export default function FinancialReports() {
         setSales(data || []);
         setSalesLoading(false);
       });
-  }, [user]);
+  }, [user?.id]);
 
   const loading = expLoading || payLoading || salesLoading;
 
