@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -50,27 +50,33 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
  * could issue the same three queries half a dozen times over.
  */
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [loading, setLoading] = useState(true);
-  // Only the first load may block the UI: a later refetch must not flip
-  // `loading` back on, or ProtectedRoute would unmount the page under it.
-  const loadedRef = useRef(false);
+  // Identifiant du compte dont le chargement est terminé, abouti ou non.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  // `loading` est calculé pendant le rendu, et non posé depuis un effet.
+  // Posé depuis un effet, il restait brièvement à `false` entre le rendu où
+  // l'utilisateur apparaît et l'effet qui lance la requête : ProtectedRoute
+  // voyait alors un profil absent sans chargement en cours, montait la page,
+  // puis la démontait au rendu suivant. Chaque ouverture montait donc l'écran
+  // deux fois.
+  //
+  // `loadedFor` est renseigné même quand la requête échoue : sinon un profil
+  // illisible laisserait un spinner perpétuel.
+  const loading = authLoading || (!!userId && loadedFor !== userId);
 
   const fetchProfile = useCallback(async () => {
     if (!userId) {
       setProfile(null);
       setRole(null);
       setOrganization(null);
-      loadedRef.current = false;
-      setLoading(false);
+      setLoadedFor(null);
       return;
     }
-
-    if (!loadedRef.current) setLoading(true);
 
     const [profileRes, roleRes] = await Promise.all([
       // `profiles.organization_id` référence `organizations.id`, donc PostgREST
@@ -91,8 +97,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     if (roleRes.data) setRole(roleRes.data as UserRole);
 
-    loadedRef.current = true;
-    setLoading(false);
+    setLoadedFor(userId);
   }, [userId]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
