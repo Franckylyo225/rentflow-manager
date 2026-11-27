@@ -71,6 +71,7 @@ export default function Patrimoine() {
       supabase.from("patrimony_assets").select("*, asset_holders(full_name), patrimony_documents(document_type)").order("created_at", { ascending: false }),
       supabase.from("asset_holders").select("*").order("full_name"),
     ]);
+    if (assetsRes.error || holdersRes.error) toast.error("Impossible de charger le patrimoine : " + (assetsRes.error || holdersRes.error)!.message);
     setAssets(assetsRes.data || []);
     setHolders(holdersRes.data || []);
     setLoading(false);
@@ -205,7 +206,14 @@ export default function Patrimoine() {
   const handleDelete = async () => {
     if (!deletingAsset) return;
     setSaving(true);
+    // Collect stored files first: deleting the asset cascades its document rows, which would orphan the files.
+    const { data: docs } = await supabase.from("patrimony_documents").select("file_url").eq("asset_id", deletingAsset.id);
     const { error } = await supabase.from("patrimony_assets").delete().eq("id", deletingAsset.id);
+    if (!error) {
+      const paths = (docs || []).map((d: any) => d.file_url).filter(Boolean);
+      if (paths.length) await supabase.storage.from("patrimony-docs").remove(paths);
+      if (deletingAsset.sale_deed_url) await supabase.storage.from("patrimony-sales").remove([deletingAsset.sale_deed_url]);
+    }
     setSaving(false);
     if (error) { toast.error("Erreur : " + error.message); }
     else { toast.success("Actif supprimé"); setShowDelete(false); setDeletingAsset(null); fetchData(); }
