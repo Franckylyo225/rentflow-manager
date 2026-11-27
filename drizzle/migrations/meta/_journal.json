@@ -8,6 +8,13 @@
       "when": 1793291841212,
       "tag": "0000_add_expense_unit_link",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795781017801,
+      "tag": "0001_drop_open_role_log_insert",
+      "breakpoints": true
     }
   ]
 }

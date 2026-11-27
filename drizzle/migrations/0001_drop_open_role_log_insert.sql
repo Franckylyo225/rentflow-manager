@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "System can insert role logs" ON public.role_change_logs;
