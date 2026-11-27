@@ -25,6 +25,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { PatrimoineMap } from "@/components/patrimoine/PatrimoineMap";
 import { PatrimoineExcelImport } from "@/components/patrimoine/PatrimoineExcelImport";
+import { assetMatchesSearch, holderMatchesSearch } from "@/lib/patrimoineSearch";
 
 const ASSET_TYPES = [
   { value: "terrain", label: "Terrain" },
@@ -86,7 +87,7 @@ export default function Patrimoine() {
     if (typeFilter !== "all" && a.asset_type !== typeFilter) return false;
     if (statusFilter === "complet" && !hasAcd(a)) return false;
     if (statusFilter === "en_cours" && hasAcd(a)) return false;
-    if (search && !a.title.toLowerCase().includes(search.toLowerCase()) && !a.locality.toLowerCase().includes(search.toLowerCase())) return false;
+    if (!assetMatchesSearch(a, search, holders)) return false;
     return true;
   });
 
@@ -246,9 +247,7 @@ export default function Patrimoine() {
     setShowEditHolder(true);
   };
 
-  const filteredHolders = holders.filter(h =>
-    !holderSearch || h.full_name.toLowerCase().includes(holderSearch.toLowerCase()) || (h.phone || "").includes(holderSearch)
-  );
+  const filteredHolders = holders.filter(h => holderMatchesSearch(h, holderSearch));
 
   const resetForm = () => { setForm({ title: "", asset_type: "terrain", holder_id: "", city_id: "", locality: "", subdivision_name: "", block_number: "", plot_number: "", land_title: "", handling_firm: "", description: "", map_link: "", receipt_order_number: "", title_creation_date: "", for_rent: false, rental_property_type: "immeuble" }); setLinkedPropertyId(null); };
 
@@ -462,7 +461,7 @@ export default function Patrimoine() {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+                <Input placeholder="Rechercher (titre, titulaire, localité, titre foncier...)" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
               </div>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="Tous les types" /></SelectTrigger>
@@ -485,7 +484,11 @@ export default function Patrimoine() {
               <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground">
-                {assets.length === 0 ? "Aucun actif. Commencez par en ajouter un." : "Aucun résultat."}
+                {assets.length === 0
+                  ? "Aucun actif. Commencez par en ajouter un."
+                  : search
+                    ? `Aucun actif ne correspond à « ${search} ». La recherche couvre aussi le nom du titulaire.`
+                    : "Aucun résultat."}
               </div>
             ) : (
               <Card className="border-border">
@@ -510,6 +513,10 @@ export default function Patrimoine() {
                               <p className="font-medium text-card-foreground">{asset.title}</p>
                               <p className="text-xs text-muted-foreground">
                                 {[asset.subdivision_name, asset.block_number ? `Ilot ${asset.block_number}` : "", asset.plot_number ? `Lot ${asset.plot_number}` : ""].filter(Boolean).join(" · ")}
+                              </p>
+                              {/* Le titulaire est aussi un critère de recherche : visible aussi sur mobile */}
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 sm:hidden">
+                                <Users className="h-3 w-3" />{asset.asset_holders?.full_name || "—"}
                               </p>
                             </td>
                             <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{asset.asset_holders?.full_name || "—"}</td>
